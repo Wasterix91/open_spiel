@@ -204,6 +204,9 @@ set(GAME_SOURCES
   ultimate_tic_tac_toe/ultimate_tic_tac_toe.cc
   y/y.cc
   y/y.h
+
+  president/president.cc
+  president/president.h
 )
 
 if (${OPEN_SPIEL_BUILD_WITH_HANABI})
@@ -654,6 +657,11 @@ add_test(twixt_test twixt_test)
 add_executable(ultimate_tic_tac_toe_test ultimate_tic_tac_toe/ultimate_tic_tac_toe_test.cc
                ${OPEN_SPIEL_OBJECTS} $<TARGET_OBJECTS:tests>)
 add_test(ultimate_tic_tac_toe_test ultimate_tic_tac_toe_test)
+
+add_executable(president_test president/president_test.cc ${OPEN_SPIEL_OBJECTS}
+               $<TARGET_OBJECTS:tests>
+               $<TARGET_OBJECTS:algorithms>)
+add_test(president_test president_test)
 
 if (${OPEN_SPIEL_BUILD_WITH_ACPC})
   add_executable(universal_poker_test universal_poker/universal_poker_test.cc ${OPEN_SPIEL_OBJECTS}
