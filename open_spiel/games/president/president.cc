@@ -10,21 +10,29 @@
 namespace open_spiel {
 namespace president {
 
-// ---------- Hilfsfunktionen -------------
+std::vector<int> LegalActionsFromHand(const Hand& hand, int top_rank, ComboType current_type, bool new_trick, bool single_card_mode) {
+  std::vector<int> actions = {0};
+  int max_combo_size = single_card_mode ? 1 : 4;
 
-std::vector<int> LegalActionsFromHand(const Hand& hand, int top_rank, bool new_trick) {
-  std::vector<int> actions = {0};  // Pass immer erlaubt
-  for (int i = 0; i < kNumRanks; ++i) {
-    if (hand[i] > 0 && (new_trick || i > top_rank)) {
-      actions.push_back(1 + i);
+  for (int rank = 0; rank < kNumRanks; ++rank) {
+    int count = hand[rank];
+    for (int size = 1; size <= std::min(count, max_combo_size); ++size) {
+      ComboType type = static_cast<ComboType>(static_cast<int>(ComboType::Single) + size - 1);
+
+      // Nur gleiche Kombinationen erlauben, wenn ein Stich läuft
+      if (new_trick || (type == current_type && rank > top_rank)) {
+        actions.push_back(EncodeAction({type, rank}));
+      }
     }
   }
+
   return actions;
 }
 
 void ApplyPresidentAction(const PresidentAction& action, Hand& hand) {
   if (action.type != ComboType::Pass) {
-    hand[action.rank]--;
+    int count = static_cast<int>(action.type) - static_cast<int>(ComboType::Single) + 1;
+    hand[action.rank] -= count;
   }
 }
 
@@ -39,18 +47,18 @@ std::string HandToString(const Hand& hand) {
   return result;
 }
 
-// ---------- Spielzustand -------------
-
 PresidentGameState::PresidentGameState(std::shared_ptr<const Game> game, bool shuffle)
     : State(game),
       num_players_(4),
       current_player_(0),
       last_player_to_play_(-1),
       top_rank_(-1),
+      current_combo_type_(ComboType::Pass),
       new_trick_(true),
       hands_(num_players_, Hand(kNumRanks, 0)),
       passed_(num_players_, false),
-      finish_order_() {
+      finish_order_(),
+      single_card_mode_(std::static_pointer_cast<const PresidentGame>(game)->single_card_mode_) {
 
   std::vector<int> deck;
   for (int rank = 0; rank < kNumRanks; ++rank) {
@@ -72,15 +80,18 @@ PresidentGameState::PresidentGameState(std::shared_ptr<const Game> game, bool sh
 Player PresidentGameState::CurrentPlayer() const { return current_player_; }
 
 std::vector<Action> PresidentGameState::LegalActions() const {
-  std::vector<int> raw = LegalActionsFromHand(hands_[current_player_], top_rank_, new_trick_);
+  std::vector<int> raw = LegalActionsFromHand(hands_[current_player_], top_rank_, current_combo_type_, new_trick_, single_card_mode_);
   return std::vector<Action>(raw.begin(), raw.end());
 }
 
 std::string PresidentGameState::ActionToString(Player, Action action_id) const {
   PresidentAction action = DecodeAction(action_id);
   if (action.type == ComboType::Pass) return "Pass";
+
   static const std::vector<std::string> ranks = {"7", "8", "9", "10", "U", "O", "K", "A"};
-  return "Play " + ranks[action.rank];
+  static const std::vector<std::string> combo_names = {"Single", "Pair", "Triple", "Quad"};
+  int combo_index = static_cast<int>(action.type) - static_cast<int>(ComboType::Single);
+  return "Play " + combo_names[combo_index] + " of " + ranks[action.rank];
 }
 
 std::string PresidentGameState::ToString() const {
@@ -137,6 +148,7 @@ void PresidentGameState::ApplyAction(Action action_id) {
 
     last_player_to_play_ = current_player_;
     top_rank_ = action.rank;
+    current_combo_type_ = action.type;
     new_trick_ = false;
     std::fill(passed_.begin(), passed_.end(), false);
   }
@@ -153,6 +165,7 @@ void PresidentGameState::AdvanceToNextPlayer() {
   if (active == 1 && last_player_to_play_ != -1) {
     current_player_ = last_player_to_play_;
     top_rank_ = -1;
+    current_combo_type_ = ComboType::Pass;
     new_trick_ = true;
     passed_ = std::vector<bool>(num_players_, false);
   } else {
@@ -166,24 +179,20 @@ bool PresidentGameState::IsOut(int player) const {
   return std::accumulate(hands_[player].begin(), hands_[player].end(), 0) == 0;
 }
 
-// ---------- Game -------------
+// ---------- Game ----------
 
 const GameType kGameType{
-    /* short_name = */ "president",
-    /* long_name = */ "President",
+    "president",
+    "President",
     GameType::Dynamics::kSequential,
     GameType::ChanceMode::kDeterministic,
     GameType::Information::kPerfectInformation,
     GameType::Utility::kGeneralSum,
     GameType::RewardModel::kTerminal,
-    /* max_num_players = */ 6,
-    /* min_num_players = */ 2,
-    /* provides_information_state_string = */ false,
-    /* provides_information_state_tensor = */ false,
-    /* provides_observation_string = */ true,
-    /* provides_observation_tensor = */ false,
-    /* parameter_specification = */
-    {{"shuffle_cards", GameParameter(true)}}
+    6, 2,
+    false, false, true, false,
+    {{"shuffle_cards", GameParameter(true)},
+     {"single_card_mode", GameParameter(true)}}
 };
 
 std::shared_ptr<const Game> Factory(const GameParameters& params) {
@@ -194,7 +203,8 @@ REGISTER_SPIEL_GAME(kGameType, Factory);
 
 PresidentGame::PresidentGame(const GameParameters& params)
     : Game(kGameType, params),
-      shuffle_cards_(ParameterValue<bool>("shuffle_cards")) {}
+      shuffle_cards_(ParameterValue<bool>("shuffle_cards")),
+      single_card_mode_(ParameterValue<bool>("single_card_mode")) {}
 
 std::unique_ptr<State> PresidentGame::NewInitialState() const {
   return std::make_unique<PresidentGameState>(shared_from_this(), shuffle_cards_);
