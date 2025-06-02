@@ -17,6 +17,7 @@ enum class ComboType {
   Quad,
 };
 
+// Kombination von 1 bis 4 Karten gleichen Ranges
 struct PresidentAction {
   ComboType type;
   int rank;
@@ -26,10 +27,11 @@ struct PresidentAction {
   }
 };
 
-inline constexpr int kNumRanks = 8;
-inline constexpr int kNumActionTypes = 4;
-inline constexpr int kNumActions = 1 + kNumRanks * kNumActionTypes;
+inline constexpr int kNumRanks = 8; // 7,8,9,10,U,O,K,A
+inline constexpr int kNumActionTypes = 4; // Single, Pair, Triple, Quad
+inline constexpr int kNumActions = 1 + kNumRanks * kNumActionTypes; // Anzahl möglicher Aktionen
 
+// Kodierung der Aktionen. Pass -> 0; Single -> 1-8; Pair -> 9-16; Triple -> 17-24; Quad -> 25-32
 inline int EncodeAction(const PresidentAction& action) {
   if (action.type == ComboType::Pass) return 0;
   return 1 + (static_cast<int>(action.type) - static_cast<int>(ComboType::Single)) * kNumRanks + action.rank;
@@ -43,60 +45,80 @@ inline PresidentAction DecodeAction(int id) {
   return PresidentAction{type, rank};
 }
 
+// Vektor aus Anzahl * Rang, 
+// Beispiel: Hand player_hand = {1,0,2,0,0,1,0,0} 
+// bedeutet: {1*0, 0*1, 2*2, 0*3,  0*4, 1*5, 0*6, 0*7}
+// bedeutet: {1*7, 0*8, 2*9, 0*10, 0*U, 1*O, 0*K, 0*A}
 using Hand = std::vector<int>;
 
+// berechnet legale Aktionen abhängig von 
+// top_rank (Höchste gespielte Karte)
+// current_type (Kombinationsart)
+// new_trick (Hat neuer Trick begonnen?)
+// single_card_mode (Nur Einzelkarten erlaubt?)
 std::vector<int> LegalActionsFromHand(const Hand& hand, int top_rank, ComboType current_type, bool new_trick, bool single_card_mode);
+
+// Entfernt gespielte Karte aus Hand
 void ApplyPresidentAction(const PresidentAction& action, Hand& hand);
+
+// Lesbarer String der Hand "2x Rank 0, 1x Rank 5"
 std::string HandToString(const Hand& hand);
 
 class PresidentGame;
 
+// Aktueller Zustand des Spiels
 class PresidentGameState : public open_spiel::State {
  public:
   PresidentGameState(std::shared_ptr<const Game> game, bool shuffle);
 
-  Player CurrentPlayer() const override;
-  std::vector<Action> LegalActions() const override;
-  std::string ActionToString(Player player, Action action_id) const override;
-  std::string ToString() const override;
-  bool IsTerminal() const override;
-  std::vector<double> Returns() const override;
-  std::unique_ptr<State> Clone() const override;
-  void ApplyAction(Action action_id) override;
+  // Öffentliche Methoden: OpenSpiel-Funktionen
+  Player CurrentPlayer() const override; // Wer ist am Zug?
+  std::vector<Action> LegalActions() const override; // Welche Züge sind erlaubt?
+  std::string ActionToString(Player player, Action action_id) const override; 
+  std::string ToString() const override; // Ganzer Spielzustand als String
+  bool IsTerminal() const override; // Spielende?
+  std::vector<double> Returns() const override; // Scors für alle Spieler
+  std::unique_ptr<State> Clone() const override; // Kopie des Spielzustands
+  void ApplyAction(Action action_id) override; // Ändert den Zustand
+
+  void ObservationTensor(Player player, absl::Span<float> values) const override; // RL: Beobachtung des Spielzustands
+  void InformationStateTensor(Player player, absl::Span<float> values) const override; // RL: private Infos pro Spieler
 
  private:
-  void AdvanceToNextPlayer();
-  bool IsOut(int player) const;
+  void AdvanceToNextPlayer(); // Schaltet weiter zu nächstem Spieler
+  bool IsOut(int player) const; // Überprüft ob Spieler fertig
 
-  int num_players_;
-  int current_player_;
-  int last_player_to_play_;
-  int top_rank_;
-  ComboType current_combo_type_;
-  bool new_trick_;
-  std::vector<Hand> hands_;
-  std::vector<bool> passed_;
-  std::vector<int> finish_order_;
-  bool single_card_mode_;
+  // Interne Variablen - was wird gespeichert?
+  int num_players_; // Anzahl der Spieler
+  int current_player_; // Wer ist am Zug?
+  int last_player_to_play_; // Wer hat als letztes gespielt?
+  int top_rank_; // Rang der aktuell höchstgespielten Karte
+  ComboType current_combo_type_; // Welche Kombinationsart liegt aktuell aus
+  bool new_trick_; // Ist neue Spielrunde gestartet?
+  std::vector<Hand> hands_; // 
+  std::vector<bool> passed_; // Wer hat gepasst?
+  std::vector<int> finish_order_; // Wer hat Spiel in welcher Reihenfolge beendet
+  bool single_card_mode_; // Spielmodus
 };
 
+// Beschreibt das Spiel selbst
 class PresidentGame : public Game {
  public:
   explicit PresidentGame(const GameParameters& params);
 
-  std::unique_ptr<State> NewInitialState() const override;
-  int NumDistinctActions() const override { return kNumActions; }
-  int MaxChanceOutcomes() const override { return 0; }
-  std::vector<int> ObservationTensorShape() const override { return {}; }
-  std::vector<int> InformationStateTensorShape() const override { return {}; }
-  double MinUtility() const override { return 0; }
-  double MaxUtility() const override { return 3; }
-  int NumPlayers() const override { return 4; }
-  int MaxGameLength() const override { return 100; }
+  std::unique_ptr<State> NewInitialState() const override; // Anfangszustand
+  int NumDistinctActions() const override { return kNumActions; } // 1 Pass + 4*8 Kombinationen (Single, Pair, Triple, Quad) * (7,8,9,10,U,O,K,A)
+  int MaxChanceOutcomes() const override { return 0; } // Keine Zufallskomponenten (Kein Würfel)
+  std::vector<int> ObservationTensorShape() const override { return {kNumRanks}; } // Muss für OpenSpiel implementiert sein
+  std::vector<int> InformationStateTensorShape() const override { return {kNumRanks}; } // Muss für OpenSpiel implementiert sein
+  double MinUtility() const override { return 0; } // Minimale Punktezahl
+  double MaxUtility() const override { return 3; } // Maximale Punktezahl
+  int NumPlayers() const override { return 4; } // Spielerzahl ist fest
+  int MaxGameLength() const override { return 100; } // Maximal 100 Züge
 
  private:
-  bool shuffle_cards_;
-  bool single_card_mode_;
+  bool shuffle_cards_; // Wird am Anfang gemischt?
+  bool single_card_mode_; // Nur Einzelkarten?
   friend class PresidentGameState;
 };
 
