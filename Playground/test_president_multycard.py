@@ -8,6 +8,7 @@ NUM_SHOWN_GAMES = 1
 
 # 💡 Parameter für das President-Spiel
 DEFAULT_GAME_PARAMS = {
+    "start_player_mode": "random",
     "shuffle_cards": True,
     "single_card_mode": False  # False = Mehrfachkarten erlaubt, True = nur Einzelkarten
 }

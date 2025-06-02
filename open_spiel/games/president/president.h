@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <optional>  // Für std::optional
 #include "open_spiel/spiel.h"
 
 namespace open_spiel {
@@ -47,7 +48,6 @@ inline PresidentAction DecodeAction(int id) {
 
 // Vektor aus Anzahl * Rang, 
 // Beispiel: Hand player_hand = {1,0,2,0,0,1,0,0} 
-// bedeutet: {1*0, 0*1, 2*2, 0*3,  0*4, 1*5, 0*6, 0*7}
 // bedeutet: {1*7, 0*8, 2*9, 0*10, 0*U, 1*O, 0*K, 0*A}
 using Hand = std::vector<int>;
 
@@ -64,6 +64,9 @@ void ApplyPresidentAction(const PresidentAction& action, Hand& hand);
 // Lesbarer String der Hand "2x Rank 0, 1x Rank 5"
 std::string HandToString(const Hand& hand);
 
+// Mögliche Modi, wie bestimmt wird, wer die nächste Runde beginnt
+enum class StartPlayerMode { Fixed, Random, Rotate, Loser };
+
 class PresidentGame;
 
 // Aktueller Zustand des Spiels
@@ -77,7 +80,7 @@ class PresidentGameState : public open_spiel::State {
   std::string ActionToString(Player player, Action action_id) const override; 
   std::string ToString() const override; // Ganzer Spielzustand als String
   bool IsTerminal() const override; // Spielende?
-  std::vector<double> Returns() const override; // Scors für alle Spieler
+  std::vector<double> Returns() const override; // Scores für alle Spieler
   std::unique_ptr<State> Clone() const override; // Kopie des Spielzustands
   void ApplyAction(Action action_id) override; // Ändert den Zustand
 
@@ -86,7 +89,7 @@ class PresidentGameState : public open_spiel::State {
 
  private:
   void AdvanceToNextPlayer(); // Schaltet weiter zu nächstem Spieler
-  bool IsOut(int player) const; // Überprüft ob Spieler fertig
+  bool IsOut(int player) const; // Überprüft, ob Spieler fertig
 
   // Interne Variablen - was wird gespeichert?
   int num_players_; // Anzahl der Spieler
@@ -95,10 +98,14 @@ class PresidentGameState : public open_spiel::State {
   int top_rank_; // Rang der aktuell höchstgespielten Karte
   ComboType current_combo_type_; // Welche Kombinationsart liegt aktuell aus
   bool new_trick_; // Ist neue Spielrunde gestartet?
-  std::vector<Hand> hands_; // 
+  std::vector<Hand> hands_; // Kartenhände der Spieler
   std::vector<bool> passed_; // Wer hat gepasst?
   std::vector<int> finish_order_; // Wer hat Spiel in welcher Reihenfolge beendet
   bool single_card_mode_; // Spielmodus
+
+  // Startspieler-Logik
+  StartPlayerMode start_mode_;           // Modus: fixed, random, rotate, loser
+  int rotate_start_index_;               // aktueller Index für "rotate"
 };
 
 // Beschreibt das Spiel selbst
@@ -107,14 +114,19 @@ class PresidentGame : public Game {
   explicit PresidentGame(const GameParameters& params);
 
   std::unique_ptr<State> NewInitialState() const override; // Anfangszustand
-  int NumDistinctActions() const override { return kNumActions; } // 1 Pass + 4*8 Kombinationen (Single, Pair, Triple, Quad) * (7,8,9,10,U,O,K,A)
-  int MaxChanceOutcomes() const override { return 0; } // Keine Zufallskomponenten (Kein Würfel)
-  std::vector<int> ObservationTensorShape() const override { return {kNumRanks}; } // Muss für OpenSpiel implementiert sein
-  std::vector<int> InformationStateTensorShape() const override { return {kNumRanks}; } // Muss für OpenSpiel implementiert sein
+  int NumDistinctActions() const override { return kNumActions; } // 1 Pass + 4*8 Kombinationen
+  int MaxChanceOutcomes() const override { return 0; } // Keine Zufallskomponenten
+  std::vector<int> ObservationTensorShape() const override { return {kNumRanks}; } // Form für Beobachtung
+  std::vector<int> InformationStateTensorShape() const override { return {kNumRanks}; } // Form für Informationszustand
   double MinUtility() const override { return 0; } // Minimale Punktezahl
   double MaxUtility() const override { return 3; } // Maximale Punktezahl
   int NumPlayers() const override { return 4; } // Spielerzahl ist fest
   int MaxGameLength() const override { return 100; } // Maximal 100 Züge
+
+  // Startspieler-Logik
+  StartPlayerMode start_mode_;          // Gewählter Modus
+  int rotate_index_ = 0;                // Index für Rotationsstart
+  std::optional<int> last_loser_;       // Letzter Verlierer für Loser-Modus
 
  private:
   bool shuffle_cards_; // Wird am Anfang gemischt?
