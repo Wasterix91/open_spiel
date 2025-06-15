@@ -11,51 +11,47 @@
 namespace open_spiel {
 namespace president {
 
-// Number of ranks in President (7 to Ace).
-inline constexpr int kNumRanks = 8;
 
-// Maximum number of unique actions (1 Pass + 4*8 combinations).
-inline constexpr int kNumActionTypes = 4;
-inline constexpr int kNumActions = 1 + kNumRanks * kNumActionTypes;
+enum class ComboType { Pass, Play };
 
-// Types of combinations that can be played.
-enum class ComboType { Pass, Single, Pair, Triple, Quad };
-
-// Struct representing a game action (combination type and rank).
+// Ein Spielzug: Pass oder Spielzug mit combo_size >= 1
 struct PresidentAction {
-  ComboType type;
-  int rank;
+  ComboType type;  // Pass oder Spielzug
+  int combo_size;  // Nur für Spielzug: wie viele gleiche Karten (1-8)
+  int rank;        // Kartenrang
 
   bool operator==(const PresidentAction& other) const {
-    return type == other.type && rank == other.rank;
+    return type == other.type && combo_size == other.combo_size && rank == other.rank;
   }
 };
 
-// Encodes a PresidentAction into a unique integer.
-inline int EncodeAction(const PresidentAction& action) {
+// Kodierung: Action -> int
+inline int EncodeAction(const PresidentAction& action, int num_ranks) {
   if (action.type == ComboType::Pass) return 0;
-  return 1 + (static_cast<int>(action.type) - static_cast<int>(ComboType::Single)) * kNumRanks + action.rank;
+  return 1 + (action.combo_size - 1) * num_ranks + action.rank;
 }
 
-// Decodes an integer into a PresidentAction.
-inline PresidentAction DecodeAction(int id) {
-  if (id == 0) return {ComboType::Pass, -1};
+// Dekodierung: int -> Action
+inline PresidentAction DecodeAction(int id, int num_ranks) {
+  if (id == 0) return {ComboType::Pass, 0, -1};
   int adjusted = id - 1;
-  ComboType type = static_cast<ComboType>(static_cast<int>(ComboType::Single) + adjusted / kNumRanks);
-  int rank = adjusted % kNumRanks;
-  return {type, rank};
+  int combo_size = 1 + adjusted / num_ranks;
+  int rank = adjusted % num_ranks;
+  return {ComboType::Play, combo_size, rank};  
 }
 
-// A hand is a vector representing how many cards of each rank a player has.
+// Eine Hand = Vektor mit Kartenanzahlen pro Rang
 using Hand = std::vector<int>;
 
-// Start player logic for new rounds.
+// Startspieler-Strategie
 enum class StartPlayerMode { Fixed, Random, Rotate, Loser };
 
-// Forward declaration.
+// Forward declaration
 class PresidentGame;
 
-// Game state class.
+// -----------------------------
+// State-Klasse
+// -----------------------------
 class PresidentGameState : public State {
  public:
   PresidentGameState(std::shared_ptr<const Game> game, bool shuffle);
@@ -80,7 +76,7 @@ class PresidentGameState : public State {
   int current_player_;
   int last_player_to_play_;
   int top_rank_;
-  ComboType current_combo_type_;
+  int current_combo_size_;  // NEU: statt enum
   bool new_trick_;
   std::vector<Hand> hands_;
   std::vector<bool> passed_;
@@ -89,15 +85,20 @@ class PresidentGameState : public State {
 
   StartPlayerMode start_mode_;
   int rotate_start_index_;
+
+  int kNumRanks;
+  std::vector<std::string> ranks_;
 };
 
-// Game class.
+// -----------------------------
+// Game-Klasse
+// -----------------------------
 class PresidentGame : public Game {
  public:
   explicit PresidentGame(const GameParameters& params);
 
   std::unique_ptr<State> NewInitialState() const override;
-  int NumDistinctActions() const override { return kNumActions; }
+  int NumDistinctActions() const override { return 1 + kMaxComboSize * kNumRanks; }
   int MaxChanceOutcomes() const override { return 0; }
   int NumPlayers() const override { return 4; }
   double MinUtility() const override { return 0; }
@@ -109,6 +110,11 @@ class PresidentGame : public Game {
   StartPlayerMode start_mode_;
   int rotate_index_;
   std::optional<int> last_loser_;
+
+  int kNumRanks;
+  int kMaxComboSize;  // NEU: dynamisch bestimmt aus Deckgröße
+  int num_suits_;
+  std::vector<std::string> ranks_;
 
  private:
   bool shuffle_cards_;
