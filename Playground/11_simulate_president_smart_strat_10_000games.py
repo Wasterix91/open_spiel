@@ -1,6 +1,13 @@
 import pyspiel
 from collections import defaultdict
 
+"""
+Dieses Programm führt 10.000 President-Spiele mit vordefinierten Heuristik-Strategien für alle Spieler aus.
+Player 0 nutzt eine 'Smart Strategy', die große Kombos bevorzugt, während die anderen Spieler feste Strategien spielen.
+Für jedes Spiel werden Returns, Siege und Startspieler (als Proxy für Niederlagen) statistisch erfasst und am Ende als Zusammenfassung ausgegeben.
+"""
+
+
 # === 1️⃣ Parameter ===
 NUM_GAMES = 10_000
 
@@ -35,9 +42,9 @@ def parse_combo_size(s):
     if "Quad" in s: return 4
     return 1
 
-def smart_policy(state):
+def smart_strat(state):
     """
-    Eine verbesserte, menschlichere President-Policy.
+    Eine verbesserte, menschlichere President-Strategie.
     - Kombos bevorzugt
     - Hohe Ranks wenn nötig
     - Lieber passen als unsinnig stechen
@@ -82,7 +89,7 @@ def choose_action(state):
 
     # Test: P0 = Smart, andere wie bisher
     if player == 0:
-        return smart_policy(state)
+        return smart_strat(state)
 
     # Rest wie bisher:
     actions = state.legal_actions()
@@ -152,7 +159,7 @@ for player in range(game.num_players()):
     print()
 
 print("=== Strategien ===")
-print("Player 0: Smart Policy.")
+print("Player 0: Smart Strategy.")
 print("Player 1: spielt IMMER so viele Karten wie erlaubt (max Combo).")
 print("Player 2: spielt DEFENSIV: niedrige Ranks & kleine Kombos.")
 print("Player 3: spielt NUR Einzelkarten (oder passt).")

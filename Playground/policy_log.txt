@@ -1,0 +1,156 @@
+Player 0 Wahrscheinlichkeiten:
+  Play Single of 7     : 0.103
+  Play Pair of 7       : 0.077
+  Play Single of 9     : 0.104
+  Play Pair of 9       : 0.120
+  Play Single of J     : 0.277
+  Play Single of Q     : 0.125
+  Play Single of A     : 0.130
+  Play Pair of A       : 0.065
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 0.842
+  Play Pair of A       : 0.158
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 0.417
+  Play Single of J     : 0.295
+  Play Single of Q     : 0.140
+  Play Single of A     : 0.148
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 0.592
+  Play Single of Q     : 0.198
+  Play Single of A     : 0.210
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 1.000
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 0.417
+  Play Single of J     : 0.295
+  Play Single of Q     : 0.140
+  Play Single of A     : 0.148
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 0.738
+  Play Single of A     : 0.262
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 1.000
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 0.417
+  Play Single of J     : 0.295
+  Play Single of Q     : 0.140
+  Play Single of A     : 0.148
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 0.730
+  Play Single of A     : 0.270
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 0.579
+  Play Single of Q     : 0.207
+  Play Single of A     : 0.214
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 0.730
+  Play Single of A     : 0.270
+
+Player 0 Wahrscheinlichkeiten:
+  Play Single of 7     : 0.213
+  Play Pair of 7       : 0.167
+  Play Single of Q     : 0.231
+  Play Single of A     : 0.239
+  Play Pair of A       : 0.151
+
+Player 0 Wahrscheinlichkeiten:
+  Play Single of 7     : 0.251
+  Play Pair of 7       : 0.215
+  Play Single of Q     : 0.259
+  Play Single of A     : 0.275
+
+Player 0 Wahrscheinlichkeiten:
+  Play Single of 7     : 0.340
+  Play Pair of 7       : 0.320
+  Play Single of Q     : 0.340
+
+Player 0 Wahrscheinlichkeiten:
+  Play Single of 7     : 0.509
+  Play Pair of 7       : 0.491
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 1.000
+
+Player 0 Wahrscheinlichkeiten:
+  Play Single of 8     : 0.126
+  Play Single of 9     : 0.079
+  Play Single of 10    : 0.195
+  Play Single of J     : 0.245
+  Play Pair of J       : 0.058
+  Play Single of Q     : 0.121
+  Play Single of A     : 0.115
+  Play Pair of A       : 0.062
+
+Player 0 Wahrscheinlichkeiten:
+  Play Single of 8     : 0.142
+  Play Single of 9     : 0.087
+  Play Single of 10    : 0.200
+  Play Single of J     : 0.247
+  Play Pair of J       : 0.067
+  Play Single of Q     : 0.129
+  Play Single of A     : 0.128
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 0.707
+  Play Single of A     : 0.293
+
+Player 0 Wahrscheinlichkeiten:
+  Play Single of 8     : 0.219
+  Play Single of 9     : 0.136
+  Play Single of J     : 0.348
+  Play Pair of J       : 0.108
+  Play Single of Q     : 0.189
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 1.000
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 1.000
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 0.780
+  Play Pair of J       : 0.220
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 1.000
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 0.430
+  Play Single of J     : 0.363
+  Play Single of Q     : 0.207
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 1.000
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 0.400
+  Play Single of J     : 0.364
+  Play Single of Q     : 0.236
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 1.000
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 0.425
+  Play Single of 9     : 0.279
+  Play Single of Q     : 0.296
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 1.000
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 0.600
+  Play Single of Q     : 0.400
+
