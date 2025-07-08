@@ -92,6 +92,8 @@ set(PYTHON_BINDINGS ${PYTHON_BINDINGS}
   pybind11/games_leduc_poker.h
   pybind11/games_negotiation.cc
   pybind11/games_negotiation.h
+  pybind11/games_president.cc
+  pybind11/games_president.h
   pybind11/games_spades.cc
   pybind11/games_spades.h
   pybind11/games_tarok.cc

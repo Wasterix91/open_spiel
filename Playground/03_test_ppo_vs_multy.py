@@ -45,7 +45,6 @@ game = pyspiel.load_game(
         "deck_size": "32",
         "shuffle_cards": True,
         "single_card_mode": False,
-        "start_player_mode": "loser"
     }
 )
 
