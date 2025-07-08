@@ -14,7 +14,7 @@ GAME_PARAMS = {
     "deck_size": "32",
     "shuffle_cards": True,
     "single_card_mode": False,
-    "start_player_mode": "loser"
+    #"start_player_mode": "loser"
 }
 
 # === 2️⃣ Ranks dynamisch ===
@@ -79,7 +79,7 @@ print(f"Observation tensor shape: {game.observation_tensor_shape()}")
 params = game.get_parameters()
 print(f"shuffle_cards: {params['shuffle_cards']}")
 print(f"single_card_mode: {params['single_card_mode']}")
-print(f"start_player_mode: {params['start_player_mode']}")
+#print(f"start_player_mode: {params['start_player_mode']}")
 print(f"deck_size: {params['deck_size']}")
 
 # === 5️⃣ Mehrfach-Spiele laufen lassen ===

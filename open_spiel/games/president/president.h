@@ -50,15 +50,14 @@ class PresidentGame : public Game {
 
   // ✅ NEU: Tensor shapes!
   std::vector<int> ObservationTensorShape() const override;
-  std::vector<int> InformationStateTensorShape() const override;
 
   // === Game Parameters ===
   int num_players_;
   bool shuffle_cards_;
   bool single_card_mode_;
-  enum class StartPlayerMode { Fixed, Random, Rotate, Loser } start_mode_;
-  int rotate_index_;
-  std::optional<int> last_loser_;
+  //enum class StartPlayerMode { Fixed, Random, Rotate, Loser } start_mode_;
+  //int rotate_index_;
+  //std::optional<int> last_loser_;
 
   std::vector<std::string> ranks_;
   int kNumRanks;
@@ -69,7 +68,7 @@ class PresidentGame : public Game {
 // === State ===
 class PresidentGameState : public State {
  public:
-  explicit PresidentGameState(std::shared_ptr<const Game> game, bool shuffle);
+  explicit PresidentGameState(std::shared_ptr<const Game> game, bool shuffle, int start_player);
 
   Player CurrentPlayer() const override;
   std::vector<Action> LegalActions() const override;
@@ -79,29 +78,21 @@ class PresidentGameState : public State {
   std::vector<double> Returns() const override;
   std::unique_ptr<State> Clone() const override;
   void ApplyAction(Action action_id) override;
+  std::vector<int> GetFinishOrder();
 
   void ObservationTensor(Player player, absl::Span<float> values) const override;
-  void InformationStateTensor(Player player, absl::Span<float> values) const override;
-
  private:
-  int num_players_;
   int current_player_;
   int last_player_to_play_;
   int top_rank_;
   int current_combo_size_;
-  bool new_trick_;
-  bool single_card_mode_;
-  PresidentGame::StartPlayerMode start_mode_;
   int rotate_start_index_;
-  std::vector<std::string> ranks_;
-  int kNumRanks;
 
   std::vector<Hand> hands_;
-  std::vector<bool> passed_;
+  //std::vector<bool> passed_;
   std::vector<int> finish_order_;
 
   bool IsOut(int player) const;
-  void AdvanceToNextPlayer();
 };
 
 }  // namespace president

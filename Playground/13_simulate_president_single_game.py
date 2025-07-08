@@ -17,7 +17,7 @@ game = pyspiel.load_game(
         "deck_size": "32",
         "shuffle_cards": True,
         "single_card_mode": False,
-        "start_player_mode": "loser"
+        "num_players":2
     }
 )
 
@@ -31,7 +31,7 @@ print(f"Observation tensor shape: {game.observation_tensor_shape()}")
 params = game.get_parameters()
 print(f"shuffle_cards: {params['shuffle_cards']}")
 print(f"single_card_mode: {params['single_card_mode']}")
-print(f"start_player_mode: {params['start_player_mode']}")
+
 print(f"deck_size: {params['deck_size']}")
 
 # === 2️⃣ Spielzustand anzeigen ===
@@ -90,13 +90,12 @@ def choose_action(state):
             best = min(singles, key=lambda x: parse_rank(x[1]))
             return best[0]
 
-    # Kein passender Zug -> Pass
-    return 0
+    # Kein passender Zug -> erste erlaubte Aktion
+    return actions[0]
 
 # === 5️⃣ Spiel ausführen ===
-for move in range(100):
+for move in range(300):
     if state.is_terminal():
-        print("\nSpiel ist vorbei.")
         break
 
     player = state.current_player()
@@ -104,13 +103,20 @@ for move in range(100):
     action_strs = [state.action_to_string(player, a) for a in actions]
 
     print(f"\n=== Runde {move + 1} ===")
+    print(state)
+    print(state.observation_tensor())
     print(f"Player {player} legal actions: {action_strs}")
 
     chosen = choose_action(state)
     print(f"Player {player} wählt: {state.action_to_string(player, chosen)}")
 
     state.apply_action(chosen)
-    print(state)
+
 
 if state.is_terminal():
-    print("\nSpiel beendet. Returns:", state.returns())
+    print()
+    print("Spiel beendet.")
+    print()
+    print(state)
+    print("Returns:", state.returns())
+    #print(state.get_finish_order())

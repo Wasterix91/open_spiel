@@ -70,3 +70,70 @@ Player 0 Wahrscheinlichkeiten:
   Pass                 : 0.000
   Play Single of 9     : 1.000
 
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 0.000
+  Play Single of Q     : 1.000
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 1.000
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 1.000
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 1.000
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 1.000
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 1.000
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 1.000
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 1.000
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 1.000
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 0.000
+  Play Single of 9     : 0.000
+  Play Single of 10    : 0.004
+  Play Single of J     : 0.996
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 1.000
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 0.000
+  Play Single of 9     : 0.000
+  Play Single of 10    : 0.004
+  Play Single of J     : 0.996
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 1.000
+
+Player 0 Wahrscheinlichkeiten:
+  Play Single of 7     : 1.000
+  Play Single of 8     : 0.000
+  Play Single of 9     : 0.000
+  Play Pair of 9       : 0.000
+  Play Single of 10    : 0.000
+
+Player 0 Wahrscheinlichkeiten:
+  Pass                 : 0.000
+  Play Single of 9     : 0.027
+  Play Single of 10    : 0.973
+
+Player 0 Wahrscheinlichkeiten:
+  Play Single of 8     : 0.974
+  Play Single of 9     : 0.007
+  Play Pair of 9       : 0.020
+
+Player 0 Wahrscheinlichkeiten:
+  Play Single of 9     : 0.282
+  Play Pair of 9       : 0.718
+

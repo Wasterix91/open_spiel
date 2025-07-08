@@ -2102,6 +2102,8 @@ open_spiel/python/pybind11/games_leduc_poker.cc
 open_spiel/python/pybind11/games_leduc_poker.h
 open_spiel/python/pybind11/games_negotiation.cc
 open_spiel/python/pybind11/games_negotiation.h
+open_spiel/python/pybind11/games_president.cc
+open_spiel/python/pybind11/games_president.h
 open_spiel/python/pybind11/games_spades.cc
 open_spiel/python/pybind11/games_spades.h
 open_spiel/python/pybind11/games_tarok.cc

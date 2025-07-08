@@ -15,7 +15,7 @@ GAME_PARAMS = {
     "deck_size": "32",
     "shuffle_cards": True,
     "single_card_mode": False,
-    "start_player_mode": "loser"
+    #"start_player_mode": "loser"
 }
 
 # === 2️⃣ Ranks dynamisch ===
@@ -154,7 +154,7 @@ for player in range(game.num_players()):
     print(f"Player {player}:")
     print(f"  - Gesamtpunkte: {points:.1f}")
     print(f"  - Siege: {wins} ({wins/NUM_GAMES:.1%})")
-    print(f"  - Starts (= Niederlagen): {starts} ({starts/NUM_GAMES:.1%})")
+    print(f"  - Starts: {starts} ({starts/NUM_GAMES:.1%})")
     print(f"  - Anteil an allen Punkten: {share:.1f}%")
     print()
 
