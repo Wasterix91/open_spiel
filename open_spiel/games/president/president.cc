@@ -1,7 +1,7 @@
 #include "open_spiel/games/president/president.h"
 
 #include <algorithm>
-#include <iostream>  // <== Für std::cerr !
+#include <iostream>
 #include <numeric>
 #include <random>
 #include <string>
@@ -15,7 +15,7 @@ namespace open_spiel {
 namespace president {
 namespace {
 
-// Game registration
+// === Game registration ===
 const GameType kGameType{
     /*short_name=*/"president",
     /*long_name=*/"President",
@@ -32,6 +32,7 @@ const GameType kGameType{
     /*provides_observation_tensor=*/true,
     /*parameter_specification=*/
     {
+        {"num_players", GameParameter(4)},  // ✅ Dynamisch
         {"shuffle_cards", GameParameter(true)},
         {"single_card_mode", GameParameter(true)},
         {"start_player_mode", GameParameter(std::string("fixed"))},
@@ -40,7 +41,6 @@ const GameType kGameType{
 };
 
 std::shared_ptr<const Game> Factory(const GameParameters& params) {
-  // std::cerr << "✅ President version 1.2 loaded!" << std::endl;
   return std::make_shared<PresidentGame>(params);
 }
 
@@ -72,11 +72,7 @@ std::vector<int> LegalActionsFromHand(const Hand& hand, int top_rank,
                                       int current_combo_size, bool new_trick,
                                       bool single_card_mode, int num_ranks) {
   std::vector<int> actions;
-
-  // ✅ Nur Pass erlauben, wenn es KEIN neuer Trick ist
-  if (!new_trick) {
-    actions.push_back(0);  // Pass
-  }
+  if (!new_trick) actions.push_back(0);  // Pass
 
   int max_same = 0;
   for (int c : hand) max_same = std::max(max_same, c);
@@ -94,7 +90,6 @@ std::vector<int> LegalActionsFromHand(const Hand& hand, int top_rank,
   return actions;
 }
 
-
 void ApplyPresidentAction(const PresidentAction& action, Hand& hand) {
   if (action.type == ComboType::Pass) return;
   hand[action.rank] -= action.combo_size;
@@ -102,9 +97,10 @@ void ApplyPresidentAction(const PresidentAction& action, Hand& hand) {
 
 }  // namespace
 
-// PresidentGame
+// === PresidentGame ===
 PresidentGame::PresidentGame(const GameParameters& params)
     : Game(kGameType, params),
+      num_players_(ParameterValue<int>("num_players")),
       shuffle_cards_(ParameterValue<bool>("shuffle_cards")),
       single_card_mode_(ParameterValue<bool>("single_card_mode")),
       rotate_index_(0),
@@ -119,13 +115,13 @@ PresidentGame::PresidentGame(const GameParameters& params)
     num_suits_ = 4;
   } else if (deck_size_str == "64") {
     ranks_ = {"7", "8", "9", "10", "J", "Q", "K", "A"};
-    num_suits_ = 8;  // Doppeltes Deck
+    num_suits_ = 8;
   } else {
     SpielFatalError("Unknown deck_size: " + deck_size_str);
   }
 
   kNumRanks = ranks_.size();
-  kMaxComboSize = num_suits_;  // z.B. max. 4 oder 8 gleiche Karten
+  kMaxComboSize = num_suits_;
 
   std::string mode = ParameterValue<std::string>("start_player_mode");
   if (mode == "fixed") start_mode_ = StartPlayerMode::Fixed;
@@ -139,11 +135,31 @@ std::unique_ptr<State> PresidentGame::NewInitialState() const {
   return std::make_unique<PresidentGameState>(shared_from_this(), shuffle_cards_);
 }
 
-// === PresidentGameState ===
+int PresidentGame::NumPlayers() const { return num_players_; }
 
+int PresidentGame::NumDistinctActions() const { return 1 + kMaxComboSize * kNumRanks; }
+
+double PresidentGame::MinUtility() const { return 0.0; }
+
+double PresidentGame::MaxUtility() const { return 3.0; }
+
+int PresidentGame::MaxGameLength() const {
+  return kNumRanks * num_suits_ * num_players_;
+}
+
+// ✅ Neu: Tensor shapes!
+std::vector<int> PresidentGame::ObservationTensorShape() const {
+  return {kNumRanks};
+}
+
+std::vector<int> PresidentGame::InformationStateTensorShape() const {
+  return {kNumRanks};
+}
+
+// === PresidentGameState ===
 PresidentGameState::PresidentGameState(std::shared_ptr<const Game> game, bool shuffle)
     : State(game),
-      num_players_(4),
+      num_players_(std::static_pointer_cast<const PresidentGame>(game)->num_players_),
       current_player_(0),
       last_player_to_play_(-1),
       top_rank_(-1),
@@ -174,21 +190,24 @@ PresidentGameState::PresidentGameState(std::shared_ptr<const Game> game, bool sh
   }
 
   switch (start_mode_) {
-    case StartPlayerMode::Fixed: current_player_ = 0; break;
-    case StartPlayerMode::Random: {
+    case PresidentGame::StartPlayerMode::Fixed: current_player_ = 0; break;
+    case PresidentGame::StartPlayerMode::Random: {
       std::mt19937 rng(std::random_device{}());
       std::uniform_int_distribution<int> dist(0, num_players_ - 1);
       current_player_ = dist(rng);
       break;
     }
-    case StartPlayerMode::Rotate: current_player_ = rotate_start_index_; break;
-    case StartPlayerMode::Loser: current_player_ = pg->last_loser_.value_or(0); break;
+    case PresidentGame::StartPlayerMode::Rotate: current_player_ = rotate_start_index_; break;
+    case PresidentGame::StartPlayerMode::Loser: current_player_ = pg->last_loser_.value_or(0); break;
   }
 }
 
 Player PresidentGameState::CurrentPlayer() const { return current_player_; }
 
 std::vector<Action> PresidentGameState::LegalActions() const {
+  if (IsOut(current_player_)) {
+    return {EncodeAction({ComboType::Pass, 0, 0}, kNumRanks)};
+  }
   auto raw = LegalActionsFromHand(
       hands_[current_player_],
       top_rank_,
@@ -235,12 +254,12 @@ std::vector<double> PresidentGameState::Returns() const {
   }
 
   auto* game = const_cast<PresidentGame*>(static_cast<const PresidentGame*>(game_.get()));
-  if (start_mode_ == StartPlayerMode::Loser && finish_order_.size() == num_players_ - 1) {
+  if (start_mode_ == PresidentGame::StartPlayerMode::Loser && finish_order_.size() == num_players_ - 1) {
     for (int p = 0; p < num_players_; ++p) {
       if (!IsOut(p)) game->last_loser_ = p;
     }
   }
-  if (start_mode_ == StartPlayerMode::Rotate) {
+  if (start_mode_ == PresidentGame::StartPlayerMode::Rotate) {
     game->rotate_index_ = (rotate_start_index_ + 1) % num_players_;
   }
 
@@ -280,7 +299,7 @@ void PresidentGameState::AdvanceToNextPlayer() {
   if (active == 1 && last_player_to_play_ != -1) {
     current_player_ = last_player_to_play_;
     top_rank_ = -1;
-    current_combo_size_ = 0;  // Trick ist neu!
+    current_combo_size_ = 0;
     new_trick_ = true;
     passed_ = std::vector<bool>(num_players_, false);
   } else {

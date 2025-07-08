@@ -1,5 +1,12 @@
 import pyspiel
 
+"""
+Dieses Programm führt mehrere President-Spiele mit festen Heuristik-Strategien für alle Spieler aus.
+Für jedes Spiel werden Startspieler, alle Runden, gewählte Aktionen und der finale Return ausgegeben.
+Die Anzahl der Spiele und die Spielparameter (z.B. deck_size) können oben angepasst werden.
+"""
+
+
 # === 1️⃣ Einstellungen ===
 NUM_GAMES = 3
 

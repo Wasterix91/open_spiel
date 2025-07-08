@@ -2275,7 +2275,6 @@ pybind11/include/pybind11/cast.h
 pybind11/include/pybind11/chrono.h
 pybind11/include/pybind11/common.h
 pybind11/include/pybind11/complex.h
-pybind11/include/pybind11/critical_section.h
 pybind11/include/pybind11/eigen.h
 pybind11/include/pybind11/embed.h
 pybind11/include/pybind11/eval.h

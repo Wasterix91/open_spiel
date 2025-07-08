@@ -2,6 +2,14 @@ import pyspiel
 from collections import Counter
 import random
 
+"""
+Dieses Programm simuliert 100 President-Spiele mit vordefinierten Heuristik-Strategien für alle Spieler.
+Es speichert die Gewinner jedes Spiels, wählt zufällig 5 Beispielspiele aus und gibt deren gesamten Spielverlauf 
+inklusive gewählter Aktionen und finaler Returns aus.
+Am Ende wird eine Zusammenfassung der Gewinnverteilung aller Spieler angezeigt.
+"""
+
+
 # === 1️⃣ Einstellungen ===
 NUM_SIMULATIONS = 100
 NUM_EXAMPLES = 5  # Wie viele zufällig zeigen
@@ -45,23 +53,38 @@ def choose_action(state):
     decoded = [(a, state.action_to_string(player, a)) for a in actions if a != 0]
 
     if player == 0:
+        # 🃏 Player 0 Strategie:
+        # Spielt die Karte mit dem höchsten Rang, unabhängig von Kombo-Größe.
         if decoded:
             best = max(decoded, key=lambda x: parse_rank(x[1]))
             return best[0]
+
     elif player == 1:
+        # 🃏 Player 1 Strategie:
+        # Spielt die größtmögliche Kombo (Quad > Triple > Pair > Single).
         if decoded:
             best = max(decoded, key=lambda x: parse_combo_size(x[1]))
             return best[0]
+
     elif player == 2:
+        # 🃏 Player 2 Strategie:
+        # Spielt defensiv: wählt die kleinste Kombo-Größe und darin die niedrigste Karte.
         if decoded:
             best = min(decoded, key=lambda x: (parse_combo_size(x[1]), parse_rank(x[1])))
             return best[0]
+
     elif player == 3:
+        # 🃏 Player 3 Strategie:
+        # Spielt nur Einzelkarten (Single), wählt die niedrigste Single;
+        # wenn keine Single vorhanden, passt.
         singles = [x for x in decoded if "Single" in x[1]]
         if singles:
             best = min(singles, key=lambda x: parse_rank(x[1]))
             return best[0]
+
+    # ✋ Kein passender Zug gefunden oder keine legalen Aktionen außer Pass -> Pass
     return 0
+
 
 # === 5️⃣ 100 Spiele simulieren ===
 results = []  # Gewinner speichern
@@ -103,9 +126,7 @@ for sim in range(NUM_SIMULATIONS):
 # === 6️⃣ Auswertung ===
 counter = Counter(results)
 
-print(f"\n=== Zusammenfassung nach {NUM_SIMULATIONS} Spielen ===")
-for player in range(4):
-    print(f"Player {player} gewann {counter[player]} mal ({counter[player]/NUM_SIMULATIONS:.1%})")
+
 
 # === 7️⃣ Zeige 5 zufällige Beispiel-Spiele ===
 print(f"\n=== {NUM_EXAMPLES} zufällige Beispiel-Spiele ===")
@@ -115,3 +136,7 @@ for example in examples:
     for step, entry in enumerate(example['log'], start=1):
         print(f"Runde {step}: Player {entry['player']} wählt {entry['action']}")
     print(f"Returns: {example['returns']}")
+
+print(f"\n=== Zusammenfassung nach {NUM_SIMULATIONS} Spielen ===")
+for player in range(4):
+    print(f"Player {player} gewann {counter[player]} mal ({counter[player]/NUM_SIMULATIONS:.1%})")
