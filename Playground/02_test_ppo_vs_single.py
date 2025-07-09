@@ -40,13 +40,12 @@ game = pyspiel.load_game(
         "deck_size": "32",
         "shuffle_cards": True,
         "single_card_mode": False,
-        "start_player_mode": "loser",
         "num_players": 2  # <-- 1v1 Modus
     }
 )
 
 # === 🧠 Gelernte Policy laden
-info_state_size = game.information_state_tensor_shape()[0]
+info_state_size = game.observation_tensor_shape()[0]
 num_actions = game.num_distinct_actions()
 
 class PolicyNetwork(nn.Module):

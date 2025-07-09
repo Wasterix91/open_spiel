@@ -1,5 +1,5 @@
 #ifndef OPEN_SPIEL_GAMES_PRESIDENT_H_
-#define OPEN_SPIIEL_GAMES_PRESIDENT_H_
+#define OPEN_SPIEL_GAMES_PRESIDENT_H_
 
 #include <memory>
 #include <string>
@@ -48,8 +48,9 @@ class PresidentGame : public Game {
   int MaxGameLength() const override;
   std::unique_ptr<State> NewInitialState() const override;
 
-  // ✅ NEU: Tensor shapes!
+  // === Tensor shapes ===
   std::vector<int> ObservationTensorShape() const override;
+  std::vector<int> InformationStateTensorShape() const override;
 
   // === Game Parameters ===
   int num_players_;
@@ -80,7 +81,13 @@ class PresidentGameState : public State {
   void ApplyAction(Action action_id) override;
   std::vector<int> GetFinishOrder();
 
+  // === Observation und InformationState ===
   void ObservationTensor(Player player, absl::Span<float> values) const override;
+  std::string ObservationString(Player player) const override;
+
+  void InformationStateTensor(Player player, absl::Span<float> values) const override;
+  std::string InformationStateString(Player player) const override;
+
  private:
   int current_player_;
   int last_player_to_play_;

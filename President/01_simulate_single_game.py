@@ -14,10 +14,10 @@ Es zeigt den Spielverlauf, gewählte Züge und den finalen Return im Terminal an
 game = pyspiel.load_game(
     "president",
     {
-        "deck_size": "52",
+        "deck_size": "32",
         "shuffle_cards": True,
         "single_card_mode": False,
-        "num_players":5
+        "num_players":4
     }
 )
 
@@ -104,7 +104,12 @@ for move in range(300):
 
     print(f"\n=== Runde {move + 1} ===")
     print(state)
+
     print(f"Observation Tensor Player {player}: {state.observation_tensor()}")
+    print(f"Observation String Player {player}: {state.observation_string(player)}")
+    print(f"Information State Tensor Player {player}: {state.information_state_tensor(player)}")
+    print(f"Information State String Player {player}: {state.information_state_string(player)}")
+
     print(f"Player {player} legal actions: {action_strs}")
 
     chosen = choose_action(state)
