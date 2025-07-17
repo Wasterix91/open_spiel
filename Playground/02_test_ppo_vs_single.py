@@ -18,8 +18,8 @@ base_dir = os.path.dirname(__file__)
 models_root = os.path.join(base_dir, "models")
 
 # === 🏷️ Manuelle Wahl: Version & Ordner
-version = "ppo_president_08"   # <--- Deine Version hier
-subfolder = "test"            # <--- 'train' oder 'test'
+version = "ppo_president_10"   # <--- Deine Version hier
+subfolder = "train"            # <--- 'train' oder 'test'
 
 MODEL_DIR = os.path.join(models_root, version, subfolder)
 LOG_FILE = os.path.join(MODEL_DIR, "policy_log.txt")
@@ -44,6 +44,9 @@ game = pyspiel.load_game(
     }
 )
 
+
+
+
 # === 🧠 Gelernte Policy laden
 info_state_size = game.observation_tensor_shape()[0]
 num_actions = game.num_distinct_actions()
@@ -63,8 +66,14 @@ class PolicyNetwork(nn.Module):
         return self.net(x)
 
 policy_p0 = PolicyNetwork(info_state_size, num_actions)
+
+print("✅ Policy expects input size:", policy_p0.net[0].in_features)
+print("✅ Game observation tensor shape:", info_state_size)
+
 policy_p0.load_state_dict(torch.load(policy_path))
 policy_p0.eval()
+
+
 
 print(f"✅ Gelernte Policy geladen: {policy_file}")
 

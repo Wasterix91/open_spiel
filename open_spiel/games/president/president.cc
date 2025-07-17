@@ -34,7 +34,7 @@ const GameType kGameType{
     {
         {"num_players", GameParameter(4)},  // ✅ Dynamisch
         {"shuffle_cards", GameParameter(true)},
-        {"single_card_mode", GameParameter(true)},
+        {"single_card_mode", GameParameter(false)},
         {"deck_size", GameParameter(std::string("32"))},
     }
 };
