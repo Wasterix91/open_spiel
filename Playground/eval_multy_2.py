@@ -21,11 +21,15 @@ game = pyspiel.load_game(
 )
 
 # === ⚙️ Evaluationsparameter ===========================
-VERSION_NUM = "02"
+VERSION_NUM = "10"
 NUM_EPISODES = 1_000
 PLAYER_TYPES = ["ppo", "random", "random", "random"]  # Alternativen: random, max_combo, single_only, smart, aggressive
-MODEL_DIR = f"/home/wasterix/OpenSpiel/open_spiel/Playground/models/selfplay_president_{VERSION_NUM}/train"
-GENERATE_PLOTS = True  # False → keine Plots erzeugen
+
+base_dir = os.path.dirname(os.path.abspath(__file__))
+MODEL_DIR = os.path.join(base_dir, f"models/selfplay_president_{VERSION_NUM}/train")
+MODEL_DIR = os.path.normpath(MODEL_DIR)
+
+GENERATE_PLOTS = False  # False → keine Plots erzeugen
 
 # === 🖨️ Übersichtsausgabe =============================
 print("=== 🧪 President Game Evaluation ===")
@@ -106,7 +110,8 @@ for pid, ptype in enumerate(PLAYER_TYPES):
             info_state_size=game.information_state_tensor_shape()[0],
             num_actions=game.num_distinct_actions()
         )
-        model_path = f"{MODEL_DIR}/selfplay_president_{VERSION_NUM}_agent_p{pid}"
+        #model_path = f"{MODEL_DIR}/selfplay_president_{VERSION_NUM}_agent_p{pid}"
+        model_path = f"{MODEL_DIR}/checkpoint_ep5000_p0"
         agent.restore(model_path)
         agents.append(agent)
     elif ptype in strategy_map:
@@ -205,18 +210,20 @@ for pid in range(4):
 
 if GENERATE_PLOTS:
     # === 📁 Evaluations-Ausgabepfad vorbereiten ===
-    BASE_EVAL_DIR = os.path.join(os.path.dirname(MODEL_DIR), "eval")
+    EVAL_ROOT = os.path.join(base_dir, "models/selfplay_president_{VERSION_NUM}/eval")
+    EVAL_ROOT = os.path.normpath(EVAL_ROOT)
 
-    os.makedirs(BASE_EVAL_DIR, exist_ok=True)
+
+    os.makedirs(EVAL_ROOT, exist_ok=True)
 
     # Finde nächste freie Nummer (z. B. 01, 02, ...)
-    existing_dirs = sorted([d for d in os.listdir(BASE_EVAL_DIR) if d.isdigit()])
+    existing_dirs = sorted([d for d in os.listdir(EVAL_ROOT) if d.isdigit()])
     if existing_dirs:
         next_eval_num = int(existing_dirs[-1]) + 1
     else:
         next_eval_num = 1
 
-    eval_subdir = os.path.join(BASE_EVAL_DIR, f"{next_eval_num:02d}")
+    eval_subdir = os.path.join(EVAL_ROOT, f"{next_eval_num:02d}")
     os.makedirs(eval_subdir)
     print(f"📁 Ergebnisse und Plots werden gespeichert in: {eval_subdir}")
 
