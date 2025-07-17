@@ -72,7 +72,7 @@ def evaluate_against_random(env, agent, num_games=100):
     return wins / num_games
 
 # === 4️⃣ Training ===
-num_episodes = 20_000
+num_episodes = 5000
 returns = [[] for _ in range(4)]
 win_rates = []
 eval_winrates = []  # (episode, winrate)
@@ -112,10 +112,16 @@ for ep in progress:
         msg = " | ".join([f"P{pid}: {ret:.2f}" for pid, ret in enumerate(ret_avgs)])
         progress.write(f"[Ep {ep}] Ø Return (100): {msg} | Winrate P0: {win_avg:.1f}%")
 
+
     if ep % 500 == 0:
         eval_wr = evaluate_against_random(env, agents[0])
         eval_winrates.append((ep, eval_wr))
         progress.write(f"[Eval] Ep {ep}: P0 vs Random Winrate: {eval_wr*100:.1f}%")
+
+    if ep % 1000 == 0:
+        for pid, agent in enumerate(agents):
+            checkpoint_path = os.path.join(train_dir, f"checkpoint_ep{ep}_p{pid}")
+            agent.save(checkpoint_path)
 
 # === 5️⃣ Speichern ===
 for pid, agent in enumerate(agents):
