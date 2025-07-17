@@ -12,7 +12,7 @@ Für jedes Spiel werden Returns, Siege und Startspieler statistisch erfasst und 
 
 
 # === 1️⃣ Parameter ===
-NUM_GAMES = 10_000
+NUM_GAMES = 1000
 
 GAME_PARAMS = {
     "deck_size": "64",

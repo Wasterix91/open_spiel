@@ -20,6 +20,7 @@ DEFAULT_CONFIG = PPOConfig(
 
 # === PPO Networks ===
 class PolicyNetwork(nn.Module):
+    """Simple feed-forward policy network."""
     def __init__(self, input_size, num_actions):
         super().__init__()
         self.net = nn.Sequential(
@@ -35,6 +36,7 @@ class PolicyNetwork(nn.Module):
         return self.net(x)
 
 class ValueNetwork(nn.Module):
+    """Value function approximator."""
     def __init__(self, input_size):
         super().__init__()
         self.net = nn.Sequential(
@@ -50,6 +52,7 @@ class ValueNetwork(nn.Module):
 
 # === PPO Agent ===
 class PPOAgent:
+    """PPO Agent: handles policy/value networks and training."""
     def __init__(self, info_state_size, num_actions, config=None, device="cpu"):
         self.device = torch.device(device)
         self._info_state_size = info_state_size
@@ -65,7 +68,9 @@ class PPOAgent:
         self._buffer = []
 
     def step(self, time_step, legal_actions):
+        """Takes a step: chooses action or learns on terminal."""
         if time_step.last():
+            # On terminal: overwrite rewards, train, clear buffer.
             final_reward = time_step.rewards[0]
             self._buffer = [(s, a, final_reward) for (s, a, _) in self._buffer]
             self._train()
@@ -73,19 +78,21 @@ class PPOAgent:
             return None
 
         if not legal_actions:
-            # Keine legalen Aktionen: Skipping.
+            # No legal actions → skip.
             return None
 
+        # Get info state & compute logits.
         info_state = np.array(time_step.observations["info_state"][0], dtype=np.float32)
         info_state_tensor = torch.tensor(info_state, dtype=torch.float32).to(self.device)
 
         logits = self._policy(info_state_tensor).detach().cpu().numpy()
 
+        # Mask logits to respect legal actions only.
         masked_logits = np.zeros_like(logits)
         masked_logits[legal_actions] = logits[legal_actions]
 
         if masked_logits.sum() == 0:
-            # Fallback: uniform random legal action
+            # Fallback: uniform random legal action.
             masked_probs = np.zeros_like(logits)
             masked_probs[legal_actions] = 1.0 / len(legal_actions)
         else:
@@ -97,6 +104,7 @@ class PPOAgent:
         return collections.namedtuple("AgentOutput", ["action"])(action=action)
 
     def _train(self):
+        """One training pass through buffer."""
         if not self._buffer:
             return
         states, actions, rewards = zip(*self._buffer)
@@ -120,68 +128,11 @@ class PPOAgent:
             self._optimizer.step()
 
     def save(self, path):
+        """Save policy & value network weights."""
         torch.save(self._policy.state_dict(), path + "_policy.pt")
         torch.save(self._value.state_dict(), path + "_value.pt")
 
     def restore(self, path):
+        """Load policy & value network weights."""
         self._policy.load_state_dict(torch.load(path + "_policy.pt"))
         self._value.load_state_dict(torch.load(path + "_value.pt"))
-
-# === Main Self-Play Loop ===
-if __name__ == "__main__":
-    env = pyspiel.load_game("president")
-
-    num_players = env.num_players()
-    info_state_size = env.information_state_tensor_shape()[0]
-    num_actions = env.num_distinct_actions()
-
-    # ✅ Multi-Agent: ein PPO-Agent pro Spieler
-    agents = [PPOAgent(info_state_size, num_actions) for _ in range(num_players)]
-
-    NUM_EPISODES = 5
-
-    for episode in range(NUM_EPISODES):
-        state = env.new_initial_state()
-        step_count = 0
-
-        print("\n=== New Episode ===")
-
-        while not state.is_terminal():
-            step_count += 1
-            player = state.current_player()
-
-            obs = state.information_state_tensor(player)
-            legal_actions = state.legal_actions()
-
-            time_step = collections.namedtuple("TimeStep", ["last", "rewards", "observations"])
-            time_step.last = lambda: state.is_terminal()
-            time_step.rewards = [state.returns()[player]]
-            time_step.observations = {"info_state": [obs]}
-
-            output = agents[player].step(time_step, legal_actions)
-
-            if output is not None:
-                state.apply_action(output.action)
-                print(f"Step {step_count} | P{player} plays: {state.action_to_string(player, output.action)}")
-            else:
-                print(f"⚠️ Step {step_count} | P{player} has no legal actions — skipping step.")
-
-            print(state)
-
-            if step_count > 500:
-                raise RuntimeError("Safeguard: possible infinite loop!")
-
-        # Terminal: final train for each player
-        for p in range(num_players):
-            final_step = collections.namedtuple("TimeStep", ["last", "rewards", "observations"])
-            final_step.last = lambda: True
-            final_step.rewards = [state.returns()[p]]
-            final_step.observations = {"info_state": [np.zeros(info_state_size)]}
-            agents[p].step(final_step, [0])  # Dummy legal_actions
-
-        print(f"=== Episode {episode + 1} finished with returns: {state.returns()} ===")
-
-    # ✅ Save all agents
-    for p, agent in enumerate(agents):
-        agent.save(f"agent_p{p}")
-    print("All agents saved!")
