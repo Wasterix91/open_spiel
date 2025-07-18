@@ -14,7 +14,7 @@ PPOConfig = collections.namedtuple(
 
 DEFAULT_CONFIG = PPOConfig(
     learning_rate=0.001,
-    num_epochs=5,
+    num_epochs=1,
     batch_size=32,
     entropy_cost=0.01,
     gamma=0.99,
@@ -146,8 +146,8 @@ class PPOAgent:
             loss.backward()
             self._optimizer.step()
 
-            print(f"[Epoch {epoch}] Policy Loss: {policy_loss.item():.4f}, "
-                  f"Value Loss: {value_loss.item():.4f}, Entropy: {entropy.item():.4f}")
+            #print(f"[Epoch {epoch}] Policy Loss: {policy_loss.item():.4f}, "
+            #     f"Value Loss: {value_loss.item():.4f}, Entropy: {entropy.item():.4f}")
 
         self._buffer.clear()
 

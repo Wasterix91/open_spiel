@@ -26,10 +26,10 @@ print(f"Num distinct actions: {game.num_distinct_actions()}")
 print(f"Observation tensor shape: {game.observation_tensor_shape()}")
 
 # === 🔢 Versionsnummer definieren ===
-VERSION_NUM = "08"
+VERSION_NUM = "03"
 
 # === 2️⃣ Agenten vorbereiten ===
-PLAYER_TYPES = ["ppo", "single_only", "max_combo", "aggressive"]
+PLAYER_TYPES = ["ppo", "random", "random", "random"]
 MODEL_DIR = f"/home/wasterix/OpenSpiel/open_spiel/Playground/models/selfplay_president_{VERSION_NUM}/train"
 
 params = game.get_parameters()
