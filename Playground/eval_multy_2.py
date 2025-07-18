@@ -8,6 +8,7 @@ from collections import defaultdict
 import pandas as pd
 import ppo_local_2 as ppo  # ggf. anpassen
 import matplotlib.pyplot as plt
+import math
 
 # === 🧠 Spielkonfiguration ============================
 game = pyspiel.load_game(
@@ -21,7 +22,7 @@ game = pyspiel.load_game(
 )
 
 # === ⚙️ Evaluationsparameter ===========================
-VERSION_NUM = "10"
+VERSION_NUM = "03"
 NUM_EPISODES = 1_000
 PLAYER_TYPES = ["ppo", "random", "random", "random"]  # Alternativen: random, max_combo, single_only, smart, aggressive
 
@@ -29,7 +30,7 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 MODEL_DIR = os.path.join(base_dir, f"models/selfplay_president_{VERSION_NUM}/train")
 MODEL_DIR = os.path.normpath(MODEL_DIR)
 
-GENERATE_PLOTS = False  # False → keine Plots erzeugen
+GENERATE_PLOTS = True  # False → keine Plots erzeugen
 
 # === 🖨️ Übersichtsausgabe =============================
 print("=== 🧪 President Game Evaluation ===")
@@ -110,8 +111,8 @@ for pid, ptype in enumerate(PLAYER_TYPES):
             info_state_size=game.information_state_tensor_shape()[0],
             num_actions=game.num_distinct_actions()
         )
-        #model_path = f"{MODEL_DIR}/selfplay_president_{VERSION_NUM}_agent_p{pid}"
-        model_path = f"{MODEL_DIR}/checkpoint_ep5000_p0"
+        model_path = f"{MODEL_DIR}/selfplay_president_{VERSION_NUM}_agent_p{pid}"
+        #model_path = f"{MODEL_DIR}/checkpoint_ep5000_p0"
         agent.restore(model_path)
         agents.append(agent)
     elif ptype in strategy_map:
@@ -209,30 +210,22 @@ for pid in range(4):
 
 
 if GENERATE_PLOTS:
-    # === 📁 Evaluations-Ausgabepfad vorbereiten ===
-    EVAL_ROOT = os.path.join(base_dir, "models/selfplay_president_{VERSION_NUM}/eval")
-    EVAL_ROOT = os.path.normpath(EVAL_ROOT)
+    import math
 
-
+    EVAL_ROOT = os.path.join(base_dir, f"models/selfplay_president_{VERSION_NUM}/eval")
     os.makedirs(EVAL_ROOT, exist_ok=True)
 
-    # Finde nächste freie Nummer (z. B. 01, 02, ...)
     existing_dirs = sorted([d for d in os.listdir(EVAL_ROOT) if d.isdigit()])
-    if existing_dirs:
-        next_eval_num = int(existing_dirs[-1]) + 1
-    else:
-        next_eval_num = 1
+    next_eval_num = int(existing_dirs[-1]) + 1 if existing_dirs else 1
 
     eval_subdir = os.path.join(EVAL_ROOT, f"{next_eval_num:02d}")
     os.makedirs(eval_subdir)
     print(f"📁 Ergebnisse und Plots werden gespeichert in: {eval_subdir}")
 
-
-    # === 📊 Aktionsverteilung als Tabelle speichern ===
+    # === 00 - Aktionsverteilung als Tabelle ===
     num_actions = game.num_distinct_actions()
     action_labels = [f"Action {i}" for i in range(num_actions)]
-    action_table = pd.DataFrame(index=[f"Player {i}" for i in range(4)],
-                                columns=action_labels)
+    action_table = pd.DataFrame(index=[f"Player {i}" for i in range(4)], columns=action_labels)
 
     for pid in range(4):
         total = sum(action_counts[pid].values())
@@ -241,12 +234,11 @@ if GENERATE_PLOTS:
             percent = 100 * count / total if total > 0 else 0
             action_table.loc[f"Player {pid}", f"Action {aid}"] = f"{count} ({percent:.1f}%)"
 
-    # CSV speichern
-    csv_path = os.path.join(eval_subdir, f"aktionsverteilung_v{VERSION_NUM}.csv")
+    csv_path = os.path.join(eval_subdir, f"00_aktionsverteilung_v{VERSION_NUM}.csv")
     action_table.to_csv(csv_path)
     print(f"📁 Tabelle gespeichert unter: {csv_path}")
 
-    # === 📊 Gesamte Aktionsverteilung (alle Aktionen) ===
+    # === 01 - Gesamte Aktionsverteilung ===
     counts_per_action = {aid: [action_counts[pid].get(aid, 0) for pid in range(4)] for aid in range(num_actions)}
     x = np.arange(len(action_labels))
     width = 0.2
@@ -254,20 +246,64 @@ if GENERATE_PLOTS:
     for pid in range(4):
         total_actions = sum(action_counts[pid].values()) or 1
         counts = [100 * counts_per_action[aid][pid] / total_actions for aid in range(num_actions)]
-        ax.bar(x + width * pid, counts, width, label=f"Player {pid}")
+        strategy = PLAYER_TYPES[pid]
+        winrate = 100 * win_counts[pid] / NUM_EPISODES
+        ax.bar(x + width * pid, counts, width, label=f"Player {pid} ({strategy}, {winrate:.1f}%)")
+
     ax.set_xlabel("Action")
     ax.set_ylabel("Relative Häufigkeit (%)")
-    ax.set_title("Action Counts per Player")
+    ax.set_title("01 - Action Counts per Player")
     ax.set_xticks(x)
     ax.set_xticklabels(action_labels, rotation=90)
     ax.legend()
     fig.tight_layout()
-    plt.savefig(os.path.join(eval_subdir, f"aktionsverteilung_v{VERSION_NUM}.jpg"))
+    plt.savefig(os.path.join(eval_subdir, f"01_aktionsverteilung_v{VERSION_NUM}_gesamt.jpg"))
 
-    # === 📊 Einzelplots pro Kombotyp ===
+    # === 02 - Pass vs. Play ===
+    pass_stats = {pid: {"Pass": 0, "Play": 0} for pid in range(4)}
+    dummy_state = game.new_initial_state()
+    action_labels_map = {}
+    for aid in range(num_actions):
+        try:
+            label = dummy_state.action_to_string(0, aid)
+            action_labels_map[aid] = "Pass" if "Pass" in label else "Play"
+        except:
+            continue
+
+    for pid in range(4):
+        for aid, count in action_counts[pid].items():
+            label = action_labels_map.get(aid, "Play")
+            pass_stats[pid][label] += count
+
+    play_counts = []
+    pass_counts = []
+    for pid in range(4):
+        total = sum(pass_stats[pid].values()) or 1
+        play_counts.append(100 * pass_stats[pid]["Play"] / total)
+        pass_counts.append(100 * pass_stats[pid]["Pass"] / total)
+
+    x = np.arange(4)
+    width = 0.35
+    fig, ax = plt.subplots(figsize=(10, 6))
+    player_labels = [
+        f"Player {i} ({PLAYER_TYPES[i]}, {win_counts[i] / NUM_EPISODES:.1%})"
+        for i in range(4)
+    ]
+    ax.bar(x - width / 2, play_counts, width, label="Play", color="#1f77b4")
+    ax.bar(x + width / 2, pass_counts, width, label="Pass", color="#d62728")
+    ax.set_ylabel("Anteil an allen Aktionen (%)")
+    ax.set_xlabel("Spieler")
+    ax.set_title("02 - Anteil von Pass vs. Spiel-Aktionen pro Spieler")
+    ax.set_xticks(x)
+    ax.set_xticklabels(player_labels, rotation=0)
+    ax.set_ylim(0, 100)
+    ax.legend()
+    fig.tight_layout()
+    plt.savefig(os.path.join(eval_subdir, f"02_aktionsverteilung_v{VERSION_NUM}_pass_vs_play.jpg"))
+
+    # === 03 - Kombotyp-Anteile je Spieler ===
     combo_labels = ["Single", "Pair", "Triple", "Quad"]
     action_types = {}
-    dummy_state = game.new_initial_state()
     for aid in range(num_actions):
         try:
             label = dummy_state.action_to_string(0, aid)
@@ -278,12 +314,43 @@ if GENERATE_PLOTS:
         except:
             continue
 
+    combo_totals = {pid: {ctype: 0 for ctype in combo_labels} for pid in range(4)}
+    for pid in range(4):
+        for aid, count in action_counts[pid].items():
+            combo = action_types.get(aid)
+            if combo:
+                combo_totals[pid][combo] += count
+
+    x = np.arange(4)
+    width = 0.2
+    fig, ax = plt.subplots(figsize=(12, 6))
+    for i, combo in enumerate(combo_labels):
+        counts = []
+        for pid in range(4):
+            total = sum(combo_totals[pid].values()) or 1
+            percent = 100 * combo_totals[pid][combo] / total
+            counts.append(percent)
+        ax.bar(x + i * width, counts, width, label=combo)
+
+    ax.set_xlabel("Spieler")
+    ax.set_ylabel("Anteil an allen Aktionen (%)")
+    ax.set_title("03 - Anteil gespielter Kombotypen pro Spieler")
+    ax.set_xticks(x + width * 1.5)
+    ax.set_xticklabels(player_labels, rotation=0)
+    ax.set_ylim(0, 100)
+    ax.legend()
+    fig.tight_layout()
+    plt.savefig(os.path.join(eval_subdir, f"03_aktionsverteilung_v{VERSION_NUM}_kombotypen_anteile.jpg"))
+
+    # === 04-07 - Detaillierte Kombotyp-Plots ===
+    combo_plot_index = {"Single": "04", "Pair": "05", "Triple": "06", "Quad": "07"}
     combo_actions = {ctype: [] for ctype in combo_labels}
     for aid, ctype in action_types.items():
         combo_actions[ctype].append(aid)
 
     for combo, aids in combo_actions.items():
-        if not aids: continue
+        if not aids:
+            continue
         labels = [f"Action {aid}" for aid in aids]
         x = np.arange(len(labels))
         fig, ax = plt.subplots(figsize=(max(10, len(labels)), 6))
@@ -292,75 +359,22 @@ if GENERATE_PLOTS:
             total_actions = sum(action_counts[pid].values()) or 1
             counts = [100 * action_counts[pid].get(aid, 0) / total_actions for aid in aids]
             max_height = max(max_height, max(counts, default=0))
-            ax.bar(x + width * pid, counts, width, label=f"Player {pid}")
+            strategy = PLAYER_TYPES[pid]
+            winrate = 100 * win_counts[pid] / NUM_EPISODES
+            ax.bar(x + width * pid, counts, width, label=f"Player {pid} ({strategy}, {winrate:.1f}%)")
+
         ax.set_xlabel(f"{combo}-Actions")
         ax.set_ylabel("Relative Häufigkeit (%)")
-        ax.set_title(f"{combo}-Action-Verteilung pro Spieler")
+        ax.set_title(f"{combo_plot_index[combo]} - {combo}-Action-Verteilung pro Spieler")
         ax.set_xticks(x + width * 1.5)
         ax.set_xticklabels(labels, rotation=90)
-        ax.set_ylim(0, max(1, max_height * 1.1))
+        rounded_top = math.ceil(max(max_height * 1.2, 0.05) * 20) / 20
+        ax.set_ylim(0, rounded_top)
         ax.legend()
         fig.tight_layout()
-        plt.savefig(os.path.join(eval_subdir, f"aktionsverteilung_v{VERSION_NUM}_{combo.lower()}_detailliert.jpg"))
-
-    # === 📊 Kombotypen-Anteil pro Spieler ===
-    combo_totals = {pid: {ctype: 0 for ctype in combo_labels} for pid in range(4)}
-    for pid in range(4):
-        for aid, count in action_counts[pid].items():
-            combo = action_types.get(aid)
-            if combo:
-                combo_totals[pid][combo] += count
-    x = np.arange(4)
-    fig, ax = plt.subplots(figsize=(10, 6))
-    for i, combo in enumerate(combo_labels):
-        counts = []
-        for pid in range(4):
-            total = sum(combo_totals[pid].values()) or 1
-            percent = 100 * combo_totals[pid][combo] / total
-            counts.append(percent)
-        ax.bar(x + i * width, counts, width, label=combo)
-    ax.set_xlabel("Spieler")
-    ax.set_ylabel("Anteil an allen Aktionen (%)")
-    ax.set_title("Anteil gespielter Singles, Pairs, Triples und Quads pro Spieler")
-    ax.set_xticks(x + width * 1.5)
-    ax.set_xticklabels([f"Player {i}" for i in range(4)])
-    ax.set_ylim(0, 100)
-    ax.legend()
-    fig.tight_layout()
-    plt.savefig(os.path.join(eval_subdir, f"aktionsverteilung_v{VERSION_NUM}_kombotypen_anteile.jpg"))
-
-    # === 📊 Pass vs. Play Plot (nebeneinander) ===
-    pass_stats = {pid: {"Pass": 0, "Play": 0} for pid in range(4)}
-    dummy_state = game.new_initial_state()
-    action_labels_map = {}
-    for aid in range(num_actions):
-        try:
-            label = dummy_state.action_to_string(0, aid)
-            action_labels_map[aid] = "Pass" if "Pass" in label else "Play"
-        except:
-            continue
-    for pid in range(4):
-        for aid, count in action_counts[pid].items():
-            label = action_labels_map.get(aid, "Play")
-            pass_stats[pid][label] += count
-    play_counts, pass_counts = [], []
-    for pid in range(4):
-        total = sum(pass_stats[pid].values()) or 1
-        play_counts.append(100 * pass_stats[pid]["Play"] / total)
-        pass_counts.append(100 * pass_stats[pid]["Pass"] / total)
-    x = np.arange(4)
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.bar(x - width / 2, play_counts, width, label="Play", color="#1f77b4")
-    ax.bar(x + width / 2, pass_counts, width, label="Pass", color="#d62728")
-    ax.set_ylabel("Anteil an allen Aktionen (%)")
-    ax.set_xlabel("Spieler")
-    ax.set_title("Anteil von Pass vs. Spiel-Aktionen pro Spieler")
-    ax.set_xticks(x)
-    ax.set_xticklabels([f"Player {i}" for i in range(4)])
-    ax.set_ylim(0, 100)
-    ax.legend()
-    fig.tight_layout()
-    plt.savefig(os.path.join(eval_subdir, f"aktionsverteilung_v{VERSION_NUM}_pass_vs_play.jpg"))
+        filename = f"{combo_plot_index[combo]}_aktionsverteilung_v{VERSION_NUM}_{combo.lower()}_detailliert.jpg"
+        plt.savefig(os.path.join(eval_subdir, filename))
 
     print("✅ Alle Plots erfolgreich gespeichert!")
+
 
