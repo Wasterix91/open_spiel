@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import torch
 import datetime
+import matplotlib.pyplot as plt
 import pyspiel
 from open_spiel.python import rl_environment
 import ppo_local_2 as ppo
@@ -40,9 +41,9 @@ game_settings = {
     "shuffle_cards": True,
     "single_card_mode": False
 }
-NUM_EPISODES = 20_000
-EVAL_INTERVAL = 200
-EVAL_EPISODES = 50
+NUM_EPISODES = 2_500
+EVAL_INTERVAL = 50
+EVAL_EPISODES = 10_000
 
 # === Spiel und Environment ===
 game = pyspiel.load_game("president", game_settings)
@@ -84,8 +85,9 @@ df = pd.DataFrame([metadata])
 df.to_csv(csv_file, index=False, columns=columns_order)
 print(f"📄 Konfiguration gespeichert unter: {csv_file}")
 
-
 # === Trainingsloop ===
+winrates = []  # Zum Plotten der Lernkurve
+
 for episode in range(1, NUM_EPISODES + 1):
     time_step = env.reset()
     total_reward = 0
@@ -109,7 +111,6 @@ for episode in range(1, NUM_EPISODES + 1):
             agent._buffer.rewards[-1] = reward
             total_reward += reward
 
-    # Bonus für Endplatzierung
     final_scores = time_step.rewards
     player_score = final_scores[0]
     if player_score == max(final_scores):
@@ -121,10 +122,9 @@ for episode in range(1, NUM_EPISODES + 1):
     agent.step(time_step, [0])
     agent.train()
 
-    if episode % 100 == 0:
-        print(f"[{episode}] Training abgeschlossen.")
+    """     if episode % 100 == 0:
+        print(f"[{episode}] Training abgeschlossen.") """
 
-    # === Evaluation gegen Random-Gegner ===
     if episode % EVAL_INTERVAL == 0:
         wins = 0
         for _ in range(EVAL_EPISODES):
@@ -135,18 +135,14 @@ for episode in range(1, NUM_EPISODES + 1):
                 if pid == 0:
                     obs = state.information_state_tensor(0)
                     logits = agent._policy(torch.tensor(obs, dtype=torch.float32)).detach().numpy()
-
                     masked = np.zeros_like(logits)
                     masked[legal] = logits[legal]
                     masked = np.nan_to_num(masked, nan=0.0)
-
                     if masked.sum() <= 0 or np.any(np.isnan(masked)):
                         probs = np.zeros_like(logits)
                         probs[legal] = 1.0 / len(legal)
                     else:
                         probs = masked / masked.sum()
-
-                    probs = probs / probs.sum()
                     action = np.random.choice(len(probs), p=probs)
                 else:
                     action = np.random.choice(legal)
@@ -156,10 +152,22 @@ for episode in range(1, NUM_EPISODES + 1):
                 wins += 1
 
         winrate = 100 * wins / EVAL_EPISODES
+        winrates.append(winrate)  # Für Plot
         print(f"✅ Evaluation nach {episode} Episoden: Winrate gegen Random = {winrate:.1f}%")
-
         agent.save(MODEL_PATH)
 
 # === Finales Modell speichern ===
 agent.save(MODEL_PATH)
 print(f"✅ Finales Modell gespeichert unter: {MODEL_PATH}")
+
+# === Lernkurve plotten ===
+eval_intervals = list(range(EVAL_INTERVAL, NUM_EPISODES + 1, EVAL_INTERVAL))
+plt.figure(figsize=(10, 6))
+plt.plot(eval_intervals, winrates, marker='o')
+plt.title("Lernkurve – Winrate gegen Random-Gegner")
+plt.xlabel("Trainings-Episode")
+plt.ylabel("Winrate (%)")
+plt.grid(True)
+plt.tight_layout()
+plt.savefig(os.path.join(MODEL_BASE, "lernkurve.png"))
+plt.show()

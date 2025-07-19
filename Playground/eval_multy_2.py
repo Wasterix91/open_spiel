@@ -22,9 +22,9 @@ game = pyspiel.load_game(
 )
 
 # === ⚙️ Evaluationsparameter ===========================
-VERSION_NUM = "03"
-NUM_EPISODES = 1_000
-PLAYER_TYPES = ["ppo", "random", "random", "random"]  # Alternativen: random, max_combo, single_only, smart, aggressive
+VERSION_NUM = "17"
+NUM_EPISODES = 10_000
+PLAYER_TYPES = ["ppo", "random2", "random2", "random2"]  # Alternativen: random, random2, max_combo, single_only, smart, aggressive
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 MODEL_DIR = os.path.join(base_dir, f"models/selfplay_president_{VERSION_NUM}/train")
@@ -81,8 +81,17 @@ def single_only_strategy(state):
     singles = [x for x in decoded if "Single" in x[1]]
     return min(singles, key=lambda x: x[0])[0] if singles else 0
 
-def random_action_strategy(state):
+# Komplett Random, einschließlich Pass
+def random_action_strategy(state): 
     return np.random.choice(state.legal_actions())
+
+# Spielt nur Pass wenn es erlaubt ist
+def random2_action_strategy(state):
+    legal = state.legal_actions()
+    if len(legal) > 1 and 0 in legal:
+        legal = [a for a in legal if a != 0]
+    return np.random.choice(legal)
+
 
 def smart_strategy(state):
     decoded = decode_actions(state)
@@ -98,6 +107,7 @@ def smart_strategy(state):
 
 strategy_map = {
     "random": random_action_strategy,
+    "random2": random2_action_strategy,
     "max_combo": max_combo_strategy,
     "single_only": single_only_strategy,
     "smart": smart_strategy,
