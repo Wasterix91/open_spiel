@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import torch
 import datetime
+import matplotlib.pyplot as plt
 import pyspiel
 from open_spiel.python import rl_environment
 import ppo_local_2 as ppo
@@ -33,16 +34,16 @@ os.makedirs(MODEL_BASE, exist_ok=True)
 print(f"📁 Neue Trainingsversion: {VERSION}")
 
 # === Spielparameter & Gegnerkonfiguration ===
-player_types = ["ppo", "random", "random", "random"]
+player_types = ["ppo", "ppo", "ppo", "ppo"]
 game_settings = {
     "num_players": 4,
     "deck_size": "32",
     "shuffle_cards": True,
     "single_card_mode": False
 }
-NUM_EPISODES = 20_000
+NUM_EPISODES = 10_000
 EVAL_INTERVAL = 200
-EVAL_EPISODES = 50
+EVAL_EPISODES = 1_000
 
 # === Spiel und Environment ===
 game = pyspiel.load_game("president", game_settings)
@@ -83,48 +84,51 @@ columns_order = [
 df = pd.DataFrame([metadata])
 df.to_csv(csv_file, index=False, columns=columns_order)
 print(f"📄 Konfiguration gespeichert unter: {csv_file}")
+# === PPO-Agenten für alle Spieler ===
+agents = [ppo.PPOAgent(info_state_size, num_actions) for _ in range(4)]
 
+# === Konfigurierbare Gegnerstrategie für Evaluation ===
+EVAL_OPPONENT_STRATEGY = "random2"  # "random" oder "random2"
+
+# echtes Random. Zufällige Auswahl inklusive Pass
+def random_action_strategy(state):
+    return np.random.choice(state.legal_actions())
+
+# Aggressives Random. Pass wird nur gewählt wenn nicht anders möglich, sonst Random
+def random2_action_strategy(state):
+    legal = state.legal_actions()
+    if len(legal) > 1 and 0 in legal:
+        legal = [a for a in legal if a != 0]
+    return np.random.choice(legal)
+
+# Strategieauswahl
+strategy_map = {
+    "random": random_action_strategy,
+    "random2": random2_action_strategy
+}
+opponent_strategy = strategy_map[EVAL_OPPONENT_STRATEGY]
 
 # === Trainingsloop ===
+winrates = []
+
 for episode in range(1, NUM_EPISODES + 1):
     time_step = env.reset()
-    total_reward = 0
 
     while not time_step.last():
         player = time_step.observations["current_player"]
         legal = time_step.observations["legal_actions"][player]
 
-        if player == 0:
-            agent_out = agent.step(time_step, legal)
-            action = agent_out.action if agent_out else np.random.choice(legal)
-        else:
-            action = np.random.choice(legal)
-
+        agent_out = agents[player].step(time_step, legal)
+        action = agent_out.action if agent_out else np.random.choice(legal)
         time_step = env.step([action])
 
-        if player == 0:
-            hand = time_step.observations["info_state"][0]
-            hand_size = sum(hand[:8])  # 8 Ränge bei 32er Deck
-            reward = -hand_size
-            agent._buffer.rewards[-1] = reward
-            total_reward += reward
+    # Endreward pro Spieler setzen
+    for i in range(4):
+        agents[i]._buffer.rewards[-1] = time_step.rewards[i]
+        agents[i].step(time_step, [0])  # Abschlussstep
+        agents[i].train()
 
-    # Bonus für Endplatzierung
-    final_scores = time_step.rewards
-    player_score = final_scores[0]
-    if player_score == max(final_scores):
-        total_reward += 10
-    elif player_score == min(final_scores):
-        total_reward -= 5
-
-    agent._buffer.rewards[-1] = total_reward
-    agent.step(time_step, [0])
-    agent.train()
-
-    if episode % 100 == 0:
-        print(f"[{episode}] Training abgeschlossen.")
-
-    # === Evaluation gegen Random-Gegner ===
+    # === Evaluation ===
     if episode % EVAL_INTERVAL == 0:
         wins = 0
         for _ in range(EVAL_EPISODES):
@@ -132,34 +136,45 @@ for episode in range(1, NUM_EPISODES + 1):
             while not state.is_terminal():
                 pid = state.current_player()
                 legal = state.legal_actions(pid)
-                if pid == 0:
-                    obs = state.information_state_tensor(0)
-                    logits = agent._policy(torch.tensor(obs, dtype=torch.float32)).detach().numpy()
 
+                if pid == 0:
+                    # PPO-Agent
+                    obs = state.information_state_tensor(pid)
+                    logits = agents[0]._policy(torch.tensor(obs, dtype=torch.float32)).detach().numpy()
                     masked = np.zeros_like(logits)
                     masked[legal] = logits[legal]
                     masked = np.nan_to_num(masked, nan=0.0)
-
                     if masked.sum() <= 0 or np.any(np.isnan(masked)):
                         probs = np.zeros_like(logits)
                         probs[legal] = 1.0 / len(legal)
                     else:
                         probs = masked / masked.sum()
-
-                    probs = probs / probs.sum()
                     action = np.random.choice(len(probs), p=probs)
                 else:
-                    action = np.random.choice(legal)
+                    # Gegner: Random oder Random2
+                    action = opponent_strategy(state)
+
                 state.apply_action(action)
 
             if state.returns()[0] == max(state.returns()):
                 wins += 1
 
         winrate = 100 * wins / EVAL_EPISODES
-        print(f"✅ Evaluation nach {episode} Episoden: Winrate gegen Random = {winrate:.1f}%")
-
-        agent.save(MODEL_PATH)
+        winrates.append(winrate)
+        print(f"✅ Evaluation nach {episode} Episoden: Winrate gegen {EVAL_OPPONENT_STRATEGY} = {winrate:.1f}%")
 
 # === Finales Modell speichern ===
-agent.save(MODEL_PATH)
+agents[0].save(MODEL_PATH)
 print(f"✅ Finales Modell gespeichert unter: {MODEL_PATH}")
+
+# === Lernkurve plotten ===
+eval_intervals = list(range(EVAL_INTERVAL, NUM_EPISODES + 1, EVAL_INTERVAL))
+plt.figure(figsize=(10, 6))
+plt.plot(eval_intervals, winrates, marker='o')
+plt.title(f"Lernkurve – Winrate von Player 0 gegen {EVAL_OPPONENT_STRATEGY}")
+plt.xlabel("Trainings-Episode")
+plt.ylabel("Winrate (%)")
+plt.grid(True)
+plt.tight_layout()
+plt.savefig(os.path.join(MODEL_BASE, "lernkurve.png"))
+plt.show()

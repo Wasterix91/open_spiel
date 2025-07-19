@@ -1,0 +1,2 @@
+version,timestamp,agent_type,num_episodes,eval_interval,eval_episodes,num_players,deck_size,shuffle_cards,single_card_mode,observation_dim,num_actions,player_types,model_path,model_version_dir
+12,2025-07-19 20:31:50,PPO,10000,200,1000,4,32,True,False,14,33,"ppo,ppo,ppo,ppo",/home/wasterix/OpenSpiel/open_spiel/Playground/models/selfplay_president_12/train/selfplay_president_12_agent_p0,/home/wasterix/OpenSpiel/open_spiel/Playground/models/selfplay_president_12/train
