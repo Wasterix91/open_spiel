@@ -1,0 +1,5 @@
+version,eval_id,player,strategy,win_rate,avg_return,total_points,num_wins,num_starts
+05,3,0,ppo,34.23,1.77,17730.0,3423,2546
+05,3,1,random2,25.02,1.55,15498.0,2502,2450
+05,3,2,random2,21.13,1.38,13786.0,2113,2539
+05,3,3,random2,19.62,1.3,12986.0,1962,2465

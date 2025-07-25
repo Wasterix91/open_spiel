@@ -1,0 +1,2 @@
+version,timestamp,agent_type,num_episodes,eval_interval,eval_episodes,num_players,deck_size,shuffle_cards,single_card_mode,observation_dim,num_actions,player_types,model_path,model_version_dir
+02,2025-07-21 12:43:56,PPO,4000,200,10000,4,32,True,False,14,33,"ppo,ppo,ppo,ppo",/home/wasterix/OpenSpiel/open_spiel/Playground/models/ppo_model_02/train/ppo_model_02_agent_p0,/home/wasterix/OpenSpiel/open_spiel/Playground/models/ppo_model_02/train

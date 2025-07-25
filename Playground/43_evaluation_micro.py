@@ -2,7 +2,7 @@ import pyspiel
 import numpy as np
 import torch
 import collections
-import ppo_local_2 as ppo  # <- ggf. anpassen
+import ppo_agent as ppo  # <- ggf. anpassen
 
 # === 1️⃣ Spiel erstellen ===
 game = pyspiel.load_game(
@@ -27,9 +27,12 @@ print(f"shuffle_cards: {params['shuffle_cards']}")
 print(f"single_card_mode: {params['single_card_mode']}")
 print(f"deck_size: {params['deck_size']}")
 
-# === 2️⃣ Spieler-Strategien definieren ===
-PLAYER_TYPES = ["ppo", "random", "random", "random"]  # ppo, random, max_combo, single_only, smart
-MODEL_DIR = "/home/wasterix/OpenSpiel/open_spiel/Playground/models/selfplay_president_05/train"
+# === 🔢 Versionsnummer definieren ===
+VERSION_NUM = "18"  # z. B. Eingabe über CLI oder oben ändern
+
+# === 2️⃣ Agenten vorbereiten ===
+PLAYER_TYPES = ["ppo", "random", "random", "random"]
+MODEL_DIR = f"/home/wasterix/OpenSpiel/open_spiel/Playground/models/ppo_model_{VERSION_NUM}/train"
 
 # Dynamisch basierend auf deck_size
 def get_ranks(deck_size):
@@ -109,7 +112,7 @@ for pid, ptype in enumerate(PLAYER_TYPES):
             info_state_size=game.information_state_tensor_shape()[0],
             num_actions=game.num_distinct_actions()
         )
-        model_path = f"{MODEL_DIR}/selfplay_president_05_agent_p{pid}"
+        model_path = f"{MODEL_DIR}/ppo_model_{VERSION_NUM}_agent_p{pid}"
         agent.restore(model_path)
         agents.append(agent)
     elif ptype in strategy_map:

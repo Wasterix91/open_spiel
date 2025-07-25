@@ -5,7 +5,7 @@ import pyspiel
 import torch
 import collections
 from collections import defaultdict
-import ppo_local_2 as ppo  # ggf. anpassen
+import open_spiel.Playground.ppo_agent as ppo  # ggf. anpassen
 
 
 

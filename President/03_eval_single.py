@@ -28,7 +28,7 @@ print(f"single_card_mode: {params['single_card_mode']}")
 print(f"deck_size: {params['deck_size']}")
 
 # === 🔢 Versionsnummer definieren ===
-VERSION_NUM = "03"  # z. B. Eingabe über CLI oder oben ändern
+VERSION_NUM = "18"  # z. B. Eingabe über CLI oder oben ändern
 
 # === 2️⃣ Agenten vorbereiten ===
 PLAYER_TYPES = ["ppo", "random", "random", "random"]
