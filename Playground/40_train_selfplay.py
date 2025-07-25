@@ -7,7 +7,7 @@ import datetime
 import matplotlib.pyplot as plt
 import pyspiel
 from open_spiel.python import rl_environment
-import ppo_local_2 as ppo
+import ppo_agent as ppo
 
 # === Relativer Basispfad zum Speicherort des Skripts ===
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -15,7 +15,7 @@ MODELS_ROOT = os.path.join(SCRIPT_DIR, "models")
 
 # === Automatische Versionserkennung ===
 def find_next_version(base_dir):
-    pattern = re.compile(r"selfplay_president_(\d{2})$")
+    pattern = re.compile(r"ppo_model_(\d{2})$")
     existing = [
         int(m.group(1))
         for m in (
@@ -28,22 +28,22 @@ def find_next_version(base_dir):
     return f"{max(existing) + 1:02d}" if existing else "01"
 
 VERSION = find_next_version(MODELS_ROOT)
-MODEL_BASE = os.path.join(MODELS_ROOT, f"selfplay_president_{VERSION}", "train")
-MODEL_PATH = os.path.join(MODEL_BASE, f"selfplay_president_{VERSION}_agent_p0")
+MODEL_BASE = os.path.join(MODELS_ROOT, f"ppo_model_{VERSION}", "train")
+MODEL_PATH = os.path.join(MODEL_BASE, f"ppo_model_{VERSION}_agent_p0")
 os.makedirs(MODEL_BASE, exist_ok=True)
 print(f"📁 Neue Trainingsversion: {VERSION}")
 
 # === Spielparameter & Gegnerkonfiguration ===
-player_types = ["ppo", "ppo", "ppo", "ppo"]
+player_types = ["ppo", "random", "random", "random"]
 game_settings = {
     "num_players": 4,
     "deck_size": "32",
     "shuffle_cards": True,
     "single_card_mode": False
 }
-NUM_EPISODES = 10_000
+NUM_EPISODES = 4_000
 EVAL_INTERVAL = 200
-EVAL_EPISODES = 1_000
+EVAL_EPISODES = 10_000
 
 # === Spiel und Environment ===
 game = pyspiel.load_game("president", game_settings)
@@ -73,7 +73,7 @@ metadata = {
     "model_version_dir": MODEL_BASE
 }
 
-# === Speichere nur aktuelle Konfiguration in selfplay_president_XX/training_runs.csv ===
+# === Speichere nur aktuelle Konfiguration in ppo_model_XX/training_runs.csv ===
 csv_file = os.path.join(os.path.dirname(MODEL_BASE), "training_runs.csv")
 columns_order = [
     "version", "timestamp", "agent_type", "num_episodes", "eval_interval", "eval_episodes",
@@ -88,7 +88,7 @@ print(f"📄 Konfiguration gespeichert unter: {csv_file}")
 agents = [ppo.PPOAgent(info_state_size, num_actions) for _ in range(4)]
 
 # === Konfigurierbare Gegnerstrategie für Evaluation ===
-EVAL_OPPONENT_STRATEGY = "random2"  # "random" oder "random2"
+EVAL_OPPONENT_STRATEGY = "random"  # "random" oder "random2"
 
 # echtes Random. Zufällige Auswahl inklusive Pass
 def random_action_strategy(state):

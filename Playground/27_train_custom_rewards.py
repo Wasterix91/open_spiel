@@ -3,7 +3,7 @@ import re
 import numpy as np
 import pyspiel
 from open_spiel.python import rl_environment
-import ppo_local_2 as ppo
+import open_spiel.Playground.ppo_agent as ppo
 from tqdm import trange
 import matplotlib.pyplot as plt
 import shutil

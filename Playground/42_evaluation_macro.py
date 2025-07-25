@@ -6,7 +6,7 @@ import torch
 import collections
 from collections import defaultdict
 import pandas as pd
-import ppo_local_2 as ppo  # ggf. anpassen
+import ppo_agent as ppo  # ggf. anpassen
 import matplotlib.pyplot as plt
 import math
 
@@ -22,12 +22,13 @@ game = pyspiel.load_game(
 )
 
 # === ⚙️ Evaluationsparameter ===========================
-VERSION_NUM = "17"
+VERSION_NUM = "05"
 NUM_EPISODES = 10_000
 PLAYER_TYPES = ["ppo", "random2", "random2", "random2"]  # Alternativen: random, random2, max_combo, single_only, smart, aggressive
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
-MODEL_DIR = os.path.join(base_dir, f"models/selfplay_president_{VERSION_NUM}/train")
+MODEL_DIR = os.path.join(base_dir, f"models/ppo_model_{VERSION_NUM}/train")
+# MODEL_DIR = os.path.join(base_dir, f"models/selfplay_president_{VERSION_NUM}/train")
 MODEL_DIR = os.path.normpath(MODEL_DIR)
 
 GENERATE_PLOTS = True  # False → keine Plots erzeugen
@@ -121,7 +122,7 @@ for pid, ptype in enumerate(PLAYER_TYPES):
             info_state_size=game.information_state_tensor_shape()[0],
             num_actions=game.num_distinct_actions()
         )
-        model_path = f"{MODEL_DIR}/selfplay_president_{VERSION_NUM}_agent_p{pid}"
+        model_path = f"{MODEL_DIR}/ppo_model_{VERSION_NUM}_agent_p{pid}"
         #model_path = f"{MODEL_DIR}/checkpoint_ep5000_p0"
         agent.restore(model_path)
         agents.append(agent)
@@ -218,18 +219,50 @@ for pid in range(4):
     share = 100 * count / total_starts if total_starts else 0
     print(f"Player {pid} started {count} times ({share:.2f}%)")
 
+# === 🔧 Eval-Verzeichnis vorbereiten (vor CSV-Speicherung!) ===
+EVAL_ROOT = os.path.join(base_dir, f"models/ppo_model_{VERSION_NUM}/eval")
+os.makedirs(EVAL_ROOT, exist_ok=True)
+
+existing_dirs = sorted([d for d in os.listdir(EVAL_ROOT) if d.isdigit()])
+next_eval_num = int(existing_dirs[-1]) + 1 if existing_dirs else 1
+
+eval_subdir = os.path.join(EVAL_ROOT, f"{next_eval_num:02d}")
+os.makedirs(eval_subdir, exist_ok=True)  # Wichtig!
+
+
+# === 6️⃣ Ergebnisse als CSV speichern ===
+summary_path = os.path.join(eval_subdir, f"evaluation_summary_v{VERSION_NUM}.csv")
+
+summary_rows = []
+for pid in range(4):
+    avg_return = returns_total[pid] / NUM_EPISODES
+    total_points = points_total[pid]
+    wins = win_counts[pid]
+    win_rate = 100 * wins / NUM_EPISODES
+    starts = start_counts[pid]
+    starts_percent = 100 * starts / NUM_EPISODES
+    strategy = PLAYER_TYPES[pid]
+
+    row = {
+    "version": VERSION_NUM,
+    "eval_id": next_eval_num,
+    "player": pid,
+    "strategy": strategy,
+    "win_rate_percent": round(win_rate, 2),
+    "avg_return": round(avg_return, 2),
+    "total_points": round(total_points, 1),
+    "num_wins": wins,
+    "num_starts": starts,
+    "start_rate_percent": round(starts_percent, 2)
+    }
+    summary_rows.append(row)
+
+df_summary = pd.DataFrame(summary_rows)
+df_summary.to_csv(summary_path, index=False)
+print(f"📄 Evaluationsergebnisse gespeichert unter: {summary_path}")
+
 
 if GENERATE_PLOTS:
-    import math
-
-    EVAL_ROOT = os.path.join(base_dir, f"models/selfplay_president_{VERSION_NUM}/eval")
-    os.makedirs(EVAL_ROOT, exist_ok=True)
-
-    existing_dirs = sorted([d for d in os.listdir(EVAL_ROOT) if d.isdigit()])
-    next_eval_num = int(existing_dirs[-1]) + 1 if existing_dirs else 1
-
-    eval_subdir = os.path.join(EVAL_ROOT, f"{next_eval_num:02d}")
-    os.makedirs(eval_subdir)
     print(f"📁 Ergebnisse und Plots werden gespeichert in: {eval_subdir}")
 
     # === 00 - Aktionsverteilung als Tabelle ===

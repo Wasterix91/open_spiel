@@ -3,7 +3,7 @@ import re
 import numpy as np
 import pyspiel
 from open_spiel.python import rl_environment
-import ppo_local_2 as ppo
+import ppo_agent as ppo
 import torch
 
 # === Trainingsparameter ===
@@ -14,7 +14,7 @@ EVAL_EPISODES = 50
 # === Speicherpfad an Skript #4 anpassen ===
 # === Automatische Versionserkennung ===
 def find_next_version(base_dir="models"):
-    pattern = re.compile(r"selfplay_president_(\d{2})$")
+    pattern = re.compile(r"ppo_model_(\d{2})$")
     existing = [
         int(m.group(1))
         for m in (
@@ -26,8 +26,8 @@ def find_next_version(base_dir="models"):
     return f"{max(existing) + 1:02d}" if existing else "01"
 
 VERSION = find_next_version("models")
-MODEL_BASE = os.path.join("models", f"selfplay_president_{VERSION}", "train")
-MODEL_PATH = os.path.join(MODEL_BASE, f"selfplay_president_{VERSION}_agent_p0")
+MODEL_BASE = os.path.join("models", f"ppo_model_{VERSION}", "train")
+MODEL_PATH = os.path.join(MODEL_BASE, f"ppo_model_{VERSION}_agent_p0")
 os.makedirs(MODEL_BASE, exist_ok=True)
 
 print(f"📁 Neue Trainingsversion: {VERSION}")
