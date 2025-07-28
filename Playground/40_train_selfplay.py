@@ -34,16 +34,16 @@ os.makedirs(MODEL_BASE, exist_ok=True)
 print(f"📁 Neue Trainingsversion: {VERSION}")
 
 # === Spielparameter & Gegnerkonfiguration ===
-player_types = ["ppo", "random", "random", "random"]
+player_types = ["ppo", "ppo", "ppo", "ppo"]
 game_settings = {
     "num_players": 4,
-    "deck_size": "32",
+    "deck_size": "64",
     "shuffle_cards": True,
     "single_card_mode": False
 }
-NUM_EPISODES = 4_000
-EVAL_INTERVAL = 200
-EVAL_EPISODES = 10_000
+NUM_EPISODES = 20_000
+EVAL_INTERVAL = 500
+EVAL_EPISODES = 500
 
 # === Spiel und Environment ===
 game = pyspiel.load_game("president", game_settings)
@@ -177,4 +177,4 @@ plt.ylabel("Winrate (%)")
 plt.grid(True)
 plt.tight_layout()
 plt.savefig(os.path.join(MODEL_BASE, "lernkurve.png"))
-plt.show()
+

@@ -1,0 +1,5 @@
+version,eval_id,player,strategy,win_rate_percent,avg_return,total_points,num_wins,num_starts,start_rate_percent
+10,4,0,ppo,15.62,1.16,11569.0,1562,2475,24.75
+10,4,1,smart,29.6,1.61,16090.0,2960,2462,24.62
+10,4,2,smart,28.01,1.62,16230.0,2801,2500,25.0
+10,4,3,smart,26.77,1.61,16111.0,2677,2563,25.63

@@ -14,7 +14,7 @@ import math
 game = pyspiel.load_game(
     "president",
     {
-        "deck_size": "32",
+        "deck_size": "64",
         "shuffle_cards": True,
         "single_card_mode": False,
         "num_players": 4
@@ -22,9 +22,9 @@ game = pyspiel.load_game(
 )
 
 # === ⚙️ Evaluationsparameter ===========================
-VERSION_NUM = "05"
+VERSION_NUM = "10"
 NUM_EPISODES = 10_000
-PLAYER_TYPES = ["ppo", "random2", "random2", "random2"]  # Alternativen: random, random2, max_combo, single_only, smart, aggressive
+PLAYER_TYPES = ["ppo", "smart", "smart", "smart"]  # Alternativen: random, random2, max_combo, single_only, smart, aggressive
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 MODEL_DIR = os.path.join(base_dir, f"models/ppo_model_{VERSION_NUM}/train")
