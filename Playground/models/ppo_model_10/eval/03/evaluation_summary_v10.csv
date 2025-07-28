@@ -1,0 +1,5 @@
+version,eval_id,player,strategy,win_rate_percent,avg_return,total_points,num_wins,num_starts,start_rate_percent
+10,3,0,ppo,95.7,2.94,29384.0,9570,2523,25.23
+10,3,1,aggressive,1.23,1.03,10305.0,123,2472,24.72
+10,3,2,aggressive,1.42,1.02,10157.0,142,2541,25.41
+10,3,3,aggressive,1.65,1.02,10154.0,165,2464,24.64

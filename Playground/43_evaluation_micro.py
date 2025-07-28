@@ -8,7 +8,7 @@ import ppo_agent as ppo  # <- ggf. anpassen
 game = pyspiel.load_game(
     "president",
     {
-        "deck_size": "32",
+        "deck_size": "64",
         "shuffle_cards": True,
         "single_card_mode": False,
         "num_players": 4
@@ -28,10 +28,10 @@ print(f"single_card_mode: {params['single_card_mode']}")
 print(f"deck_size: {params['deck_size']}")
 
 # === 🔢 Versionsnummer definieren ===
-VERSION_NUM = "18"  # z. B. Eingabe über CLI oder oben ändern
+VERSION_NUM = "08"  # z. B. Eingabe über CLI oder oben ändern
 
 # === 2️⃣ Agenten vorbereiten ===
-PLAYER_TYPES = ["ppo", "random", "random", "random"]
+PLAYER_TYPES = ["ppo", "random2", "random2", "random2"]
 MODEL_DIR = f"/home/wasterix/OpenSpiel/open_spiel/Playground/models/ppo_model_{VERSION_NUM}/train"
 
 # Dynamisch basierend auf deck_size
@@ -98,8 +98,16 @@ def smart_strategy(state):
             return min(groups[size], key=lambda x: parse_rank(x[1]))[0]
     return 0
 
+# Spielt nur Pass wenn es erlaubt ist
+def random2_action_strategy(state):
+    legal = state.legal_actions()
+    if len(legal) > 1 and 0 in legal:
+        legal = [a for a in legal if a != 0]
+    return np.random.choice(legal)
+
 strategy_map = {
     "random": random_action,
+    "random2": random2_action_strategy,
     "max_combo": max_combo,
     "single_only": single_only,
     "smart": smart_strategy,
