@@ -1,54 +1,60 @@
 import os
-import re
 import numpy as np
 import pyspiel
 import torch
 import collections
-from collections import defaultdict
 import pandas as pd
-import ppo_agent as ppo  # ggf. anpassen
 import matplotlib.pyplot as plt
 import math
 
-# === 🧠 Spielkonfiguration ============================
-game = pyspiel.load_game(
-    "president",
-    {
-        "deck_size": "64",
-        "shuffle_cards": True,
-        "single_card_mode": False,
-        "num_players": 4
-    }
-)
+import ppo_agent as ppo
+import dqn_agent as dqn
+import td_agent as td  # ✅ Neu hinzugefügt
+from collections import defaultdict
 
-# === ⚙️ Evaluationsparameter ===========================
-VERSION_NUM = "17"
+# === Konfiguration ===
 NUM_EPISODES = 10_000
-PLAYER_TYPES = ["smart", "random2", "random2", "random2"]  # Alternativen: random, random2, max_combo, single_only, smart, aggressive
+PLAYER_CONFIG = [
+    {"name": "Player0", "type": "ppo", "version": "17"},
+    {"name": "Player1", "type": "smart"},
+    {"name": "Player2", "type": "smart"},
+    {"name": "Player3", "type": "smart"}
+]
 
+
+GENERATE_PLOTS = True
+EVAL_OUTPUT = True
+
+# === Speicherlogik ===
 base_dir = os.path.dirname(os.path.abspath(__file__))
-MODEL_DIR = os.path.join(base_dir, f"models/ppo_model_{VERSION_NUM}/train")
-# MODEL_DIR = os.path.join(base_dir, f"models/selfplay_president_{VERSION_NUM}/train")
-MODEL_DIR = os.path.normpath(MODEL_DIR)
+eval_macro_root = os.path.join(base_dir, "eval_macro")
+os.makedirs(eval_macro_root, exist_ok=True)
 
-GENERATE_PLOTS = True  # False → keine Plots erzeugen
+existing_macro_dirs = sorted([d for d in os.listdir(eval_macro_root) if d.startswith("eval_macro_")])
+next_macro_num = int(existing_macro_dirs[-1].split("_")[-1]) + 1 if existing_macro_dirs else 1
+macro_dir = os.path.join(eval_macro_root, f"eval_macro_{next_macro_num:02d}")
+os.makedirs(macro_dir, exist_ok=True)
 
-# === 🖨️ Übersichtsausgabe =============================
-print("=== 🧪 President Game Evaluation ===")
-print(f"🎮 Spielerzahl:           {game.num_players()}  → {PLAYER_TYPES}")
-print(f"🤖 PPO-Agent Version:     v{VERSION_NUM}")
-print(f"🔢 Distinct Actions:      {game.num_distinct_actions()}")
-print(f"🧠 Observation Tensor:    {', '.join(map(str, game.observation_tensor_shape()))}")
-print(f"🎲 Anzahl Episoden:       {NUM_EPISODES}")
-print(f"📊 Plots aktiv:           {GENERATE_PLOTS}")
+csv_dir = os.path.join(macro_dir, "csv")
+plot_dir = os.path.join(macro_dir, "plots")
+os.makedirs(csv_dir, exist_ok=True)
+os.makedirs(plot_dir, exist_ok=True)
 
+pd.DataFrame(PLAYER_CONFIG).to_csv(os.path.join(macro_dir, "player_config.csv"), index=False)
 
-print("\n=== Start Evaluation ===")
+# === Spielinitialisierung ===
+game = pyspiel.load_game("president", {
+    "deck_size": "64",
+    "shuffle_cards": True,
+    "single_card_mode": False,
+    "num_players": 4
+})
 
 params = game.get_parameters()
 RANKS = ["7", "8", "9", "10", "J", "Q", "K", "A"]
 RANK_TO_NUM = {rank: i for i, rank in enumerate(RANKS)}
 
+# === Strategien ===
 def parse_combo_size(text):
     if "Single" in text: return 1
     if "Pair" in text: return 2
@@ -115,160 +121,138 @@ strategy_map = {
     "aggressive": aggressive_strategy
 }
 
-agents = []
-for pid, ptype in enumerate(PLAYER_TYPES):
-    if ptype == "ppo":
-        agent = ppo.PPOAgent(
-            info_state_size=game.information_state_tensor_shape()[0],
-            num_actions=game.num_distinct_actions()
-        )
-        model_path = f"{MODEL_DIR}/ppo_model_{VERSION_NUM}_agent_p{pid}"
-        #model_path = f"{MODEL_DIR}/checkpoint_ep5000_p0"
-        agent.restore(model_path)
-        agents.append(agent)
-    elif ptype in strategy_map:
-        agents.append(strategy_map[ptype])
-    else:
-        raise ValueError(f"Unbekannter Spielertyp: {ptype}")
+# === Agent-Ladefunktion ===
+def load_agents(player_config, base_dir, game):
+    agents = []
+    for pid, cfg in enumerate(player_config):
+        kind = cfg["type"]
+        version = cfg.get("version", "01")
 
-# === 3️⃣ PPO-Auswahlfunktion ===
+        if kind == "ppo":
+            model_path = os.path.join(base_dir, f"models/ppo_model_{version}/train/ppo_model_{version}_agent_p{pid}")
+            agent = ppo.PPOAgent(
+                info_state_size=game.information_state_tensor_shape()[0],
+                num_actions=game.num_distinct_actions()
+            )
+            agent.restore(model_path)
+            agents.append(agent)
+
+        elif kind == "dqn":
+            model_path = os.path.join(base_dir, f"models/dqn_model_{version}/train/dqn_model_{version}_agent_p{pid}")
+            agent = dqn.DQNAgent(
+                state_size=game.observation_tensor_shape()[0],
+                num_actions=game.num_distinct_actions()
+            )
+            agent.restore(model_path)
+            agents.append(agent)
+
+        elif kind == "td":
+            model_path = os.path.join(base_dir, f"models/td_model_{version}/train/td_model_{version}_agent_p{pid}.pt")
+            agent = td.TDAgent(
+                obs_size=game.information_state_tensor_shape()[0],
+                num_actions=game.num_distinct_actions()
+            )
+            agent.load(model_path)
+            agents.append(agent)
+
+        elif kind in strategy_map:
+            agents.append(strategy_map[kind])
+
+        else:
+            raise ValueError(f"Unbekannter Agententyp: {kind}")
+    return agents
+
+# === Auswahlfunktion für Aktion ===
 def choose_policy_action(agent, state, player):
-    info_state = state.information_state_tensor(player)
-    legal_actions = state.legal_actions(player)
-    info_tensor = torch.tensor(info_state, dtype=torch.float32).to(agent.device)
-    logits = agent._policy(info_tensor).detach().cpu().numpy()
+    legal = state.legal_actions(player)
 
-    masked_logits = np.zeros_like(logits)
-    masked_logits[legal_actions] = logits[legal_actions]
+    if isinstance(agent, ppo.PPOAgent):
+        obs = state.information_state_tensor(player)
+        info_tensor = torch.tensor(obs, dtype=torch.float32).to(agent.device)
+        logits = agent._policy(info_tensor).detach().cpu().numpy()
+        masked = np.zeros_like(logits)
+        masked[legal] = logits[legal]
+        probs = masked / masked.sum() if masked.sum() > 0 else np.ones_like(masked) / len(legal)
+        return collections.namedtuple("AgentOutput", ["action"])(action=np.argmax(probs))
 
-    if masked_logits.sum() == 0:
-        probs = np.zeros_like(logits)
-        probs[legal_actions] = 1.0 / len(legal_actions)
+    elif isinstance(agent, dqn.DQNAgent):
+        obs = state.observation_tensor(player)
+        return collections.namedtuple("AgentOutput", ["action"])(action=agent.select_action(obs, legal))
+
+    elif isinstance(agent, td.TDAgent):
+        obs = state.information_state_tensor(player)
+        q_values = agent.predict(torch.tensor(obs, dtype=torch.float32))
+        legal_qs = q_values[legal]
+        return collections.namedtuple("AgentOutput", ["action"])(action=legal[torch.argmax(legal_qs).item()])
+
     else:
-        probs = masked_logits / masked_logits.sum()
+        raise ValueError("Unbekannter Agententyp bei choose_policy_action.")
 
-    legal_probs = np.array([probs[a] for a in legal_actions])
-    return collections.namedtuple("AgentOutput", ["action", "probs", "legal_actions"])(
-        action=np.argmax(probs), probs=legal_probs, legal_actions=legal_actions)
-
-# === 🧮 Aktionszählung initialisieren ===
+# === Evaluation starten ===
 action_counts = defaultdict(lambda: defaultdict(int))
-
-# === 4️⃣ Mehrere Spiele ausführen ===
+agents = load_agents(PLAYER_CONFIG, base_dir, game)
 returns_total = np.zeros(4)
-start_counts = defaultdict(int)
-win_counts = defaultdict(int)
-points_total = np.zeros(4)
+start_counts = collections.defaultdict(int)
+win_counts = collections.defaultdict(int)
 
 for episode in range(1, NUM_EPISODES + 1):
     state = game.new_initial_state()
-    start_player = state.current_player()
-    start_counts[start_player] += 1
+    start_counts[state.current_player()] += 1
 
     while not state.is_terminal():
-        player = state.current_player()
-        agent_or_strategy = agents[player]
-        if isinstance(agent_or_strategy, ppo.PPOAgent):
-            agent_out = choose_policy_action(agent_or_strategy, state, player)
-            action = agent_out.action
-        else:
-            action = agent_or_strategy(state)
-        state.apply_action(action)
+        pid = state.current_player()
+        agent = agents[pid]
 
-        # Aktion zählen
-        action_counts[player][action] += 1
+        if callable(agent):  # Random etc.
+            action = agent(state)
+        else:
+            action = choose_policy_action(agent, state, pid).action
+
+        action_counts[pid][action] += 1
+        state.apply_action(action)
+        
+
 
     final_returns = state.returns()
-
-    for pid, ret in enumerate(final_returns):
-        returns_total[pid] += ret
-        points_total[pid] += ret
-
-    winner_pid = np.argmax(final_returns)
-    win_counts[winner_pid] += 1
+    for i, ret in enumerate(final_returns):
+        returns_total[i] += ret
+    win_counts[np.argmax(final_returns)] += 1
 
     if episode % 250 == 0:
         print(f"✅ Episode {episode} abgeschlossen")
 
-# === 5️⃣ Ergebnisse anzeigen ===
-print("\n=== Auswertung nach 1000 Spielen ===")
-print("Durchschnittliche Returns pro Spieler:")
-for pid, total_return in enumerate(returns_total):
-    avg_return = total_return / NUM_EPISODES
-    print(f"Player {pid} ({PLAYER_TYPES[pid]}): Ø Return = {avg_return:.2f}")
-
-print("\nGesamte Punkte pro Spieler:")
-for pid, points in enumerate(points_total):
-    print(f"Player {pid} ({PLAYER_TYPES[pid]}): {points:.1f} Punkte")
-
-print("\nAnzahl gewonnener Spiele:")
-for pid in range(4):
-    print(f"Player {pid} ({PLAYER_TYPES[pid]}): {win_counts[pid]} Siege")
-
-print("\nSiegrate pro Spieler (%):")
-for pid in range(4):
-    wins = win_counts[pid]
-    win_rate = 100 * wins / NUM_EPISODES
-    print(f"Player {pid} ({PLAYER_TYPES[pid]}): {win_rate:.2f}%")
-
-print("\nStartspieler-Häufigkeit:")
-total_starts = sum(start_counts.values())
-for pid in range(4):
-    count = start_counts[pid]
-    share = 100 * count / total_starts if total_starts else 0
-    print(f"Player {pid} started {count} times ({share:.2f}%)")
-
-# === 🔧 Eval-Verzeichnis vorbereiten (vor CSV-Speicherung!) ===
-EVAL_ROOT = os.path.join(base_dir, f"models/ppo_model_{VERSION_NUM}/eval")
-os.makedirs(EVAL_ROOT, exist_ok=True)
-
-existing_dirs = sorted([d for d in os.listdir(EVAL_ROOT) if d.isdigit()])
-next_eval_num = int(existing_dirs[-1]) + 1 if existing_dirs else 1
-
-eval_subdir = os.path.join(EVAL_ROOT, f"{next_eval_num:02d}")
-os.makedirs(eval_subdir, exist_ok=True)  # Wichtig!
-
-
-# === 6️⃣ Ergebnisse als CSV speichern ===
-summary_path = os.path.join(eval_subdir, f"evaluation_summary_v{VERSION_NUM}.csv")
-
+# === Ergebnisse speichern ===
 summary_rows = []
-for pid in range(4):
-    avg_return = returns_total[pid] / NUM_EPISODES
-    total_points = points_total[pid]
-    wins = win_counts[pid]
-    win_rate = 100 * wins / NUM_EPISODES
-    starts = start_counts[pid]
-    starts_percent = 100 * starts / NUM_EPISODES
-    strategy = PLAYER_TYPES[pid]
-
+for i in range(4):
+    config = PLAYER_CONFIG[i]
+    avg_ret = returns_total[i] / NUM_EPISODES
+    winrate = 100 * win_counts[i] / NUM_EPISODES
+    label = f"{config['type']} v{config.get('version', '')}".strip()
     row = {
-    "version": VERSION_NUM,
-    "eval_id": next_eval_num,
-    "player": pid,
-    "strategy": strategy,
-    "win_rate_percent": round(win_rate, 2),
-    "avg_return": round(avg_return, 2),
-    "total_points": round(total_points, 1),
-    "num_wins": wins,
-    "num_starts": starts,
-    "start_rate_percent": round(starts_percent, 2)
+        "macro_id": next_macro_num,
+        "player": config["name"],
+        "strategy": label,
+        "avg_return": round(avg_ret, 2),
+        "win_rate_percent": round(winrate, 2),
+        "num_wins": win_counts[i],
+        "num_starts": start_counts[i],
     }
     summary_rows.append(row)
 
-df_summary = pd.DataFrame(summary_rows)
-df_summary.to_csv(summary_path, index=False)
+df = pd.DataFrame(summary_rows)
+summary_path = os.path.join(csv_dir, "evaluation_summary.csv")
+df.to_csv(summary_path, index=False)
 print(f"📄 Evaluationsergebnisse gespeichert unter: {summary_path}")
 
 
 if GENERATE_PLOTS:
-    print(f"📁 Ergebnisse und Plots werden gespeichert in: {eval_subdir}")
+    print(f"📁 Ergebnisse und Plots werden gespeichert in: {plot_dir}")
 
-    # === 00 - Aktionsverteilung als Tabelle ===
     num_actions = game.num_distinct_actions()
     action_labels = [f"Action {i}" for i in range(num_actions)]
-    action_table = pd.DataFrame(index=[f"Player {i}" for i in range(4)], columns=action_labels)
 
+    # === 00 - Aktionsverteilung als Tabelle ===
+    action_table = pd.DataFrame(index=[f"Player {i}" for i in range(4)], columns=action_labels)
     for pid in range(4):
         total = sum(action_counts[pid].values())
         for aid in range(num_actions):
@@ -276,9 +260,9 @@ if GENERATE_PLOTS:
             percent = 100 * count / total if total > 0 else 0
             action_table.loc[f"Player {pid}", f"Action {aid}"] = f"{count} ({percent:.1f}%)"
 
-    csv_path = os.path.join(eval_subdir, f"00_aktionsverteilung_v{VERSION_NUM}.csv")
-    action_table.to_csv(csv_path)
-    print(f"📁 Tabelle gespeichert unter: {csv_path}")
+    table_path = os.path.join(csv_dir, "00_action_distribution.csv")
+    action_table.to_csv(table_path)
+    print(f"📄 Tabelle gespeichert unter: {table_path}")
 
     # === 01 - Gesamte Aktionsverteilung ===
     counts_per_action = {aid: [action_counts[pid].get(aid, 0) for pid in range(4)] for aid in range(num_actions)}
@@ -288,18 +272,18 @@ if GENERATE_PLOTS:
     for pid in range(4):
         total_actions = sum(action_counts[pid].values()) or 1
         counts = [100 * counts_per_action[aid][pid] / total_actions for aid in range(num_actions)]
-        strategy = PLAYER_TYPES[pid]
+        strat = PLAYER_CONFIG[pid]["type"]
         winrate = 100 * win_counts[pid] / NUM_EPISODES
-        ax.bar(x + width * pid, counts, width, label=f"Player {pid} ({strategy}, {winrate:.1f}%)")
+        ax.bar(x + width * pid, counts, width, label=f"Player {pid} ({strat}, {winrate:.1f}%)")
 
     ax.set_xlabel("Action")
     ax.set_ylabel("Relative Häufigkeit (%)")
     ax.set_title("01 - Action Counts per Player")
-    ax.set_xticks(x)
+    ax.set_xticks(x + width * 1.5)
     ax.set_xticklabels(action_labels, rotation=90)
     ax.legend()
     fig.tight_layout()
-    plt.savefig(os.path.join(eval_subdir, f"01_aktionsverteilung_v{VERSION_NUM}_gesamt.jpg"))
+    plt.savefig(os.path.join(plot_dir, "01_action_distribution_total.jpg"))
 
     # === 02 - Pass vs. Play ===
     pass_stats = {pid: {"Pass": 0, "Play": 0} for pid in range(4)}
@@ -327,21 +311,21 @@ if GENERATE_PLOTS:
     x = np.arange(4)
     width = 0.35
     fig, ax = plt.subplots(figsize=(10, 6))
-    player_labels = [
-        f"Player {i} ({PLAYER_TYPES[i]}, {win_counts[i] / NUM_EPISODES:.1%})"
+    labels = [
+        f"Player {i} ({PLAYER_CONFIG[i]['type']}, {win_counts[i] / NUM_EPISODES:.1%})"
         for i in range(4)
     ]
     ax.bar(x - width / 2, play_counts, width, label="Play", color="#1f77b4")
     ax.bar(x + width / 2, pass_counts, width, label="Pass", color="#d62728")
     ax.set_ylabel("Anteil an allen Aktionen (%)")
     ax.set_xlabel("Spieler")
-    ax.set_title("02 - Anteil von Pass vs. Spiel-Aktionen pro Spieler")
+    ax.set_title("02 - Anteil von Pass vs. Spiel-Aktionen")
     ax.set_xticks(x)
-    ax.set_xticklabels(player_labels, rotation=0)
+    ax.set_xticklabels(labels, rotation=0)
     ax.set_ylim(0, 100)
     ax.legend()
     fig.tight_layout()
-    plt.savefig(os.path.join(eval_subdir, f"02_aktionsverteilung_v{VERSION_NUM}_pass_vs_play.jpg"))
+    plt.savefig(os.path.join(plot_dir, "02_pass_vs_play.jpg"))
 
     # === 03 - Kombotyp-Anteile je Spieler ===
     combo_labels = ["Single", "Pair", "Triple", "Quad"]
@@ -378,13 +362,13 @@ if GENERATE_PLOTS:
     ax.set_ylabel("Anteil an allen Aktionen (%)")
     ax.set_title("03 - Anteil gespielter Kombotypen pro Spieler")
     ax.set_xticks(x + width * 1.5)
-    ax.set_xticklabels(player_labels, rotation=0)
+    ax.set_xticklabels([f"Player {i}" for i in range(4)])
     ax.set_ylim(0, 100)
     ax.legend()
     fig.tight_layout()
-    plt.savefig(os.path.join(eval_subdir, f"03_aktionsverteilung_v{VERSION_NUM}_kombotypen_anteile.jpg"))
+    plt.savefig(os.path.join(plot_dir, "03_combo_types_per_player.jpg"))
 
-    # === 04-07 - Detaillierte Kombotyp-Plots ===
+    # === 04-07 - Detaillierte Kombotypenplots ===
     combo_plot_index = {"Single": "04", "Pair": "05", "Triple": "06", "Quad": "07"}
     combo_actions = {ctype: [] for ctype in combo_labels}
     for aid, ctype in action_types.items():
@@ -401,22 +385,19 @@ if GENERATE_PLOTS:
             total_actions = sum(action_counts[pid].values()) or 1
             counts = [100 * action_counts[pid].get(aid, 0) / total_actions for aid in aids]
             max_height = max(max_height, max(counts, default=0))
-            strategy = PLAYER_TYPES[pid]
+            strat = PLAYER_CONFIG[pid]["type"]
             winrate = 100 * win_counts[pid] / NUM_EPISODES
-            ax.bar(x + width * pid, counts, width, label=f"Player {pid} ({strategy}, {winrate:.1f}%)")
+            ax.bar(x + width * pid, counts, width, label=f"Player {pid} ({strat}, {winrate:.1f}%)")
 
         ax.set_xlabel(f"{combo}-Actions")
         ax.set_ylabel("Relative Häufigkeit (%)")
-        ax.set_title(f"{combo_plot_index[combo]} - {combo}-Action-Verteilung pro Spieler")
+        ax.set_title(f"{combo_plot_index[combo]} - {combo}-Actions pro Spieler")
         ax.set_xticks(x + width * 1.5)
         ax.set_xticklabels(labels, rotation=90)
-        rounded_top = math.ceil(max(max_height * 1.2, 0.05) * 20) / 20
-        ax.set_ylim(0, rounded_top)
+        ax.set_ylim(0, math.ceil(max_height * 1.2 / 5) * 5)
         ax.legend()
         fig.tight_layout()
-        filename = f"{combo_plot_index[combo]}_aktionsverteilung_v{VERSION_NUM}_{combo.lower()}_detailliert.jpg"
-        plt.savefig(os.path.join(eval_subdir, filename))
+        filename = f"{combo_plot_index[combo]}_combo_{combo.lower()}_detailed.jpg"
+        plt.savefig(os.path.join(plot_dir, filename))
 
     print("✅ Alle Plots erfolgreich gespeichert!")
-
-

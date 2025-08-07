@@ -41,9 +41,9 @@ game_settings = {
     "shuffle_cards": True,
     "single_card_mode": False
 }
-NUM_EPISODES = 20_000
-EVAL_INTERVAL = 500
-EVAL_EPISODES = 500
+NUM_EPISODES = 5000
+EVAL_INTERVAL = 200
+EVAL_EPISODES = 10_000
 
 # === Spiel und Environment ===
 game = pyspiel.load_game("president", game_settings)
@@ -164,8 +164,12 @@ for episode in range(1, NUM_EPISODES + 1):
         print(f"✅ Evaluation nach {episode} Episoden: Winrate gegen {EVAL_OPPONENT_STRATEGY} = {winrate:.1f}%")
 
 # === Finales Modell speichern ===
-agents[0].save(MODEL_PATH)
-print(f"✅ Finales Modell gespeichert unter: {MODEL_PATH}")
+# === Finales Modell speichern (alle Spieler) ===
+for i, ag in enumerate(agents):
+    model_path_i = os.path.join(MODEL_BASE, f"ppo_model_{VERSION}_agent_p{i}")
+    ag.save(model_path_i)
+    print(f"💾 Modell von Agent {i} gespeichert unter: {model_path_i}")
+
 
 # === Lernkurve plotten ===
 eval_intervals = list(range(EVAL_INTERVAL, NUM_EPISODES + 1, EVAL_INTERVAL))

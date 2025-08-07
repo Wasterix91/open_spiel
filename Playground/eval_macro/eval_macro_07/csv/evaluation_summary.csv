@@ -1,0 +1,5 @@
+macro_id,player,strategy,avg_return,win_rate_percent,num_wins,num_starts
+7,Player0,ppo v14,2.34,54.83,2193,1024
+7,Player1,dqn v08,1.64,20.68,827,988
+7,Player2,ppo v14,0.52,4.05,162,974
+7,Player3,random v,1.5,20.45,818,1014

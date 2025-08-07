@@ -2,14 +2,17 @@ import pyspiel
 import numpy as np
 import torch
 import collections
-import ppo_local_2 as ppo  # <- ggf. anpassen
+
+import ppo_agent as ppo
+import dqn_agent as dqn
+import td_agent as td
 
 # === 1️⃣ Spiel erstellen ===
 game = pyspiel.load_game(
     "president",
     {
         "deck_size": "32",
-        "shuffle_cards": True,
+        "shuffle_cards": False,
         "single_card_mode": False,
         "num_players": 4
     }
@@ -27,14 +30,16 @@ print(f"shuffle_cards: {params['shuffle_cards']}")
 print(f"single_card_mode: {params['single_card_mode']}")
 print(f"deck_size: {params['deck_size']}")
 
-# === 🔢 Versionsnummer definieren ===
-VERSION_NUM = "18"  # z. B. Eingabe über CLI oder oben ändern
+# === 🔢 Agentenkonfiguration ===
+PLAYER_CONFIG = [
+    {"name": "Player0", "type": "ppo", "version": "14"},
+    {"name": "Player1", "type": "random2"},
+    {"name": "Player2", "type": "random2"},
+    {"name": "Player3", "type": "random2"}
+]
+MODEL_ROOT = "/home/wasterix/OpenSpiel/open_spiel/Playground/models"
 
-# === 2️⃣ Agenten vorbereiten ===
-PLAYER_TYPES = ["ppo", "random", "random", "random"]
-MODEL_DIR = f"/home/wasterix/OpenSpiel/open_spiel/Playground/models/selfplay_president_{VERSION_NUM}/train"
-
-# Dynamisch basierend auf deck_size
+# === Kartenränge (dynamisch) ===
 def get_ranks(deck_size):
     if deck_size == "32":
         return ["7", "8", "9", "10", "J", "Q", "K", "A"]
@@ -74,9 +79,7 @@ def aggressive_strategy(state):
     decoded = decode_actions(state)
     if not decoded:
         return 0
-    # Alle sind "Single" – wähle die höchste
     return max(decoded, key=lambda x: parse_rank(x[1]))[0]
-
 
 def single_only(state):
     decoded = decode_actions(state)
@@ -98,47 +101,86 @@ def smart_strategy(state):
             return min(groups[size], key=lambda x: parse_rank(x[1]))[0]
     return 0
 
+def random2_action_strategy(state):
+    legal = state.legal_actions()
+    if len(legal) > 1 and 0 in legal:
+        legal = [a for a in legal if a != 0]
+    return np.random.choice(legal)
+
 strategy_map = {
     "random": random_action,
+    "random2": random2_action_strategy,
     "max_combo": max_combo,
     "single_only": single_only,
     "smart": smart_strategy,
 }
 
+# === 2️⃣ Agenten laden ===
 agents = []
-for pid, ptype in enumerate(PLAYER_TYPES):
-    if ptype == "ppo":
+for pid, cfg in enumerate(PLAYER_CONFIG):
+    kind = cfg["type"]
+    version = cfg.get("version", "01")
+
+    if kind == "ppo":
+        model_path = f"{MODEL_ROOT}/ppo_model_{version}/train/ppo_model_{version}_agent_p{pid}"
         agent = ppo.PPOAgent(
             info_state_size=game.information_state_tensor_shape()[0],
             num_actions=game.num_distinct_actions()
         )
-        model_path = f"{MODEL_DIR}/selfplay_president_{VERSION_NUM}_agent_p{pid}"
         agent.restore(model_path)
         agents.append(agent)
-    elif ptype in strategy_map:
-        agents.append(strategy_map[ptype])
-    else:
-        raise ValueError(f"Unbekannter Spielertyp: {ptype}")
 
-# === 3️⃣ PPO-Auswahlfunktion ===
+    elif kind == "dqn":
+        model_path = f"{MODEL_ROOT}/dqn_model_{version}/train/dqn_model_{version}_agent_p{pid}"
+        agent = dqn.DQNAgent(
+            state_size=game.observation_tensor_shape()[0],
+            num_actions=game.num_distinct_actions()
+        )
+        agent.restore(model_path)
+        agents.append(agent)
+
+    elif kind == "td":
+        model_path = f"{MODEL_ROOT}/td_model_{version}/train/td_model_{version}_agent_p{pid}.pt"
+        agent = td.TDAgent(
+            obs_size=game.information_state_tensor_shape()[0],
+            num_actions=game.num_distinct_actions()
+        )
+        agent.load(model_path)
+        agents.append(agent)
+
+    elif kind in strategy_map:
+        agents.append(strategy_map[kind])
+
+    else:
+        raise ValueError(f"Unbekannter Spielertyp: {kind}")
+
+# === 3️⃣ Auswahlfunktion für Aktionen ===
 def choose_policy_action(agent, state, player):
-    info_state = state.information_state_tensor(player)
-    legal_actions = state.legal_actions(player)
-    info_tensor = torch.tensor(info_state, dtype=torch.float32).to(agent.device)
-    logits = agent._policy(info_tensor).detach().cpu().numpy()
+    legal = state.legal_actions(player)
 
-    masked_logits = np.zeros_like(logits)
-    masked_logits[legal_actions] = logits[legal_actions]
+    if isinstance(agent, ppo.PPOAgent):
+        obs = state.information_state_tensor(player)
+        info_tensor = torch.tensor(obs, dtype=torch.float32).to(agent.device)
+        logits = agent._policy(info_tensor).detach().cpu().numpy()
+        masked = np.zeros_like(logits)
+        masked[legal] = logits[legal]
+        probs = masked / masked.sum() if masked.sum() > 0 else np.ones_like(masked) / len(legal)
+        return collections.namedtuple("AgentOutput", ["action", "probs"])(action=np.argmax(probs), probs=probs)
 
-    if masked_logits.sum() == 0:
-        probs = np.zeros_like(logits)
-        probs[legal_actions] = 1.0 / len(legal_actions)
+    elif isinstance(agent, dqn.DQNAgent):
+        obs = state.observation_tensor(player)
+        action = agent.select_action(obs, legal)
+        return collections.namedtuple("AgentOutput", ["action", "probs"])(action=action, probs=None)
+
+    elif isinstance(agent, td.TDAgent):
+        obs = state.information_state_tensor(player)
+        q_values = agent.predict(torch.tensor(obs, dtype=torch.float32))
+        legal_qs = q_values[legal]
+        action = legal[torch.argmax(legal_qs).item()]
+        return collections.namedtuple("AgentOutput", ["action", "probs"])(action=action, probs=None)
+
     else:
-        probs = masked_logits / masked_logits.sum()
-
-    legal_probs = np.array([probs[a] for a in legal_actions])
-    return collections.namedtuple("AgentOutput", ["action", "probs", "legal_actions"])(
-        action=np.argmax(probs), probs=legal_probs, legal_actions=legal_actions)
+        raise ValueError("Unbekannter Agententyp bei choose_policy_action")
 
 # === 4️⃣ Spiel ausführen ===
 for move in range(300):
@@ -155,21 +197,19 @@ for move in range(300):
     print(f"Player {player} legal actions: {action_strs}")
 
     agent_or_strategy = agents[player]
-    if isinstance(agent_or_strategy, ppo.PPOAgent):
+    if callable(agent_or_strategy):
+        chosen = agent_or_strategy(state)
+    else:
         agent_out = choose_policy_action(agent_or_strategy, state, player)
         chosen = agent_out.action
-        action_labels = [state.action_to_string(player, a) for a in agent_out.legal_actions]
-        print(f"Policy-Probs: {np.round(agent_out.probs, 2)}")
-    else:
-        chosen = agent_or_strategy(state)
+        if agent_out.probs is not None:
+            print(f"Policy-Probs: {np.round(agent_out.probs, 2)}")
 
-    print(f"Player {player} wählt: {state.action_to_string(player, chosen)}")
+    print(f"{PLAYER_CONFIG[player]['name']} wählt: {state.action_to_string(player, chosen)}")
     state.apply_action(chosen)
 
 # === 5️⃣ Ergebnis anzeigen ===
 if state.is_terminal():
-    print()
-    print("Spiel beendet.")
-    print()
+    print("\nSpiel beendet.\n")
     print(state)
     print("Returns:", state.returns())

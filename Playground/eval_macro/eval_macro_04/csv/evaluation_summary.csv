@@ -1,0 +1,5 @@
+macro_id,player,strategy,win_rate_percent,avg_return,total_points,num_wins,num_starts,start_rate_percent
+4,Player0,ppo v14,60.67,2.48,9923.0,2427,987,24.68
+4,Player1,ppo v14,6.53,1.07,4299.0,261,1034,25.85
+4,Player2,ppo v14,7.62,0.97,3889.0,305,978,24.45
+4,Player3,ppo v14,25.18,1.47,5889.0,1007,1001,25.02
