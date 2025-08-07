@@ -1,0 +1,5 @@
+macro_id,player,strategy,avg_return,win_rate_percent,num_wins,num_starts
+19,Player0,ppo v17,1.0,14.42,1442,2497
+19,Player1,max_combo v,1.59,28.46,2846,2476
+19,Player2,max_combo v,1.71,29.15,2915,2481
+19,Player3,max_combo v,1.69,27.97,2797,2546

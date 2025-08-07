@@ -1,0 +1,2 @@
+version,timestamp,agent_type,num_episodes,eval_interval,eval_episodes,num_players,deck_size,shuffle_cards,single_card_mode,observation_dim,num_actions,player_types,model_path,model_version_dir
+05,2025-08-02 14:27:23,TD,10000,200,5000,4,32,True,False,14,33,"td,td,td,td",/home/wasterix/OpenSpiel/open_spiel/Playground/models/td_model_05/train/td_model_05_agent_p0,/home/wasterix/OpenSpiel/open_spiel/Playground/models/td_model_05/train

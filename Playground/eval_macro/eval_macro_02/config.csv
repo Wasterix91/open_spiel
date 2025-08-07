@@ -1,0 +1,2 @@
+version,model_type,timestamp,deck_size,num_players,episodes,players
+11,ppo,2025-07-29 15:58:03,64,4,2000,ppo;random2;ppo;random2

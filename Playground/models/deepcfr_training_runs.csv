@@ -1,0 +1,2 @@
+version,timestamp,game,num_players,iterations,traversals,policy_layers,advantage_layers,batch_size,lr,device,eval_episodes,model_base
+02,2025-08-01 09:22:37,kuhn_poker,2,15,100,"[64, 64]","[64, 64]",128,0.001,cpu,1000,/home/wasterix/OpenSpiel/open_spiel/Playground/models/deepcfr_model_02

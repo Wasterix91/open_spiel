@@ -1,0 +1,5 @@
+macro_id,player,strategy,avg_return,win_rate_percent,num_wins,num_starts
+17,Player0,ppo v17,1.01,14.44,1444,2450
+17,Player1,smart v,1.58,28.29,2829,2455
+17,Player2,smart v,1.72,29.46,2946,2488
+17,Player3,smart v,1.7,27.81,2781,2607

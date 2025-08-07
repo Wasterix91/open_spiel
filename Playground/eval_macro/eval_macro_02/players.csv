@@ -1,0 +1,5 @@
+player,strategy,avg_return,total_points,win_rate_percent,num_wins,num_starts,start_rate_percent
+0,ppo,2.05,4091.0,38.15,763,484,24.2
+1,random2,1.94,3881.0,33.15,663,537,26.85
+2,ppo,0.29,580.0,0.7,14,494,24.7
+3,random2,1.72,3448.0,28.0,560,485,24.25

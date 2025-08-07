@@ -1,0 +1,5 @@
+version,eval_id,player,strategy,win_rate_percent,avg_return,total_points,num_wins,num_starts,start_rate_percent
+12,1,0,ppo v12,53.67,2.39,9567.0,2147,1004,25.1
+12,1,1,ppo v12,0.0,0.28,1105.0,0,1009,25.23
+12,1,2,dqn v07,18.02,1.5,6013.0,721,1014,25.35
+12,1,3,random2,28.3,1.83,7315.0,1132,973,24.32
