@@ -120,7 +120,7 @@ for player_id in range(4):
             if state.is_terminal():
                 reward += state.returns()[player_id]
             agent.buffer.add(prev_obs, action, reward, next_obs, state.is_terminal())
-            agent.train()
+            agent.train_step()
 
         if episode % 500 == 0:
             print(f"[p{player_id} Ep {episode}] Epsilon: {agent.epsilon:.3f}")
