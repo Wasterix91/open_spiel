@@ -6,7 +6,7 @@ import torch
 import matplotlib.pyplot as plt
 import pyspiel
 import pandas as pd
-from dqn_agent2 import DQNAgent
+from dqn_agent import DQNAgent
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_ROOT = os.path.join(SCRIPT_DIR, "models")

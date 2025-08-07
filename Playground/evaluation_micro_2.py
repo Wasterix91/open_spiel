@@ -11,7 +11,7 @@ import td_agent as td
 game = pyspiel.load_game(
     "president",
     {
-        "deck_size": "32",
+        "deck_size": "64",
         "shuffle_cards": False,
         "single_card_mode": False,
         "num_players": 4
@@ -32,7 +32,7 @@ print(f"deck_size: {params['deck_size']}")
 
 # === 🔢 Agentenkonfiguration ===
 PLAYER_CONFIG = [
-    {"name": "Player0", "type": "ppo", "version": "14"},
+    {"name": "Player0", "type": "ppo", "version": "20"},
     {"name": "Player1", "type": "random2"},
     {"name": "Player2", "type": "random2"},
     {"name": "Player3", "type": "random2"}
