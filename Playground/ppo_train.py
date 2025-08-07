@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import torch
 import datetime
+from functools import partial
 import matplotlib.pyplot as plt
 import pyspiel
 from open_spiel.python import rl_environment
@@ -40,9 +41,9 @@ game_settings = {
     "shuffle_cards": True,
     "single_card_mode": False
 }
-NUM_EPISODES = 20_000
-EVAL_INTERVAL = 200
-EVAL_EPISODES = 10_000
+NUM_EPISODES = 100000
+EVAL_INTERVAL = 5000
+EVAL_EPISODES = 1000
 
 # === Spiel und Environment ===
 game = pyspiel.load_game("president", game_settings)
@@ -54,11 +55,16 @@ num_actions = env.action_spec()["num_actions"]
 agents = [ppo.PPOAgent(info_state_size, num_actions) for _ in range(4)]
 
 # === Reward Shaping ===
-def calculate_step_reward(player_id, time_step, deck_size):
+def calculate_step_reward(time_step, player_id, deck_size):
     hand = time_step.observations["info_state"][player_id]
-    num_ranks = 8 if deck_size == 32 else 16
+    if deck_size == 32 or deck_size == 64:
+        num_ranks = 8
+    elif deck_size == 52:
+        num_ranks = 13
+    else:
+        raise NotImplementedError
     hand_size = sum(hand[:num_ranks])
-    return -hand_size
+    return -0.01 * hand_size
 
 def calculate_final_bonus_reward(returns, player_id):
     if returns[player_id] == max(returns):
@@ -142,10 +148,10 @@ def single_only_strategy(state):
         return 0
 
 strategy_map = {
-    "random": random_action_strategy,
+    #"random": random_action_strategy,
     "random2": random2_action_strategy,
     "max_combo": max_combo_strategy,
-    "aggressive": aggressive_strategy,
+    #"aggressive": aggressive_strategy,
     "single_only": single_only_strategy
 }
 
@@ -170,15 +176,16 @@ for episode in range(1, NUM_EPISODES + 1):
             action = strategy_map[player_types[player]](env._state)
 
         time_step = env.step([action])
+        
+        # Reward shaping pro gespielter Karte
+        if player_types[player] == "ppo":
+            agents[player].post_step(calculate_step_reward(time_step, player_id=player, deck_size=deck_size))
 
     # === Reward Shaping & Training ===
     for i in range(4):
         if player_types[i] == "ppo":
-            shaped_reward = calculate_step_reward(i, time_step, deck_size)
-            shaped_reward += calculate_final_bonus_reward(time_step.rewards, i)
-
-            agents[i]._buffer.rewards[-1] = shaped_reward
-            agents[i].step(time_step, [0])  # Ende-Signal
+            agents[i]._buffer.rewards[-1] += time_step.rewards[i]
+            agents[i]._buffer.rewards[-1] += calculate_final_bonus_reward(time_step.rewards, i)
             agents[i].train()
 
 
@@ -217,38 +224,38 @@ for episode in range(1, NUM_EPISODES + 1):
             winrates[opponent_name].append(winrate)
             print(f"✅ Evaluation nach {episode} Episoden: Winrate gegen {opponent_name} = {winrate:.1f}%")
 
-# === Modelle speichern ===
-for i, ag in enumerate(agents):
-    model_path_i = os.path.join(MODEL_BASE, f"ppo_model_{VERSION}_agent_p{i}")
-    ag.save(model_path_i)
-    print(f"💾 Modell von Agent {i} gespeichert unter: {model_path_i}")
+        # === Modelle speichern ===
+        for i, ag in enumerate(agents):
+            model_path_i = os.path.join(MODEL_BASE, f"ppo_model_{VERSION}_agent_p{i}_ep{episode:07d}")
+            ag.save(model_path_i)
+            print(f"💾 Modell von Agent {i} gespeichert unter: {model_path_i}")
 
-# === Lernkurven einzeln plotten ===
-eval_intervals = list(range(EVAL_INTERVAL, NUM_EPISODES + 1, EVAL_INTERVAL))
-for opponent_name in opponent_strategies:
-    plt.figure(figsize=(10, 6))
-    plt.plot(eval_intervals, winrates[opponent_name], marker='o')
-    plt.title(f"Lernkurve – Winrate von Player 0 gegen {opponent_name}")
-    plt.xlabel("Trainings-Episode")
-    plt.ylabel("Winrate (%)")
-    plt.grid(True)
-    plt.tight_layout()
-    filename = os.path.join(MODEL_BASE, f"lernkurve_{opponent_name}.png")
-    plt.savefig(filename)
-    plt.close()
-    print(f"📄 Lernkurve für {opponent_name} gespeichert unter: {filename}")
+        # === Lernkurven einzeln plotten ===
+        eval_intervals = list(range(EVAL_INTERVAL, episode + 1, EVAL_INTERVAL))
+        for opponent_name in opponent_strategies:
+            plt.figure(figsize=(10, 6))
+            plt.plot(eval_intervals, winrates[opponent_name], marker='o')
+            plt.title(f"Lernkurve – Winrate von Player 0 gegen {opponent_name}")
+            plt.xlabel("Trainings-Episode")
+            plt.ylabel("Winrate (%)")
+            plt.grid(True)
+            plt.tight_layout()
+            filename = os.path.join(MODEL_BASE, f"lernkurve_{opponent_name}.png")
+            plt.savefig(filename)
+            plt.close()
+            print(f"📄 Lernkurve für {opponent_name} gespeichert unter: {filename}")
 
-# === Gemeinsamer Plot aller Lernkurven ===
-plt.figure(figsize=(12, 8))
-for opponent_name in opponent_strategies:
-    plt.plot(eval_intervals, winrates[opponent_name], marker='o', label=opponent_name)
-plt.title("Lernkurven – Winrate von Player 0 gegen verschiedene Gegnerstrategien")
-plt.xlabel("Trainings-Episode")
-plt.ylabel("Winrate (%)")
-plt.grid(True)
-plt.legend()
-plt.tight_layout()
-joint_plot_file = os.path.join(MODEL_BASE, "lernkurven_alle_strategien.png")
-plt.savefig(joint_plot_file)
-plt.show()
-print(f"📄 Gemeinsamer Lernkurven-Plot gespeichert unter: {joint_plot_file}")
+        # === Gemeinsamer Plot aller Lernkurven ===
+        plt.figure(figsize=(12, 8))
+        for opponent_name in opponent_strategies:
+            plt.plot(eval_intervals, winrates[opponent_name], marker='o', label=opponent_name)
+        plt.title("Lernkurven – Winrate von Player 0 gegen verschiedene Gegnerstrategien")
+        plt.xlabel("Trainings-Episode")
+        plt.ylabel("Winrate (%)")
+        plt.grid(True)
+        plt.legend()
+        plt.tight_layout()
+        joint_plot_file = os.path.join(MODEL_BASE, "lernkurven_alle_strategien.png")
+        plt.savefig(joint_plot_file)
+        plt.show()
+        print(f"📄 Gemeinsamer Lernkurven-Plot gespeichert unter: {joint_plot_file}")

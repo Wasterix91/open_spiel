@@ -1,0 +1,5 @@
+macro_id,player,strategy,avg_return,win_rate_percent,num_wins,num_starts
+21,Player0,max_combo2 v,2.38,59.25,5925,2462
+21,Player1,random2 v,1.31,14.19,1419,2466
+21,Player2,random2 v,1.16,13.77,1377,2584
+21,Player3,random2 v,1.15,12.79,1279,2488

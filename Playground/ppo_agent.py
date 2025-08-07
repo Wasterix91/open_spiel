@@ -94,11 +94,6 @@ class PPOAgent:
         self._buffer = ReplayBuffer()
 
     def step(self, time_step, legal_actions):
-        if time_step.last():
-            final_reward = time_step.rewards[0]
-            self._buffer.rewards[-1] = final_reward  # overwrite last reward
-            return None
-
         if not legal_actions:
             return None
 
@@ -118,6 +113,9 @@ class PPOAgent:
         action = np.random.choice(len(probs), p=probs)
         self._buffer.add(info_state, action, 0.0)  # reward is updated at the end
         return collections.namedtuple("AgentOutput", ["action"])(action=action)
+    
+    def post_step(self, reward):
+        self._buffer.rewards[-1] = reward
 
     def train(self):
         if not self._buffer.states:
