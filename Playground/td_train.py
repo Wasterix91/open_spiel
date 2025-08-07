@@ -36,7 +36,7 @@ print(f"📁 Neue Trainingsversion: {VERSION}")
 player_types = ["td", "td", "td", "td"]
 game_settings = {
     "num_players": 4,
-    "deck_size": "32",
+    "deck_size": "64",
     "shuffle_cards": True,
     "single_card_mode": False
 }

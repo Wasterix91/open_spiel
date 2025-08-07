@@ -15,10 +15,10 @@ from collections import defaultdict
 # === Konfiguration ===
 NUM_EPISODES = 10_000
 PLAYER_CONFIG = [
-    {"name": "Player0", "type": "ppo", "version": "17"},
-    {"name": "Player1", "type": "max_combo"},
-    {"name": "Player2", "type": "max_combo"},
-    {"name": "Player3", "type": "max_combo"}
+    {"name": "Player0", "type": "max_combo2"},
+    {"name": "Player1", "type": "random2"},
+    {"name": "Player2", "type": "random2"},
+    {"name": "Player3", "type": "random2"}
 ]
 
 
@@ -78,6 +78,20 @@ def max_combo_strategy(state):
     decoded = decode_actions(state)
     return max(decoded, key=lambda x: parse_combo_size(x[1]))[0] if decoded else 0
 
+def max_combo_strategy2(state):
+    decoded = [(a, state.action_to_string(state.current_player(), a)) for a in state.legal_actions()]
+    if not decoded:
+        return 0
+    # Wähle Kombination mit größter Combo-Größe: Quad > Triple > Pair > Single
+    def combo_size_priority(s):
+        if "Quad" in s: return 4
+        if "Triple" in s: return 3
+        if "Pair" in s: return 2
+        if "Single" in s: return 1
+        return 0
+    best = max(decoded, key=lambda x: (combo_size_priority(x[1]), -x[0]))
+    return best[0]
+
 def aggressive_strategy(state):
     decoded = decode_actions(state)
     if not decoded:
@@ -117,6 +131,7 @@ strategy_map = {
     "random": random_action_strategy,
     "random2": random2_action_strategy,
     "max_combo": max_combo_strategy,
+    "max_combo2": max_combo_strategy2,
     "single_only": single_only_strategy,
     "smart": smart_strategy,
     "aggressive": aggressive_strategy
