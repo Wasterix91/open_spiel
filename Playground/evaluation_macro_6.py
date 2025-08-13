@@ -15,10 +15,10 @@ from collections import defaultdict
 # === Konfiguration ===
 NUM_EPISODES = 10_000
 PLAYER_CONFIG = [
-    {"name": "Player0", "type": "max_combo2"},
-    {"name": "Player1", "type": "random2"},
-    {"name": "Player2", "type": "random2"},
-    {"name": "Player3", "type": "random2"}
+    {"name": "Player0", "type": "ppo", "version": "53", "episode": 430000},
+    {"name": "Player1", "type": "max_combo"},
+    {"name": "Player2", "type": "max_combo"},
+    {"name": "Player3", "type": "max_combo"}
 ]
 
 

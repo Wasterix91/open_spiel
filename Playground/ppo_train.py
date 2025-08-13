@@ -34,16 +34,16 @@ os.makedirs(MODEL_BASE, exist_ok=True)
 print(f"📁 Neue Trainingsversion: {VERSION}")
 
 # === Spielparameter & Gegnerkonfiguration ===
-player_types = ["ppo", "max_combo", "max_combo", "max_combo"]
+player_types = ["ppo", "ppo", "ppo", "ppo"]
 game_settings = {
     "num_players": 4,
     "deck_size": "64",
     "shuffle_cards": True,
     "single_card_mode": False
 }
-NUM_EPISODES = 100000
-EVAL_INTERVAL = 5000
-EVAL_EPISODES = 1000
+NUM_EPISODES = 800_000
+EVAL_INTERVAL = 10_000
+EVAL_EPISODES = 10_000
 
 # === Spiel und Environment ===
 game = pyspiel.load_game("president", game_settings)

@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,version,episode,avg_return,win_rate_percent,num_wins,num_starts
+33,Player0,ppo v53 ep430.000,ppo,53,430000,1.73,32.93,3293,2514
+33,Player1,max_combo v,max_combo,,,1.57,25.44,2544,2410
+33,Player2,ppo v57 ep90.000,ppo,57,90000,1.24,17.32,1732,2535
+33,Player3,max_combo v,max_combo,,,1.46,24.31,2431,2541
