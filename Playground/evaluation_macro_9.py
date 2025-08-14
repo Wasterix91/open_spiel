@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import math
 
 #import ppo_agent as ppo
-import ppo_agent_self as ppo
+import ppo_agent_self_new as ppo
 import dqn_agent as dqn
 import td_agent as td  
 from collections import defaultdict
@@ -16,10 +16,10 @@ from collections import defaultdict
 # === Konfiguration ===
 NUM_EPISODES = 10_000
 PLAYER_CONFIG = [
-    {"name": "Player0", "type": "ppo", "version": "53", "episode": 430_000},
-    {"name": "Player1", "type": "single_only"},
-    {"name": "Player2", "type": "ppo", "version": "57", "episode": 90_000},
-    {"name": "Player3", "type": "single_only"}
+    {"name": "Player0", "type": "ppo", "version": "69", "episode": 430_000},
+    {"name": "Player1", "type": "max_combo"},
+    {"name": "Player2", "type": "max_combo"},
+    {"name": "Player3", "type": "max_combo"}
 ]
 
 """
@@ -160,6 +160,15 @@ strategy_map = {
     "aggressive": aggressive_strategy
 }
 
+def _infer_seat_id_dim_from_checkpoint(policy_path: str, info_state_size: int) -> int:
+    sd = torch.load(policy_path, map_location="cpu")
+    # erster Linear-Layer in Policy: 'net.0.weight' hat Shape [128, input_dim]
+    w = sd["net.0.weight"]
+    input_dim = w.shape[1]
+    seat_id_dim = max(0, int(input_dim) - int(info_state_size))
+    return seat_id_dim
+
+
 # === Episode-spezifisches PPO-Laden ===
 def _pad_episode(ep: int, width: int = 7) -> str:
     return f"{ep:0{width}d}"
@@ -195,21 +204,45 @@ def load_agents(player_config, base_dir, game):
         episode = cfg.get("episode")
 
         if kind == "ppo":
-            agent = ppo.PPOAgent(
-                info_state_size=game.information_state_tensor_shape()[0],
-                num_actions=game.num_distinct_actions()
-            )
+            info_dim = game.information_state_tensor_shape()[0]
+            n_actions = game.num_distinct_actions()
+
+            # Pfad-Basis
+            train_dir = os.path.join(base_dir, f"models/ppo_model_{version}/train")
+
+            # Episodenpfad vorbereiten (falls gegeben)
+            seat_id_dim = 0
+            policy_path_for_infer = None
             if episode is not None:
-                try:
-                    _load_ppo_episode(agent, base_dir, version, pid, int(episode))
-                except Exception as e:
-                    print(f"[WARN] PPO Episode {episode} konnte nicht geladen werden (Player {pid}): {e}")
-                    model_path = os.path.join(base_dir, f"models/ppo_model_{version}/train/ppo_model_{version}_agent_p{pid}")
-                    agent.restore(model_path)
+                ep_tag = _pad_episode(int(episode))
+                prefix = os.path.join(train_dir, f"ppo_model_{version}_agent_p{pid}_ep{ep_tag}")
+                policy_path_for_infer = f"{prefix}_policy.pt"
+                if not os.path.exists(policy_path_for_infer):
+                    raise FileNotFoundError(f"Policy-File nicht gefunden: {policy_path_for_infer}")
             else:
-                model_path = os.path.join(base_dir, f"models/ppo_model_{version}/train/ppo_model_{version}_agent_p{pid}")
-                agent.restore(model_path)
+                # keinen Ep-Wert gegeben → nimm neueste Episode für diesen Player
+                candidates = [fn for fn in os.listdir(train_dir) if fn.startswith(f"ppo_model_{version}_agent_p{pid}_ep") and fn.endswith("_policy.pt")]
+                if not candidates:
+                    raise FileNotFoundError(f"Kein Snapshot für PPO v{version} p{pid} in {train_dir} gefunden.")
+                # höchste Episode wählen
+                def _epnum(name):
+                    # ..._ep0001234_policy.pt
+                    s = name.split("_ep")[1].split("_policy.pt")[0]
+                    return int(s)
+                best = max(candidates, key=_epnum)
+                policy_path_for_infer = os.path.join(train_dir, best)
+                episode = _epnum(best)
+
+            # Seat-ID aus Checkpoint ableiten
+            seat_id_dim = _infer_seat_id_dim_from_checkpoint(policy_path_for_infer, info_dim)
+
+            # Agent mit passendem Input bauen
+            agent = ppo.PPOAgent(info_state_size=info_dim, num_actions=n_actions, seat_id_dim=seat_id_dim)
+
+            # Dann das gewünschte Episode-Snapshot laden
+            _load_ppo_episode(agent, base_dir, version, pid, int(episode))
             agents.append(agent)
+
 
         elif kind == "dqn":
             model_path = os.path.join(base_dir, f"models/dqn_model_{version}/train/dqn_model_{version}_agent_p{pid}")
@@ -282,22 +315,28 @@ def choose_policy_action(agent, state, player):
     legal = state.legal_actions(player)
 
     if isinstance(agent, ppo.PPOAgent):
+        legal = state.legal_actions(player)
         obs = state.information_state_tensor(player)
-        info_tensor = torch.tensor(obs, dtype=torch.float32).to(agent.device).unsqueeze(0)
+
+        x = np.array(obs, dtype=np.float32)
+        if getattr(agent, "_seat_id_dim", 0) > 0:
+            seat_oh = np.zeros(agent._seat_id_dim, dtype=np.float32)
+            # player-Index muss < seat_id_dim sein; bei 4-Spieler-Spielen passt das
+            if 0 <= player < agent._seat_id_dim:
+                seat_oh[player] = 1.0
+            x = np.concatenate([x, seat_oh], axis=0)
+
+        x_t = torch.tensor(x, dtype=torch.float32, device=agent.device).unsqueeze(0)
         with torch.no_grad():
-            probs = agent._policy(info_tensor)[0].cpu().numpy()
+            logits = agent._policy(x_t).squeeze(0)
+            legal_mask = torch.zeros(agent._num_actions, dtype=torch.float32, device=agent.device)
+            legal_mask[legal] = 1.0
+            probs_t = ppo.masked_softmax(logits, legal_mask)
+            probs = probs_t.detach().cpu().numpy()
 
-        masked_probs = np.zeros_like(probs)
-        masked_probs[legal] = probs[legal]
-
-        total_prob = masked_probs.sum()
-        if total_prob == 0:
-            masked_probs[legal] = 1.0 / len(legal)
-        else:
-            masked_probs /= total_prob
-
-        action = np.random.choice(len(masked_probs), p=masked_probs)
+        action = int(np.random.choice(len(probs), p=probs))
         return collections.namedtuple("AgentOutput", ["action"])(action=action)
+
 
     elif isinstance(agent, dqn.DQNAgent):
         obs = state.observation_tensor(player)
