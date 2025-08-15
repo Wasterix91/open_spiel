@@ -19,8 +19,8 @@ Self-Play-fähiges Training für OpenSpiel "president" mit PPO:
 """
 
 # ===================== REWARD-KONFIG ===================== #
-STEP_REWARD = "none"      # "none" | "delta_hand" | "hand_penalty"
-DELTA_WEIGHT = 0.0
+STEP_REWARD = "delta_hand"      # "none" | "delta_hand" | "hand_penalty"
+DELTA_WEIGHT = 1.0
 HAND_PENALTY_COEFF = 0.0
 FINAL_REWARD = "none"  # alias: "final_reward"
 BONUS_WIN  = 0.0
