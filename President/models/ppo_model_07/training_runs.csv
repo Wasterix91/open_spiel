@@ -1,0 +1,2 @@
+version,timestamp,agent_type,num_episodes,eval_interval,eval_episodes,deck_size,observation_dim,num_actions,model_version_dir,step_reward,final_reward,env_reward,opponents
+07,2025-08-15 10:53:33,PPO,20000,2000,2000,64,14,65,/home/wasterix/OpenSpiel/open_spiel/President/models/ppo_model_07/train,delta_hand,none,True,"max_combo,max_combo,max_combo"
