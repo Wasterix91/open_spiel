@@ -308,7 +308,9 @@ void PresidentGameState::ObservationTensor(Player player, absl::Span<float> valu
     values[last_index + i] = sum;
   }
   last_index += num_players_ - 1;
-  int last_played_relative = (last_player_to_play_ - current_player_) % num_players_;
+
+  // Siehe ObservationString
+  int last_played_relative = ((current_player_ - last_player_to_play_) + num_players_) % num_players_;
   values[last_index] = last_played_relative;
   last_index += 1;
   values[last_index] = last_played_relative == 0 ? 0 : current_combo_size_;
@@ -333,8 +335,16 @@ std::string PresidentGameState::ObservationString(Player player) const {
     obs += std::to_string(sum) + ",";
   }
 
-  // 3. last_played_relative
-  int last_played_relative = (last_player_to_play_ - current_player_) % num_players_;
+  // 3. last_played_relative (Vorwärtszählen im Uhrzeigersinn bis zum letzten Ausspieler) <-- Originale Logik
+  //int last_played_relative = (last_player_to_play_ - current_player_) % num_players_;
+  //obs += std::to_string(last_played_relative) + ",";
+
+  // 3. last_played_relative (Vorwärtszählen im Uhrzeigersinn bis zum letzten Ausspieler, normalisiert)
+  //int last_played_relative = ((last_player_to_play_ - current_player_) + num_players_) % num_players_;
+  //obs += std::to_string(last_played_relative) + ",";
+
+  // 3. last_played_relative (Rückwärtszählen im Uhrzeigersinn bis zum letzten Ausspieler, normalisiert)
+  int last_played_relative = ((current_player_ - last_player_to_play_) + num_players_) % num_players_;
   obs += std::to_string(last_played_relative) + ",";
 
   // 4. current_combo_size
@@ -376,7 +386,11 @@ std::string PresidentGameState::InformationStateString(Player player) const {
   }
 
   // 3. last_played_relative (Index last_index)
-  int last_played_relative = (last_player_to_play_ - current_player_) % num_players_;
+  //int last_played_relative = (last_player_to_play_ - current_player_) % num_players_;
+  //info += std::to_string(last_played_relative) + ",";
+
+  // 3. Neue Berechnung, siehe InformationStateTensor
+  int last_played_relative = ((current_player_ - last_player_to_play_) + num_players_) % num_players_;
   info += std::to_string(last_played_relative) + ",";
 
   // 4. current_combo_size (Index last_index + 1)
