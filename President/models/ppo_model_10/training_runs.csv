@@ -1,0 +1,2 @@
+version,timestamp,agent_type,num_episodes,eval_interval,deck_size,observation_dim,num_actions,model_version_dir,step_reward,final_reward,env_reward,normalize,seat_onehot
+10,2025-08-15 13:11:31,PPO-K2,10000,2000,64,14,65,/home/wasterix/OpenSpiel/open_spiel/President/models/ppo_model_10/train,delta_hand,none,True,False,False

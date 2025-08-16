@@ -174,22 +174,32 @@ class DQNAgent:
             q_next_online = self.q_network(next_states)     # für Double-DQN Argmax
             q_next_target = self.target_network(next_states)
 
-            # Optionales Masking der Next-Qs (wenn Masken im Buffer vorhanden sind)
-            if next_masks_list[0] is not None:
-                next_masks = torch.tensor(np.stack(next_masks_list, axis=0), dtype=torch.float32, device=self.device)
+            # Robust: Masken nur anwenden, wenn es überhaupt welche gibt.
+            # Für Einträge ohne Maske (z.B. terminal) verwenden wir Ones -> kein Masking-Effekt.
+            has_any_mask = any(m is not None for m in next_masks_list)
+            if has_any_mask:
+                masks_np = []
+                for m, d in zip(next_masks_list, dones_np):
+                    if m is None:
+                        # Terminal-Transitions brauchen eigentlich kein Masking (gamma*(1-done)=0).
+                        # Ones vermeidet -inf Effekte und behält "kein Masking".
+                        masks_np.append(np.ones(self.num_actions, dtype=np.float32))
+                    else:
+                        masks_np.append(m)
+                next_masks = torch.tensor(np.stack(masks_np, axis=0), dtype=torch.float32, device=self.device)
+
                 neg_inf = torch.tensor(-1e9, dtype=q_next_online.dtype, device=self.device)
                 q_next_online = torch.where(next_masks > 0, q_next_online, neg_inf)
                 q_next_target = torch.where(next_masks > 0, q_next_target, neg_inf)
 
             if self.config.use_double_dqn:
-                # wähle a* mit Online-Netz, werte mit Target-Netz
                 next_actions = torch.argmax(q_next_online, dim=1, keepdim=True)
                 q_next = q_next_target.gather(1, next_actions)
             else:
-                # klassisch: max_a Q_target(s', a)
                 q_next, _ = torch.max(q_next_target, dim=1, keepdim=True)
 
             targets = rewards + self.config.gamma * q_next * (1.0 - dones)
+
 
         loss = self.criterion(q_sa, targets)
 
