@@ -1,14 +1,24 @@
 # -*- coding: utf-8 -*-
-# President/training/k3a1_snapshot.py — PPO (K3-Style) mit Snapshot-Selfplay-Pool
-# - Seat 0 lernt (Parameter-Sharing optional)
-# - Seats 1–3: mix aus aktueller Policy und eingefrorenen Snapshots
-# - Eval vs Heuristiken (single_only, max_combo, random2) + Macro über EvalPlotter
+# President/training/k3a1.py — PPO (K3, Snapshot-Selfplay-Pool)
+# - Seat 0 lernt (Parameter-Sharing-Stil; ein Netz)
+# - Seats 1–3: Mix aus aktueller Policy und eingefrorenen Snapshots
+# - Eval vs Heuristiken (single_only, max_combo, random2) + Macro via EvalPlotter
+# - NEUE SPEICHERLOGIK:
+#   models/k3a1/model_XX/
+#     ├─ config.csv
+#     ├─ plots/
+#     │   ├─ lernkurve_single_only.png
+#     │   ├─ lernkurve_max_combo.png
+#     │   ├─ lernkurve_random2.png
+#     │   ├─ lernkurve_alle.png
+#     │   └─ lernkurve_alle_mit_macro.png
+#     └─ models/
+#         └─ k3a1_model_XX_agent_p0_ep0001000_policy.pt / _value.pt / ...
 
 import os, re, copy, datetime
 import numpy as np
 import pandas as pd
 import torch
-import matplotlib.pyplot as plt
 import pyspiel
 from open_spiel.python import rl_environment
 
@@ -19,8 +29,8 @@ from utils.training_eval_plots import EvalPlotter
 
 # ===================== CONFIG ===================== #
 CONFIG = {
-    "EPISODES":        200_000,
-    "EVAL_INTERVAL":   10_000,
+    "EPISODES":        10_000,
+    "EVAL_INTERVAL":   2_000,
     "EVAL_EPISODES":   2_000,
     "DECK_SIZE":       "64",
     "SEED":            123,
@@ -48,19 +58,18 @@ CONFIG = {
         "ENV_REWARD": True,
     },
 
-    # Feature-Flags (wie k3a1)
+    # Feature-Flags (wie K3)
     "FEATURES": {
         "NORMALIZE": False,
-        "SEAT_ONEHOT": True,    # One-Hot wird beim Agent-Input (_make_input) angehängt
+        "SEAT_ONEHOT": True,    # One-Hot wird über Agent._make_input angehängt
     },
 
     # Snapshot-Selfplay
     "SNAPSHOT": {
-        "PARAMETER_SHARING": True,     # ein gemeinsames Netz; Seat 0 lernt
-        "LEARNER_SEAT": 0,
-        "MIX_CURRENT": 0.8,            # Anteil 'current' vs Snapshot bei Seats 1–3
-        "SNAPSHOT_INTERVAL": 10_000,   # wie oft aktuelle Policy in den Pool
-        "POOL_CAP": 20,                # FIFO-Größe
+        "LEARNER_SEAT": 0,           # Seat 0 lernt
+        "MIX_CURRENT": 0.8,          # Anteil 'current' vs Snapshot bei Seats 1–3
+        "SNAPSHOT_INTERVAL": 10_000, # wie oft aktuelle Policy in den Pool
+        "POOL_CAP": 20,              # FIFO-Größe
     },
 
     # Heuristik-Evalkurven (für Plotter)
@@ -68,11 +77,34 @@ CONFIG = {
 }
 
 # ===================== Helpers ===================== #
-def find_next_version(models_root, prefix):
-    pat = re.compile(rf"^{re.escape(prefix)}_(\d{{2}})$")
+def find_next_version(models_root):
+    """
+    Sucht in models_root (z.B. .../models/k3a1) nach Verzeichnissen 'model_XX' und gibt die nächste Version zurück.
+    """
     os.makedirs(models_root, exist_ok=True)
-    existing = [int(m.group(1)) for m in (pat.match(n) for n in os.listdir(models_root)) if m]
+    pat = re.compile(r"^model_(\d{2})$")
+    existing = []
+    for name in os.listdir(models_root):
+        m = pat.match(name)
+        if m:
+            existing.append(int(m.group(1)))
     return f"{max(existing)+1:02d}" if existing else "01"
+
+def setup_model_dirs(root_models_dir):
+    """
+    Erstellt:
+      root_models_dir/k3a1/model_XX/
+        - config.csv (wird an Aufrufer zurückgegeben als Pfad)
+        - plots/
+        - models/
+    """
+    version = find_next_version(root_models_dir)
+    run_dir = os.path.join(root_models_dir, f"model_{version}")
+    plots_dir = os.path.join(run_dir, "plots")
+    weights_dir = os.path.join(run_dir, "models")
+    os.makedirs(plots_dir, exist_ok=True)
+    os.makedirs(weights_dir, exist_ok=True)
+    return version, run_dir, plots_dir, weights_dir
 
 class RewardShaper:
     def __init__(self, cfg):
@@ -109,24 +141,34 @@ class SnapshotPolicy:
 
     @torch.no_grad()
     def act(self, obs_vec: np.ndarray, legal_actions, seat_one_hot=None):
-        # obs_vec: bereits augment_observation(...) (ohne seat-one-hot)
         x = np.array(obs_vec, dtype=np.float32)
         if seat_one_hot is not None:
             x = np.concatenate([x, np.asarray(seat_one_hot, dtype=np.float32)], axis=0)
         device = next(self.net.parameters()).device
         x_t = torch.tensor(x, dtype=torch.float32, device=device).unsqueeze(0)
         logits = self.net(x_t).squeeze(0)
-
         legal_mask = torch.zeros(self.num_actions, dtype=torch.float32, device=device)
         legal_mask[legal_actions] = 1.0
         probs = ppo.masked_softmax(logits, legal_mask)
         return int(torch.distributions.Categorical(probs=probs).sample().item())
 
+def _rename_plot_if_exists(src, dst):
+    try:
+        if os.path.exists(src):
+            os.replace(src, dst)
+    except Exception:
+        pass
+
 # ===================== Training ===================== #
 def main():
     np.random.seed(CONFIG["SEED"]); torch.manual_seed(CONFIG["SEED"])
     ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    MODELS = os.path.join(ROOT, "models")
+    MODELS_ROOT = os.path.join(ROOT, "models", "k3a1")
+    version, run_dir, plots_dir, weights_dir = setup_model_dirs(MODELS_ROOT)
+
+    print(f"🗂️  Speichere nach: {run_dir}")
+    print(f"   ├─ Modelle: {weights_dir}")
+    print(f"   └─ Plots:   {plots_dir}")
 
     # ---- Env ----
     game = pyspiel.load_game("president", {
@@ -151,9 +193,6 @@ def main():
     )
     seat_id_dim = num_players if CONFIG["FEATURES"]["SEAT_ONEHOT"] else 0
 
-    version = find_next_version(MODELS, "ppo_snapshot")
-    model_dir = os.path.join(MODELS, f"ppo_snapshot_{version}", "train"); os.makedirs(model_dir, exist_ok=True)
-
     ppo_cfg = ppo.PPOConfig(**CONFIG["PPO"])
     learner = ppo.PPOAgent(info_state_size=info_dim, num_actions=A,
                            seat_id_dim=seat_id_dim, config=ppo_cfg)
@@ -161,16 +200,17 @@ def main():
     # ---- EvalPlotter (Heuristiken) ----
     plotter = EvalPlotter(
         opponent_names=list(CONFIG["EVAL_CURVES"]),
-        out_dir=model_dir,
+        out_dir=plots_dir,                   # plots direkt in den Plots-Ordner
         filename_prefix="lernkurve",
         csv_filename="eval_curves.csv",
         save_csv=True,
     )
 
-    # ---- Log Config ----
+    # ---- Config speichern (config.csv im Run-Ordner) ----
     pd.DataFrame([{
         "version": version,
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "script": "k3a1",
         "agent_type": "PPO-K3-SNAPSHOT",
         "num_episodes": CONFIG["EPISODES"],
         "eval_interval": CONFIG["EVAL_INTERVAL"],
@@ -178,18 +218,17 @@ def main():
         "deck_size": CONFIG["DECK_SIZE"],
         "observation_dim": info_dim + seat_id_dim,
         "num_actions": A,
-        "model_version_dir": model_dir,
+        "run_dir": run_dir,
         "normalize": CONFIG["FEATURES"]["NORMALIZE"],
         "seat_onehot": CONFIG["FEATURES"]["SEAT_ONEHOT"],
-        "param_sharing": CONFIG["SNAPSHOT"]["PARAMETER_SHARING"],
         "mix_current": CONFIG["SNAPSHOT"]["MIX_CURRENT"],
         "snapshot_interval": CONFIG["SNAPSHOT"]["SNAPSHOT_INTERVAL"],
         "pool_cap": CONFIG["SNAPSHOT"]["POOL_CAP"],
-    }]).to_csv(os.path.join(os.path.dirname(model_dir), "training_runs.csv"), index=False)
+        "learner_seat": CONFIG["SNAPSHOT"]["LEARNER_SEAT"],
+    }]).to_csv(os.path.join(run_dir, "config.csv"), index=False)
 
     # ---- Snapshot-Pool ----
-    pool: list[dict] = []  # list of state_dicts der Policy
-
+    pool = []  # list of state_dicts
     shaper = RewardShaper(CONFIG["REWARD"])
 
     EINT, EEPS = CONFIG["EVAL_INTERVAL"], CONFIG["EVAL_EPISODES"]
@@ -297,21 +336,29 @@ def main():
                         else:
                             a = int(opp_fn(st))
                         st.apply_action(a)
-                    if st.returns()[0] == max(st.returns()):
-                        wins += 1
-                per_opponent[opp_name] = 100.0 * wins / EEPS
-                print(f"✅ Eval nach {ep} – Winrate vs {opp_name}: {per_opponent[opp_name]:.1f}%")
+                    if st.returns()[0] == max(st.returns()): wins += 1
 
+                wr = 100.0 * wins / EEPS
+                per_opponent[opp_name] = wr
+                print(f"✅ Eval nach {ep:7d} – Winrate vs {opp_name:11s}: {wr:5.1f}%")
+                
             macro = float(np.mean(list(per_opponent.values())))
             print(f"📊 Macro Average: {macro:.2f}%")
             plotter.add(ep, per_opponent)
             plotter.plot_all()
 
-            base = os.path.join(model_dir, f"ppo_snapshot_{version}_agent_p0_ep{ep:07d}")
-            learner.save(base)
-            print(f"💾 Modell gespeichert: {base}_*.pt")
+            # ggf. Plot-Dateinamen auf deutsche Varianten mappen
+            _rename_plot_if_exists(os.path.join(plots_dir, "lernkurve_all.png"),
+                                   os.path.join(plots_dir, "lernkurve_alle.png"))
+            _rename_plot_if_exists(os.path.join(plots_dir, "lernkurve_all_with_macro.png"),
+                                   os.path.join(plots_dir, "lernkurve_alle_mit_macro.png"))
 
-    print("✅ K3-Snapshot Training abgeschlossen.")
+            # Modell speichern (Policy/Value) in weights_dir
+            base = os.path.join(weights_dir, f"k3a1_model_{version}_agent_p0_ep{ep:07d}")
+            learner.save(base)
+            print(f"💾 Modell gespeichert: {base}_policy.pt / {base}_value.pt")
+
+    print("✅ K3 (Snapshot-Selfplay) Training abgeschlossen.")
 
 if __name__ == "__main__":
     main()

@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-import os, re, datetime, numpy as np, pandas as pd, torch, matplotlib.pyplot as plt
+import os, re, datetime, numpy as np, pandas as pd, torch
+import matplotlib.pyplot as plt
 import pyspiel
 from open_spiel.python import rl_environment
 from agents import ppo_agent as ppo
-from utils.strategies import STRATS                   
+from utils.strategies import STRATS
 from utils.fit_tensor import FeatureConfig, augment_observation
 from utils.training_eval_plots import EvalPlotter
 
@@ -41,9 +42,9 @@ CONFIG = {
         "ENV_REWARD": True,
     },
 
-    # Feature-Toggles (wichtig: du wolltest eigentlich OHNE Normalisierung trainieren)
+    # Feature-Toggles
     "FEATURES": {
-        "NORMALIZE": False,       # <- stelle hier um
+        "NORMALIZE": False,
         "SEAT_ONEHOT": False,     # K1: typischerweise False
     },
 
@@ -52,10 +53,11 @@ CONFIG = {
 }
 
 # ================= Helpers / Heuristiken =================
-def find_next_version(models_root, prefix):
+def find_next_version(base_dir, prefix="model"):
+    """Scans base_dir for 'prefix_XX' and returns next two-digit XX."""
     pat = re.compile(rf"^{re.escape(prefix)}_(\d{{2}})$")
-    os.makedirs(models_root, exist_ok=True)
-    existing = [int(m.group(1)) for m in (pat.match(n) for n in os.listdir(models_root)) if m]
+    os.makedirs(base_dir, exist_ok=True)
+    existing = [int(m.group(1)) for m in (pat.match(n) for n in os.listdir(base_dir)) if m]
     return f"{max(existing)+1:02d}" if existing else "01"
 
 class RewardShaper:
@@ -79,11 +81,43 @@ class RewardShaper:
         return (self.b[0],self.b[1],self.b[2],self.b[3])[place-1]
     def include_env_reward(self): return self.env
 
+def _alias_joint_plot_names(plots_dir):
+    """
+    If the plotter created old joint names, also create your requested aliases:
+      lernkurve_alle_strategien.png       -> lernkurve_alle.png
+      lernkurve_alle_strategien_avg.png   -> lernkurve_alle_mit_macro.png
+    """
+    mapping = {
+        "lernkurve_alle_strategien.png": "lernkurve_alle.png",
+        "lernkurve_alle_strategien_avg.png": "lernkurve_alle_mit_macro.png",
+    }
+    for src, dst in mapping.items():
+        src_path = os.path.join(plots_dir, src)
+        dst_path = os.path.join(plots_dir, dst)
+        if os.path.exists(src_path) and not os.path.exists(dst_path):
+            try:
+                # copy/alias; replace is fine to move/rename
+                os.replace(src_path, dst_path)
+            except Exception:
+                pass  # non-fatal
+
 # =========================== Training ===========================
 def main():
     np.random.seed(CONFIG["SEED"]); torch.manual_seed(CONFIG["SEED"])
-    ROOT=os.path.dirname(os.path.dirname(os.path.abspath(__file__))); MODELS=os.path.join(ROOT,"models")
+    ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    MODELS_ROOT = os.path.join(ROOT, "models")
 
+    # ---- NEW: run directory structure ----
+    family_dir = os.path.join(MODELS_ROOT, "k1a1")
+    version = find_next_version(family_dir, prefix="model")   # -> '01', '02', ...
+    run_dir = os.path.join(family_dir, f"model_{version}")
+    plots_dir = os.path.join(run_dir, "plots")
+    weights_dir = os.path.join(run_dir, "models")
+    os.makedirs(plots_dir, exist_ok=True)
+    os.makedirs(weights_dir, exist_ok=True)
+    print(f"📁 Neuer Lauf: {run_dir}")
+
+    # ---- Game/Env ----
     game = pyspiel.load_game("president", {
         "num_players":4, "deck_size":CONFIG["DECK_SIZE"], "shuffle_cards":True, "single_card_mode":False,
     })
@@ -91,7 +125,7 @@ def main():
     info_dim = env.observation_spec()["info_state"][0]
     A = env.action_spec()["num_actions"]
 
-    # FeatureConfig
+    # ---- Features ----
     deck_int = int(CONFIG["DECK_SIZE"])
     num_players = game.num_players()
     num_ranks   = 8 if deck_int in (32,64) else 13 if deck_int==52 else (_ for _ in ()).throw(ValueError("deck"))
@@ -101,37 +135,39 @@ def main():
         normalize=bool(CONFIG["FEATURES"]["NORMALIZE"]),
     )
 
-    version = find_next_version(MODELS, "ppo_model")
-    model_dir = os.path.join(MODELS, f"ppo_model_{version}", "train"); os.makedirs(model_dir, exist_ok=True)
-
-    # Eval-Plotter (Single_Only, Max_Combo, Random2 + Macro)
+    # ---- Plotter to new plots_dir ----
     plotter = EvalPlotter(
         opponent_names=list(CONFIG["EVAL_CURVES"]),
-        out_dir=model_dir,
+        out_dir=plots_dir,
         filename_prefix="lernkurve",
-        csv_filename="eval_curves.csv",
+        csv_filename="eval_curves.csv",   # will be written into plots_dir
         save_csv=True,
     )
 
+    # ---- Agent/opp/reward ----
     ppo_cfg = ppo.PPOConfig(**CONFIG["PPO"])
-    agent = ppo.PPOAgent(info_dim, A, seat_id_dim=(num_players if CONFIG["FEATURES"]["SEAT_ONEHOT"] else 0), config=ppo_cfg)
+    seat_id_dim = (num_players if CONFIG["FEATURES"]["SEAT_ONEHOT"] else 0)
+    agent = ppo.PPOAgent(info_dim, A, seat_id_dim=seat_id_dim, config=ppo_cfg)
     opponents = [STRATS[name] for name in CONFIG["OPPONENTS"]]
     shaper = RewardShaper(CONFIG["REWARD"])
 
-    # run log
+    # ---- Save config.csv at run root ----
     pd.DataFrame([{
-        "version":version,"timestamp":datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "agent_type":"PPO","num_episodes":CONFIG["EPISODES"],"eval_interval":CONFIG["EVAL_INTERVAL"],
-        "eval_episodes":CONFIG["EVAL_EPISODES"],"deck_size":CONFIG["DECK_SIZE"],
-        "observation_dim":info_dim + (num_players if CONFIG["FEATURES"]["SEAT_ONEHOT"] else 0),
-        "num_actions":A,"model_version_dir":model_dir,
-        "step_reward":CONFIG["REWARD"]["STEP"],"final_reward":CONFIG["REWARD"]["FINAL"],
-        "env_reward":CONFIG["REWARD"]["ENV_REWARD"],"opponents":",".join(CONFIG["OPPONENTS"]),
+        "script":"k1a1","version":version,
+        "timestamp":datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "agent_type":"PPO","num_episodes":CONFIG["EPISODES"],
+        "eval_interval":CONFIG["EVAL_INTERVAL"],"eval_episodes":CONFIG["EVAL_EPISODES"],
+        "deck_size":CONFIG["DECK_SIZE"],
+        "observation_dim":info_dim + seat_id_dim,"num_actions":A,
         "normalize":CONFIG["FEATURES"]["NORMALIZE"], "seat_onehot":CONFIG["FEATURES"]["SEAT_ONEHOT"],
-    }]).to_csv(os.path.join(os.path.dirname(model_dir), "training_runs.csv"), index=False)
+        "opponents":",".join(CONFIG["OPPONENTS"]),
+        "models_dir":weights_dir,"plots_dir":plots_dir
+    }]).to_csv(os.path.join(run_dir, "config.csv"), index=False)
+    print(f"📝 Konfiguration gespeichert: {os.path.join(run_dir, 'config.csv')}")
 
     EINT, EEPS = CONFIG["EVAL_INTERVAL"], CONFIG["EVAL_EPISODES"]
 
+    # ---- Training loop ----
     for ep in range(1, CONFIG["EPISODES"]+1):
         ts = env.reset()
         while not ts.last():
@@ -161,12 +197,10 @@ def main():
         agent._buffer.finalize_last_reward(shaper.final_bonus(ts.rewards, 0))
         agent.train()
 
-        # Evaluation
+        # ---- Evaluation ----
         if ep % EINT == 0:
-            EVAL_OPPONENTS = ["single_only", "max_combo", "random2"]  # konsistent zum Plotter oben
             per_opponent = {}
-
-            for opp_name in EVAL_OPPONENTS:
+            for opp_name in CONFIG["EVAL_CURVES"]:
                 opp_fn = STRATS[opp_name]
                 wins = 0
                 for _ in range(EEPS):
@@ -175,7 +209,6 @@ def main():
                         pid = st.current_player()
                         legal = st.legal_actions(pid)
                         if pid == 0:
-                            # gleiche Augmentierung wie im Training
                             obs = st.information_state_tensor(pid)
                             obs = augment_observation(obs, player_id=pid, cfg=feat_cfg)
                             with torch.no_grad():
@@ -191,20 +224,20 @@ def main():
 
                 wr = 100.0 * wins / EEPS
                 per_opponent[opp_name] = wr
-                print(f"✅ Eval nach {ep} – Winrate vs {opp_name}: {wr:.1f}%")
+                print(f"✅ Eval nach {ep:7d} – Winrate vs {opp_name:11s}: {wr:5.1f}%")
 
             macro = float(np.mean(list(per_opponent.values())))
             print(f"📊 Macro Average: {macro:.2f}%")
 
-            # loggen & plotten
+            # loggen & plotten (into plots_dir)
             plotter.add(ep, per_opponent)
             plotter.plot_all()
+            _alias_joint_plot_names(plots_dir)
 
-            # Modell speichern
-            base = os.path.join(model_dir, f"ppo_model_{version}_agent_p0_ep{ep:07d}")
-            agent.save(base)
-
-            print(f"💾 Modell gespeichert: {base}_*.pt")
+            # ---- Save weights to weights_dir with requested names ----
+            base = os.path.join(weights_dir, f"k1a1_model_{version}_agent_p0_ep{ep:07d}")
+            agent.save(base)  # creates ..._policy.pt and ..._value.pt
+            print(f"💾 Modell gespeichert: {base}_policy.pt / {base}_value.pt")
 
     print("✅ K1 Training abgeschlossen.")
 

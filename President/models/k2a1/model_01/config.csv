@@ -1,0 +1,2 @@
+timestamp,script,version,agent_type,num_episodes,eval_interval,eval_episodes,deck_size,observation_dim,num_actions,reward_step,reward_final,env_reward,delta_weight,hand_penalty_coeff,normalize,seat_onehot,opponents,learning_rate,num_epochs,batch_size,entropy_cost,gamma,gae_lambda,clip_eps,value_coef,max_grad_norm
+2025-08-16 20:24:42,k1a1,01,PPO,20000,2000,2000,64,14,65,delta_hand,none,True,1.0,0.0,False,False,"max_combo,max_combo,max_combo",0.0003,4,256,0.01,0.99,0.95,0.2,0.5,0.5
