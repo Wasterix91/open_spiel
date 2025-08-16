@@ -23,7 +23,7 @@ NUM_EPISODES = 10_000
 
 # Beispiel: PPO vs 3x Heuristik
 PLAYER_CONFIG = [
-    {"name": "Player0", "type": "ppo", "version": "01", "episode": "18000"}, 
+    {"name": "Player0", "type": "ppo", "version": "15", "episode": "20_000"}, 
     {"name": "Player1", "type": "max_combo"},
     {"name": "Player2", "type": "max_combo"},
     {"name": "Player3", "type": "max_combo"},
@@ -74,6 +74,11 @@ game = pyspiel.load_game("president", {
     "single_card_mode": False,
     "num_players": 4
 })
+
+NUM_PLAYERS = game.num_players()
+INFO_DIM = game.information_state_tensor_shape()[0]
+OBS_DIM  = game.observation_tensor_shape()[0]
+
 
 RANKS = ["7", "8", "9", "10", "J", "Q", "K", "A"]
 RANK_TO_NUM = {rank: i for i, rank in enumerate(RANKS)}
@@ -135,60 +140,90 @@ def load_agents(player_config, game):
         version = cfg.get("version", "01")
 
         if kind == "ppo":
-            episode = _norm_episode(cfg.get("episode"))
-            agent = ppo.PPOAgent(info_state_size=info_dim, num_actions=num_actions)
-            pid_files = cfg.get("from_pid")  # optional
+            ep = cfg.get("episode")
+            episode = _norm_episode(ep) if ep is not None else None
+            pid_files = cfg.get("from_pid")
             base = _model_prefix("ppo", version, pid, episode, pid_files)
 
-            try:
-                agent._policy.load_state_dict(torch.load(base + "_policy.pt", map_location=agent.device))
-                agent._value.load_state_dict(torch.load(base + "_value.pt",  map_location=agent.device))
-                agent._policy.eval(); agent._value.eval()
-            except Exception as e:
-                print(f"[WARN] PPO-Weights nicht ladbar für P{pid}: {base}_*.pt – random Init. Grund: {e}")
+            # Zwei Versuche: ohne und mit Seat-One-Hot
+            tried = []
+            agent = None
+            for seat_id_dim in (0, NUM_PLAYERS):
+                ag = ppo.PPOAgent(info_state_size=INFO_DIM, num_actions=num_actions, seat_id_dim=seat_id_dim)
+                try:
+                    ag._policy.load_state_dict(torch.load(base + "_policy.pt", map_location=ag.device))
+                    ag._value.load_state_dict(torch.load(base + "_value.pt",  map_location=ag.device))
+                    ag._policy.eval(); ag._value.eval()
+                    agent = ag
+                    break
+                except FileNotFoundError as e:
+                    tried.append(str(e))
+                    continue
+                except RuntimeError as e:
+                    # meist Shape-Mismatch → nächsten seat_id_dim probieren
+                    tried.append(str(e))
+                    continue
+                except Exception as e:
+                    tried.append(str(e))
+                    continue
+            if agent is None:
+                print(f"[WARN] PPO-Weights nicht ladbar für P{pid}: {base}_*.pt – random Init. Gründe: {tried}")
+                agent = ppo.PPOAgent(info_state_size=INFO_DIM, num_actions=num_actions, seat_id_dim=0)
+
             agents.append(agent)
+
 
         elif kind == "dqn":
             episode = _norm_episode(cfg.get("episode"))
-            agent = dqn.DQNAgent(state_size=obs_dim, num_actions=num_actions)
 
             def _strip_suffix(p):
                 for suf in (".pt", "_q.pt", "_qnet.pt"):
-                    if p.endswith(suf):
-                        return p[: -len(suf)]
+                    if p.endswith(suf): return p[: -len(suf)]
                 return p
 
-            # Baue Kandidaten **ohne** Endung/Suffix
+            # Kandidaten in beiden Familien: dqn_model_.. und dqn_league_..
+            families = ("dqn_model", "dqn_league")
             stems = []
-            if episode is not None:
-                stems.append(_model_prefix("dqn", version, pid, episode))          # ..._ep00XXXX
-            stems.append(_model_prefix("dqn", version, pid, None))                  # ..._agent_p{pid} (latest)
+            for fam in families:
+                base = os.path.join(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "models")),
+                                    f"{fam}_{version}", "train", f"{fam}_{version}_agent_p{pid}")
+                if episode is not None:
+                    stems.append(f"{base}_ep{int(episode):07d}")
+                stems.append(base)
+                stems += [_strip_suffix(p) for p in glob.glob(base + "_ep*")]
 
-            # Alle ep-Checkpoints einsammeln und auf Stems normalisieren
-            ep_glob = glob.glob(_model_prefix("dqn", version, pid, None) + "_ep*")
-            stems += [ _strip_suffix(p) for p in ep_glob ]
+            # deduplizieren
+            seen=set(); stems=[s for s in stems if not (s in seen or seen.add(s))]
 
-            # Deduplizieren, Reihenfolge beibehalten
-            seen = set(); candidates = []
-            for s in stems:
-                s0 = _strip_suffix(s)
-                if s0 not in seen:
-                    seen.add(s0); candidates.append(s0)
-
-            loaded = False
-            for stem in candidates:
-                try:
-                    agent.restore(stem)   # restore hängt selbst z.B. "_qnet.pt" an
-                    loaded = True
+            # 1. mit OBS_DIM versuchen, 2. mit OBS_DIM+NUM_PLAYERS (für Seat-One-Hot-Modelle)
+            tried = []
+            for state_size in (OBS_DIM, OBS_DIM + NUM_PLAYERS):
+                ag = dqn.DQNAgent(state_size=state_size, num_actions=num_actions)
+                loaded=False
+                for stem in stems:
+                    try:
+                        ag.restore(stem)
+                        loaded=True
+                        break
+                    except FileNotFoundError:
+                        continue
+                    except RuntimeError as e:
+                        # shape mismatch -> probier nächstes state_size
+                        tried.append((stem, str(e)))
+                        break
+                    except Exception as e:
+                        tried.append((stem, str(e)))
+                        continue
+                if loaded:
+                    ag.epsilon = 0.0  # greedy Eval
+                    agent = ag
                     break
-                except FileNotFoundError:
-                    continue
-                except Exception as e:
-                    print(f"[WARN] DQN-Load fail für P{pid} ({stem}*): {e}")
+            else:
+                print(f"[WARN] Kein DQN-Checkpoint für P{pid} – random Init. Versucht: {len(stems)} Kandidaten.")
+                agent = dqn.DQNAgent(state_size=OBS_DIM, num_actions=num_actions)
 
-            if not loaded:
-                print(f"[WARN] Kein DQN-Checkpoint für P{pid} – random Init.")
             agents.append(agent)
+
 
 
         elif kind in STRATS:
@@ -271,7 +306,18 @@ def choose_policy_action(agent, state, player):
     legal = state.legal_actions(player)
 
     if isinstance(agent, ppo.PPOAgent):
-        obs = state.information_state_tensor(player)
+        obs = np.array(state.information_state_tensor(player), dtype=np.float32)
+        # prüfe, ob das Netz mehr Features erwartet (z.B. Seat-One-Hot)
+        try:
+            in_features = agent._policy.net[0].in_features
+        except Exception:
+            in_features = obs.shape[0]
+        if in_features > obs.shape[0]:
+            extra = in_features - obs.shape[0]
+            if extra == NUM_PLAYERS:
+                seat_oh = np.zeros(NUM_PLAYERS, dtype=np.float32); seat_oh[player] = 1.0
+                obs = np.concatenate([obs, seat_oh], axis=0)
+
         device = getattr(agent, "device", "cpu")
         logits = _forward_policy_with_autopad(agent._policy, obs, device)
         probs = _masked_softmax_numpy(logits, legal)
@@ -279,8 +325,24 @@ def choose_policy_action(agent, state, player):
         return collections.namedtuple("AgentOutput", ["action"])(action=action)
 
     elif isinstance(agent, dqn.DQNAgent):
-        obs = state.observation_tensor(player)
-        return collections.namedtuple("AgentOutput", ["action"])(action=agent.select_action(obs, legal))
+        obs = np.array(state.observation_tensor(player), dtype=np.float32)
+        try:
+            in_features = agent.q_network.net[0].in_features
+        except Exception:
+            in_features = obs.shape[0]
+        if in_features > obs.shape[0]:
+            extra = in_features - obs.shape[0]
+            if extra == NUM_PLAYERS:
+                seat_oh = np.zeros(NUM_PLAYERS, dtype=np.float32); seat_oh[player] = 1.0
+                obs = np.concatenate([obs, seat_oh], axis=0)
+
+        old_eps = getattr(agent, "epsilon", 0.0)
+        agent.epsilon = 0.0  # greedy Eval
+        try:
+            action = int(agent.select_action(obs, legal))
+        finally:
+            agent.epsilon = old_eps
+        return collections.namedtuple("AgentOutput", ["action"])(action=action)
 
     elif callable(agent):
         action = agent(state)
@@ -290,6 +352,7 @@ def choose_policy_action(agent, state, player):
 
     else:
         raise ValueError("Unbekannter Agententyp bei choose_policy_action.")
+
 
 # ===================== Evaluation ===================== #
 def main():

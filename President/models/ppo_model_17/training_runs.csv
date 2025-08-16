@@ -1,0 +1,2 @@
+version,timestamp,agent_type,num_episodes,save_interval,eval_interval,eval_episodes,deck_size,observation_dim,num_actions,model_version_dir,normalize,seat_onehot,opponents
+17,2025-08-16 09:42:08,PPO-K4-SHARED,14000,2000,2000,2000,64,14,65,/home/wasterix/OpenSpiel/open_spiel/President/models/ppo_model_17/train,False,False,"max_combo,max_combo,max_combo"

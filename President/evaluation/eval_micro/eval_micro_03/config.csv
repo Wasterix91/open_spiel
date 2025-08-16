@@ -1,0 +1,2 @@
+game_settings,players
+"{""num_players"": 4, ""deck_size"": ""64"", ""shuffle_cards"": true, ""single_card_mode"": false}","[{""name"": ""Player0"", ""type"": ""ppo"", ""version"": ""15"", ""episode"": ""20_000""}, {""name"": ""Player1"", ""type"": ""max_combo""}, {""name"": ""Player2"", ""type"": ""max_combo""}, {""name"": ""Player3"", ""type"": ""max_combo""}]"
