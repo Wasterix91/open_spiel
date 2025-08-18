@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import os, re, datetime, numpy as np, pandas as pd, torch
+import os, re, datetime, time, numpy as np, pandas as pd, torch
 import matplotlib.pyplot as plt
 import pyspiel
 from open_spiel.python import rl_environment
@@ -10,8 +10,8 @@ from utils.training_eval_plots import EvalPlotter
 
 # ============== CONFIG  ==============
 CONFIG = {
-    "EPISODES":        20_000,
-    "EVAL_INTERVAL":   2_000,
+    "EPISODES":        1_200_000,
+    "EVAL_INTERVAL":   10_000,
     "EVAL_EPISODES":   2_000,
     "DECK_SIZE":       "64",      # "32" | "52" | "64"
     "SEED":            42,
@@ -35,7 +35,7 @@ CONFIG = {
     # Reward-Shaping
     "REWARD": {
         "STEP": "delta_hand",     # "none" | "delta_hand" | "hand_penalty"
-        "DELTA_WEIGHT": 1.0,
+        "DELTA_WEIGHT": 0.0,
         "HAND_PENALTY_COEFF": 0.0,
         "FINAL": "none",          # "none" | "placement_bonus"
         "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
@@ -83,7 +83,7 @@ class RewardShaper:
 
 def _alias_joint_plot_names(plots_dir):
     """
-    If the plotter created old joint names, also create your requested aliases:
+    Falls der Plotter alte Joint-Namen erzeugt, legen wir deine gewünschten Aliase an:
       lernkurve_alle_strategien.png       -> lernkurve_alle.png
       lernkurve_alle_strategien_avg.png   -> lernkurve_alle_mit_macro.png
     """
@@ -96,8 +96,7 @@ def _alias_joint_plot_names(plots_dir):
         dst_path = os.path.join(plots_dir, dst)
         if os.path.exists(src_path) and not os.path.exists(dst_path):
             try:
-                # copy/alias; replace is fine to move/rename
-                os.replace(src_path, dst_path)
+                os.replace(src_path, dst_path)  # rename/alias
             except Exception:
                 pass  # non-fatal
 
@@ -135,12 +134,12 @@ def main():
         normalize=bool(CONFIG["FEATURES"]["NORMALIZE"]),
     )
 
-    # ---- Plotter to new plots_dir ----
+    # ---- Plotter -> plots_dir ----
     plotter = EvalPlotter(
         opponent_names=list(CONFIG["EVAL_CURVES"]),
         out_dir=plots_dir,
         filename_prefix="lernkurve",
-        csv_filename="eval_curves.csv",   # will be written into plots_dir
+        csv_filename="eval_curves.csv",   # in plots_dir
         save_csv=True,
     )
 
@@ -165,12 +164,21 @@ def main():
     }]).to_csv(os.path.join(run_dir, "config.csv"), index=False)
     print(f"📝 Konfiguration gespeichert: {os.path.join(run_dir, 'config.csv')}")
 
+    # ---- Timing setup ----
+    timings_csv = os.path.join(run_dir, "timings.csv")
+    timing_rows = []
+    t0 = time.perf_counter()
+
     EINT, EEPS = CONFIG["EVAL_INTERVAL"], CONFIG["EVAL_EPISODES"]
 
     # ---- Training loop ----
     for ep in range(1, CONFIG["EPISODES"]+1):
+        ep_start = time.perf_counter()
+        steps = 0
+
         ts = env.reset()
         while not ts.last():
+            steps += 1
             p = ts.observations["current_player"]; legal = ts.observations["legal_actions"][p]
             hand_before = shaper.hand_size(ts, p, deck_int)
 
@@ -193,12 +201,22 @@ def main():
 
             ts = ts_next
 
+        # train() separat timen
+        train_start = time.perf_counter()
         if shaper.include_env_reward(): agent._buffer.finalize_last_reward(ts.rewards[0])
         agent._buffer.finalize_last_reward(shaper.final_bonus(ts.rewards, 0))
         agent.train()
+        train_seconds = time.perf_counter() - train_start
+
+        # Defaults für optionale Felder
+        eval_seconds = 0.0
+        plot_seconds = 0.0
+        save_seconds = 0.0
 
         # ---- Evaluation ----
         if ep % EINT == 0:
+            ev_start = time.perf_counter()
+
             per_opponent = {}
             for opp_name in CONFIG["EVAL_CURVES"]:
                 opp_fn = STRATS[opp_name]
@@ -229,16 +247,56 @@ def main():
             macro = float(np.mean(list(per_opponent.values())))
             print(f"📊 Macro Average: {macro:.2f}%")
 
-            # loggen & plotten (into plots_dir)
+            eval_seconds = time.perf_counter() - ev_start
+
+            # Plot & CSV aktualisieren (Plotter)
+            plot_start = time.perf_counter()
             plotter.add(ep, per_opponent)
             plotter.plot_all()
             _alias_joint_plot_names(plots_dir)
+            plot_seconds = time.perf_counter() - plot_start
 
-            # ---- Save weights to weights_dir with requested names ----
+            # Save weights
+            save_start = time.perf_counter()
             base = os.path.join(weights_dir, f"k1a1_model_{version}_agent_p0_ep{ep:07d}")
-            agent.save(base)  # creates ..._policy.pt and ..._value.pt
+            agent.save(base)  # ..._policy.pt / ..._value.pt
+            save_seconds = time.perf_counter() - save_start
             print(f"💾 Modell gespeichert: {base}_policy.pt / {base}_value.pt")
 
+            # Konsolen-Timing (kompakt)
+            cum_seconds = time.perf_counter() - t0
+            print(f"⏱ Timing @ep {ep}: episode {time.perf_counter()-ep_start:0.3f}s | "
+                  f"train {train_seconds:0.3f}s | eval {eval_seconds:0.3f}s | "
+                  f"plot {plot_seconds:0.3f}s | save {save_seconds:0.3f}s | "
+                  f"cum {cum_seconds/3600:0.2f}h")
+
+        # Episode-Timing abschließen & loggen
+        ep_seconds = time.perf_counter() - ep_start
+        cum_seconds = time.perf_counter() - t0
+        timing_rows.append({
+            "episode": ep,
+            "steps": steps,
+            "ep_seconds": ep_seconds,
+            "train_seconds": train_seconds,
+            "eval_seconds": eval_seconds,
+            "plot_seconds": plot_seconds,
+            "save_seconds": save_seconds,
+            "cum_seconds": cum_seconds,
+        })
+
+        # Schreibintervall: bei jeder Eval und zusätzlich alle 1000 Episoden
+        if ep % EINT == 0:
+            pd.DataFrame(timing_rows).to_csv(timings_csv, index=False)
+            # Optional kleine Progress-Kennzahl:
+            eps_per_sec = ep / max(cum_seconds, 1e-9)
+            print(f"🚀 Fortschritt: {ep}/{CONFIG['EPISODES']} Episoden | "
+                  f"Durchsatz ~ {eps_per_sec:0.2f} eps/s")
+
+    # Ende: finale CSV schreiben & Zusammenfassung
+    total_seconds = time.perf_counter() - t0
+    pd.DataFrame(timing_rows).to_csv(timings_csv, index=False)
+    print(f"⏲️  Gesamtzeit: {total_seconds/3600:0.2f}h "
+          f"(~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)")
     print("✅ K1 Training abgeschlossen.")
 
 if __name__=="__main__": main()

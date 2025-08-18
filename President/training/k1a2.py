@@ -1,7 +1,27 @@
 # -*- coding: utf-8 -*-
 # President/training/k1a2.py — DQN (K1): Single-Agent vs Heuristiken
+# Neue Speicherstruktur:
+#   models/k1a2/model_XX/
+#     config.csv
+#     timings.csv
+#     plots/
+#       lernkurve_single_only.png
+#       lernkurve_max_combo.png
+#       lernkurve_random2.png
+#       lernkurve_alle.png
+#       lernkurve_alle_mit_macro.png
+#       eval_curves.csv
+#     models/
+#       k1a2_model_XX_agent_p0_ep0001000_*.pt
+#
+# WICHTIGER FIX:
+#  - DQN-Transitions werden zwischen zwei aufeinanderfolgenden P0-Entscheidungen gebildet:
+#    (s_P0, a_P0, r_step, s'_P0, done), wobei s'_P0 = Beobachtung, wenn P0 wieder am Zug ist
+#    (oder Terminal). Gegnerzüge werden dazwischen "vorgespult", ohne neue P0-Transitions
+#    zu erzeugen. Dadurch stimmen next_legal_actions & Bootstrapping-Zustände.
 
-import os, re, datetime, numpy as np, pandas as pd, torch, matplotlib.pyplot as plt
+import os, re, datetime, time
+import numpy as np, pandas as pd, torch, matplotlib.pyplot as plt
 import pyspiel
 from open_spiel.python import rl_environment
 from agents import dqn_agent as dqn
@@ -11,8 +31,8 @@ from utils.training_eval_plots import EvalPlotter
 
 # ============== CONFIG  ==============
 CONFIG = {
-    "EPISODES":        10_000,
-    "EVAL_INTERVAL":   1_000,
+    "EPISODES":        200_000,
+    "EVAL_INTERVAL":   10_000,
     "EVAL_EPISODES":   2_000,
     "DECK_SIZE":       "64",      # "32" | "52" | "64"
     "SEED":            42,
@@ -39,7 +59,7 @@ CONFIG = {
     # Reward-Shaping (analog zu k1a1)
     "REWARD": {
         "STEP": "delta_hand",     # "none" | "delta_hand" | "hand_penalty"
-        "DELTA_WEIGHT": 1.0,
+        "DELTA_WEIGHT": 0.0,
         "HAND_PENALTY_COEFF": 0.0,
         "FINAL": "none",          # "none" | "placement_bonus"
         "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
@@ -57,9 +77,11 @@ CONFIG = {
 }
 
 # ============== Helpers / Heuristiken ==============
-def find_next_version(models_root, prefix):
-    pat = re.compile(rf"^{re.escape(prefix)}_(\d{{2}})$"); os.makedirs(models_root, exist_ok=True)
-    existing = [int(m.group(1)) for m in (pat.match(n) for n in os.listdir(models_root)) if m]
+def find_next_version(base_dir, prefix="model"):
+    """Scans base_dir for 'prefix_XX' and returns next two-digit XX."""
+    pat = re.compile(rf"^{re.escape(prefix)}_(\d{{2}})$")
+    os.makedirs(base_dir, exist_ok=True)
+    existing = [int(m.group(1)) for m in (pat.match(n) for n in os.listdir(base_dir)) if m]
     return f"{max(existing)+1:02d}" if existing else "01"
 
 class RewardShaper:
@@ -83,11 +105,42 @@ class RewardShaper:
         return (self.b[0],self.b[1],self.b[2],self.b[3])[place-1]
     def include_env_reward(self): return self.env
 
+def _alias_joint_plot_names(plots_dir):
+    """
+    Wenn der Plotter die alten gemeinsamen Namen schreibt, lege zusätzlich deine gewünschten Aliasse an:
+      lernkurve_alle_strategien.png       -> lernkurve_alle.png
+      lernkurve_alle_strategien_avg.png   -> lernkurve_alle_mit_macro.png
+    """
+    mapping = {
+        "lernkurve_alle_strategien.png": "lernkurve_alle.png",
+        "lernkurve_alle_strategien_avg.png": "lernkurve_alle_mit_macro.png",
+    }
+    for src, dst in mapping.items():
+        src_path = os.path.join(plots_dir, src)
+        dst_path = os.path.join(plots_dir, dst)
+        if os.path.exists(src_path) and not os.path.exists(dst_path):
+            try:
+                os.replace(src_path, dst_path)
+            except Exception:
+                pass  # non-fatal
+
 # =========================== Training ===========================
 def main():
     np.random.seed(CONFIG["SEED"]); torch.manual_seed(CONFIG["SEED"])
-    ROOT=os.path.dirname(os.path.dirname(os.path.abspath(__file__))); MODELS=os.path.join(ROOT,"models")
+    ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    MODELS_ROOT = os.path.join(ROOT, "models")
 
+    # ---- Neue Verzeichnisstruktur ----
+    family_dir = os.path.join(MODELS_ROOT, "k1a2")
+    version = find_next_version(family_dir, prefix="model")  # -> '01', '02', ...
+    run_dir = os.path.join(family_dir, f"model_{version}")
+    plots_dir = os.path.join(run_dir, "plots")
+    weights_dir = os.path.join(run_dir, "models")
+    os.makedirs(plots_dir, exist_ok=True)
+    os.makedirs(weights_dir, exist_ok=True)
+    print(f"📁 Neuer Lauf: {run_dir}")
+
+    # ---- Game/Env ----
     game = pyspiel.load_game("president", {
         "num_players":4, "deck_size":CONFIG["DECK_SIZE"], "shuffle_cards":True, "single_card_mode":False,
     })
@@ -107,95 +160,137 @@ def main():
                              add_seat_onehot=bool(CONFIG["FEATURES"]["SEAT_ONEHOT"]),
                              normalize=bool(CONFIG["FEATURES"]["NORMALIZE"]))
 
-    version = find_next_version(MODELS, "dqn_model")
-    model_dir = os.path.join(MODELS, f"dqn_model_{version}", "train"); os.makedirs(model_dir, exist_ok=True)
-
-    # Eval-Plotter wie in k1a1
+    # ---- Plotter in neues plots_dir ----
     plotter = EvalPlotter(
         opponent_names=list(CONFIG["EVAL_CURVES"]),
-        out_dir=model_dir,
+        out_dir=plots_dir,
         filename_prefix="lernkurve",
         csv_filename="eval_curves.csv",
         save_csv=True,
     )
 
+    # ---- Agent/Reward/Gegner ----
     dqn_cfg = dqn.DQNConfig(**CONFIG["DQN"])
     agent = dqn.DQNAgent(state_size=state_size, num_actions=A, config=dqn_cfg)
     opponents = [STRATS[name] for name in CONFIG["OPPONENTS"]]
     shaper = RewardShaper(CONFIG["REWARD"])
 
-    # run log
+    # ---- config.csv im Run-Root speichern ----
     pd.DataFrame([{
-        "version":version,"timestamp":datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "agent_type":"DQN","num_episodes":CONFIG["EPISODES"],"eval_interval":CONFIG["EVAL_INTERVAL"],
-        "eval_episodes":CONFIG["EVAL_EPISODES"],"deck_size":CONFIG["DECK_SIZE"],
-        "observation_dim":state_size,"num_actions":A,"model_version_dir":model_dir,
-        "step_reward":CONFIG["REWARD"]["STEP"],"final_reward":CONFIG["REWARD"]["FINAL"],"env_reward":CONFIG["REWARD"]["ENV_REWARD"],
+        "script":"k1a2","version":version,
+        "timestamp":datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "agent_type":"DQN","num_episodes":CONFIG["EPISODES"],
+        "eval_interval":CONFIG["EVAL_INTERVAL"],"eval_episodes":CONFIG["EVAL_EPISODES"],
+        "deck_size":CONFIG["DECK_SIZE"],
+        "observation_dim":state_size,"num_actions":A,
         "normalize":CONFIG["FEATURES"]["NORMALIZE"],"seat_onehot":CONFIG["FEATURES"]["SEAT_ONEHOT"],
         "opponents":",".join(CONFIG["OPPONENTS"]),
-    }]).to_csv(os.path.join(os.path.dirname(model_dir), "training_runs.csv"), index=False)
+        "models_dir":weights_dir,"plots_dir":plots_dir
+    }]).to_csv(os.path.join(run_dir, "config.csv"), index=False)
+    print(f"📝 Konfiguration gespeichert: {os.path.join(run_dir, 'config.csv')}")
+
+    # ---- Timings-Setup ----
+    timings_path = os.path.join(run_dir, "timings.csv")
+    timings_cols = ["episode","wall_s","steps","p0_transitions","train_calls","epsilon"]
+    timings_buffer = []
+    run_start = time.perf_counter()
 
     EINT, EEPS = CONFIG["EVAL_INTERVAL"], CONFIG["EVAL_EPISODES"]
 
+    # ---- Training loop (FIXED: P0->P0 Transitions) ----
     for ep in range(1, CONFIG["EPISODES"]+1):
+        ep_t0 = time.perf_counter()
+
         ts = env.reset()
-        last_idx_p = {p: None for p in range(num_players)}
+        last_idx_p0 = None
+        steps_in_ep = 0
+        p0_transitions = 0
+        train_calls = 0
 
         while not ts.last():
-            p = ts.observations["current_player"]; legal = ts.observations["legal_actions"][p]
 
-            # Beobachtung pro Sitz
-            base_s = np.array(env._state.observation_tensor(p), dtype=np.float32)
-            s = augment_observation(base_s, player_id=p, cfg=feat_cfg)
+            # 1) Vorspulen, bis P0 am Zug ist (Gegner spielen Heuristiken)
+            while not ts.last() and ts.observations["current_player"] != 0:
+                pid = ts.observations["current_player"]
+                a_opp = int(opponents[pid-1](env._state))
+                ts = env.step([a_opp])
+                steps_in_ep += 1
 
-            # Aktion (gleiche Policy auf allen Seats -> Shared Weights, aber K1-Szenario: nur p0 wird trainiert)
-            if p == 0:
-                a = int(agent.select_action(s, legal))
-            else:
-                # Heuristiken als Gegner
-                a = int(opponents[p-1](env._state))
+            if ts.last():
+                break  # Episode vorbei, kein P0-Zug mehr
 
-            ts_next = env.step([a])
+            # 2) P0-Zug: s, a, r_step (Reward nur für diesen P0-Schritt)
+            legal0 = ts.observations["legal_actions"][0]
+            s_base = np.array(env._state.observation_tensor(0), dtype=np.float32)
+            s      = augment_observation(s_base, player_id=0, cfg=feat_cfg)
 
-            # Next-Obs bauen (auch im Terminal einen Vektor – s_next ignoriert sich über done)
-            if not ts_next.last():
-                base_s_next = np.array(env._state.observation_tensor(p), dtype=np.float32)
-                s_next = augment_observation(base_s_next, player_id=p, cfg=feat_cfg)
-                next_legals = ts_next.observations["legal_actions"][p]
-            else:
+            hand_before = shaper.hand_size(ts, 0, deck_int)
+            a0 = int(agent.select_action(s, legal0))
+
+            ts = env.step([a0])   # führt P0-Zug aus
+            steps_in_ep += 1
+
+            hand_after = shaper.hand_size(ts, 0, deck_int)
+            r_step = shaper.step_reward(
+                hand_before=hand_before, hand_after=hand_after,
+                time_step=ts, player_id=0, deck_size=deck_int
+            )
+
+            # 3) Vorspulen bis P0 wieder am Zug ist oder Terminal
+            while not ts.last() and ts.observations["current_player"] != 0:
+                pid = ts.observations["current_player"]
+                a_opp = int(opponents[pid-1](env._state))
+                ts = env.step([a_opp])
+                steps_in_ep += 1
+
+            # 4) s' und next_legals für P0 definieren
+            if ts.last():
                 s_next = s
-                # WICHTIG: immer eine Next-Legal-Maske liefern (auch im Terminal),
-                # sonst mischt der Replay Buffer None/ndarrays → np.stack crasht.
-                next_legals = list(range(A))
+                next_legals = list(range(A))  # nie None in Buffer
+                done = True
+            else:
+                next_legals = ts.observations["legal_actions"][0]
+                s_next_base = np.array(env._state.observation_tensor(0), dtype=np.float32)
+                s_next = augment_observation(s_next_base, player_id=0, cfg=feat_cfg)
+                done = False
 
-            # Nur p0 lernt (wie K1-Setup)
-            if p == 0:
-                hand_before = shaper.hand_size(ts, p, deck_int)
-                hand_after  = shaper.hand_size(ts_next, p, deck_int)
-                r = shaper.step_reward(hand_before=hand_before, hand_after=hand_after,
-                                       time_step=ts_next, player_id=p, deck_size=deck_int)
+            # 5) Transition speichern & lernen
+            agent.buffer.add(s, a0, float(r_step), s_next, done, next_legal_actions=next_legals)
+            last_idx_p0 = len(agent.buffer.buffer) - 1
+            agent.train_step()
+            p0_transitions += 1
+            train_calls += 1
 
-                agent.buffer.add(s, a, float(r), s_next, bool(ts_next.last()),
-                                 next_legal_actions=next_legals)
-                last_idx_p[p] = len(agent.buffer.buffer) - 1
-                agent.train_step()
-
-            ts = ts_next
-
-        # Terminal: optional Env-Reward + Finalbonus auf die letzte Transition von P0 addieren
-        li = last_idx_p.get(0, None)
-        if li is not None:
+        # Terminal: optional Env-Reward + Finalbonus auf letzte P0-Transition addieren
+        if last_idx_p0 is not None:
             bonus = 0.0
             if shaper.include_env_reward():
                 bonus += ts.rewards[0]
             bonus += shaper.final_bonus(ts.rewards, 0)
             if abs(bonus) > 1e-8:
                 buf = agent.buffer
-                old = buf.buffer[li]
+                old = buf.buffer[last_idx_p0]
                 new = buf.Experience(old.state, old.action, float(old.reward + bonus), old.next_state, old.done, old.next_legal_mask)
-                buf.buffer[li] = new
+                buf.buffer[last_idx_p0] = new
 
-        # Evaluation (identisch zu k1a1 – per Gegner + Macro + Plotter)
+        # ---- Episode-Timing erfassen ----
+        ep_wall = time.perf_counter() - ep_t0
+        timings_buffer.append({
+            "episode": ep,
+            "wall_s": round(ep_wall, 6),
+            "steps": steps_in_ep,
+            "p0_transitions": p0_transitions,
+            "train_calls": train_calls,
+            "epsilon": getattr(agent, "epsilon", np.nan),
+        })
+        # Puffer regelmäßig schreiben (alle 100 Episoden + beim Ende)
+        if (ep % 100 == 0) or (ep == CONFIG["EPISODES"]):
+            df = pd.DataFrame(timings_buffer, columns=timings_cols)
+            write_header = not os.path.exists(timings_path)
+            df.to_csv(timings_path, mode="a", index=False, header=write_header)
+            timings_buffer.clear()
+
+        # ---- Evaluation (per Gegner + Macro + Plotter) ----
         if ep % EINT == 0:
             per_opponent = {}
             old_eps = agent.epsilon
@@ -219,23 +314,25 @@ def main():
                         wins += 1
                 wr = 100.0 * wins / EEPS
                 per_opponent[opp_name] = wr
-                print(f"✅ Eval nach {ep} – Winrate vs {opp_name}: {wr:.1f}%")
+                print(f"✅ Eval nach {ep:7d} – Winrate vs {opp_name:11s}: {wr:5.1f}%")
 
             agent.epsilon = old_eps
 
             macro = float(np.mean(list(per_opponent.values())))
             print(f"📊 Macro Average: {macro:.2f}%")
 
-            # loggen & plotten
+            # loggen & plotten (ins plots_dir)
             plotter.add(ep, per_opponent)
             plotter.plot_all()
+            _alias_joint_plot_names(plots_dir)
 
-            # Checkpoints (latest + episodiert)
-            base_latest = os.path.join(model_dir, f"dqn_model_{version}_agent_p0")
-            base_ep     = os.path.join(model_dir, f"dqn_model_{version}_agent_p0_ep{ep:07d}")
-            agent.save(base_latest); agent.save(base_ep)
-            print(f"💾 Modelle gespeichert: {base_latest}_*, {base_ep}_*")
+            # Checkpoints (episodiert) in weights_dir
+            base_ep = os.path.join(weights_dir, f"k1a2_model_{version}_agent_p0_ep{ep:07d}")
+            agent.save(base_ep)
+            print(f"💾 Modell gespeichert: {base_ep}_*")
 
+    total_wall = time.perf_counter() - run_start
+    print(f"⏱️  Gesamtlaufzeit: {total_wall/3600:.2f} h ({total_wall:.0f} s)")
     print("✅ K1 DQN Training abgeschlossen.")
 
 if __name__=="__main__": main()

@@ -1,0 +1,81 @@
+turn,player,legal_actions,chosen_action,policy_probs_over_legal
+0,1,"[(1, 'Play Single of 7'), (2, 'Play Single of 8'), (3, 'Play Single of 9'), (11, 'Play Pair of 9'), (5, 'Play Single of J'), (6, 'Play Single of Q'), (14, 'Play Pair of Q'), (22, 'Play Triple of Q'), (7, 'Play Single of K'), (15, 'Play Pair of K'), (23, 'Play Triple of K'), (8, 'Play Single of A'), (16, 'Play Pair of A'), (24, 'Play Triple of A'), (32, 'Play Quad of A'), (40, 'Play 5-of-a-kind of A')]",40 (Play 5-of-a-kind of A),
+1,2,"[(0, 'Pass')]",0 (Pass),
+2,3,"[(0, 'Pass')]",0 (Pass),
+3,0,"[(0, 'Pass')]",0 (Pass),0:1.00
+4,1,"[(1, 'Play Single of 7'), (2, 'Play Single of 8'), (3, 'Play Single of 9'), (11, 'Play Pair of 9'), (5, 'Play Single of J'), (6, 'Play Single of Q'), (14, 'Play Pair of Q'), (22, 'Play Triple of Q'), (7, 'Play Single of K'), (15, 'Play Pair of K'), (23, 'Play Triple of K')]",22 (Play Triple of Q),
+5,2,"[(0, 'Pass')]",0 (Pass),
+6,3,"[(0, 'Pass'), (23, 'Play Triple of K')]",23 (Play Triple of K),
+7,0,"[(0, 'Pass')]",0 (Pass),0:1.00
+8,1,"[(0, 'Pass')]",0 (Pass),
+9,2,"[(0, 'Pass')]",0 (Pass),
+10,3,"[(1, 'Play Single of 7'), (9, 'Play Pair of 7'), (2, 'Play Single of 8'), (3, 'Play Single of 9'), (11, 'Play Pair of 9'), (19, 'Play Triple of 9'), (27, 'Play Quad of 9'), (4, 'Play Single of 10'), (12, 'Play Pair of 10'), (5, 'Play Single of J'), (13, 'Play Pair of J'), (6, 'Play Single of Q'), (8, 'Play Single of A')]",27 (Play Quad of 9),
+11,0,"[(0, 'Pass'), (28, 'Play Quad of 10')]",28 (Play Quad of 10),0:0.20; 28:0.80
+12,1,"[(0, 'Pass')]",0 (Pass),
+13,2,"[(0, 'Pass'), (29, 'Play Quad of J')]",29 (Play Quad of J),
+14,3,"[(0, 'Pass')]",0 (Pass),
+15,0,"[(0, 'Pass')]",0 (Pass),0:1.00
+16,1,"[(0, 'Pass')]",0 (Pass),
+17,2,"[(1, 'Play Single of 7'), (9, 'Play Pair of 7'), (17, 'Play Triple of 7'), (2, 'Play Single of 8'), (10, 'Play Pair of 8'), (18, 'Play Triple of 8'), (3, 'Play Single of 9'), (4, 'Play Single of 10'), (6, 'Play Single of Q'), (14, 'Play Pair of Q'), (22, 'Play Triple of Q'), (8, 'Play Single of A')]",17 (Play Triple of 7),
+18,3,"[(0, 'Pass')]",0 (Pass),
+19,0,"[(0, 'Pass'), (18, 'Play Triple of 8')]",18 (Play Triple of 8),0:0.24; 18:0.76
+20,1,"[(0, 'Pass'), (23, 'Play Triple of K')]",23 (Play Triple of K),
+21,2,"[(0, 'Pass')]",0 (Pass),
+22,3,"[(0, 'Pass')]",0 (Pass),
+23,0,"[(0, 'Pass')]",0 (Pass),0:1.00
+24,1,"[(1, 'Play Single of 7'), (2, 'Play Single of 8'), (3, 'Play Single of 9'), (11, 'Play Pair of 9'), (5, 'Play Single of J')]",11 (Play Pair of 9),
+25,2,"[(0, 'Pass'), (14, 'Play Pair of Q')]",14 (Play Pair of Q),
+26,3,"[(0, 'Pass')]",0 (Pass),
+27,0,"[(0, 'Pass'), (15, 'Play Pair of K')]",15 (Play Pair of K),0:0.39; 15:0.61
+28,1,"[(0, 'Pass')]",0 (Pass),
+29,2,"[(0, 'Pass')]",0 (Pass),
+30,3,"[(0, 'Pass')]",0 (Pass),
+31,0,"[(1, 'Play Single of 7'), (9, 'Play Pair of 7'), (3, 'Play Single of 9'), (4, 'Play Single of 10'), (5, 'Play Single of J'), (6, 'Play Single of Q'), (8, 'Play Single of A')]",4 (Play Single of 10),1:0.11; 3:0.17; 4:0.16; 5:0.12; 6:0.14; 8:0.14; 9:0.15
+32,1,"[(0, 'Pass'), (5, 'Play Single of J')]",5 (Play Single of J),
+33,2,"[(0, 'Pass'), (6, 'Play Single of Q'), (8, 'Play Single of A')]",6 (Play Single of Q),
+34,3,"[(0, 'Pass'), (8, 'Play Single of A')]",8 (Play Single of A),
+35,0,"[(0, 'Pass')]",0 (Pass),0:1.00
+36,1,"[(0, 'Pass')]",0 (Pass),
+37,2,"[(0, 'Pass')]",0 (Pass),
+38,3,"[(1, 'Play Single of 7'), (9, 'Play Pair of 7'), (2, 'Play Single of 8'), (4, 'Play Single of 10'), (12, 'Play Pair of 10'), (5, 'Play Single of J'), (13, 'Play Pair of J'), (6, 'Play Single of Q')]",9 (Play Pair of 7),
+39,0,"[(0, 'Pass')]",0 (Pass),0:1.00
+40,1,"[(0, 'Pass')]",0 (Pass),
+41,2,"[(0, 'Pass'), (10, 'Play Pair of 8')]",10 (Play Pair of 8),
+42,3,"[(0, 'Pass'), (12, 'Play Pair of 10'), (13, 'Play Pair of J')]",12 (Play Pair of 10),
+43,0,"[(0, 'Pass')]",0 (Pass),0:1.00
+44,1,"[(0, 'Pass')]",0 (Pass),
+45,2,"[(0, 'Pass')]",0 (Pass),
+46,3,"[(2, 'Play Single of 8'), (5, 'Play Single of J'), (13, 'Play Pair of J'), (6, 'Play Single of Q')]",13 (Play Pair of J),
+47,0,"[(0, 'Pass')]",0 (Pass),0:1.00
+48,1,"[(0, 'Pass')]",0 (Pass),
+49,2,"[(0, 'Pass')]",0 (Pass),
+50,3,"[(2, 'Play Single of 8'), (6, 'Play Single of Q')]",2 (Play Single of 8),
+51,0,"[(0, 'Pass'), (3, 'Play Single of 9'), (5, 'Play Single of J'), (6, 'Play Single of Q'), (8, 'Play Single of A')]",5 (Play Single of J),0:0.18; 3:0.22; 5:0.20; 6:0.20; 8:0.21
+52,1,"[(0, 'Pass')]",0 (Pass),
+53,2,"[(0, 'Pass'), (8, 'Play Single of A')]",8 (Play Single of A),
+54,3,"[(0, 'Pass')]",0 (Pass),
+55,0,"[(0, 'Pass')]",0 (Pass),0:1.00
+56,1,"[(0, 'Pass')]",0 (Pass),
+57,2,"[(2, 'Play Single of 8'), (3, 'Play Single of 9'), (4, 'Play Single of 10')]",2 (Play Single of 8),
+58,3,"[(0, 'Pass'), (6, 'Play Single of Q')]",6 (Play Single of Q),
+59,0,"[(0, 'Pass'), (8, 'Play Single of A')]",0 (Pass),0:0.44; 8:0.56
+60,1,"[(0, 'Pass')]",0 (Pass),
+61,2,"[(0, 'Pass')]",0 (Pass),
+62,0,"[(1, 'Play Single of 7'), (9, 'Play Pair of 7'), (3, 'Play Single of 9'), (6, 'Play Single of Q'), (8, 'Play Single of A')]",9 (Play Pair of 7),1:0.18; 3:0.21; 6:0.20; 8:0.20; 9:0.22
+63,1,"[(0, 'Pass')]",0 (Pass),
+64,2,"[(0, 'Pass')]",0 (Pass),
+65,0,"[(3, 'Play Single of 9'), (6, 'Play Single of Q'), (8, 'Play Single of A')]",8 (Play Single of A),3:0.35; 6:0.31; 8:0.34
+66,1,"[(0, 'Pass')]",0 (Pass),
+67,2,"[(0, 'Pass')]",0 (Pass),
+68,0,"[(3, 'Play Single of 9'), (6, 'Play Single of Q')]",6 (Play Single of Q),3:0.54; 6:0.46
+69,1,"[(0, 'Pass')]",0 (Pass),
+70,2,"[(0, 'Pass')]",0 (Pass),
+71,0,"[(3, 'Play Single of 9')]",3 (Play Single of 9),3:1.00
+72,1,"[(0, 'Pass')]",0 (Pass),
+73,2,"[(0, 'Pass'), (4, 'Play Single of 10')]",4 (Play Single of 10),
+74,1,"[(0, 'Pass')]",0 (Pass),
+75,2,"[(3, 'Play Single of 9')]",3 (Play Single of 9),
+76,1,"[(0, 'Pass')]",0 (Pass),
+77,1,"[(1, 'Play Single of 7'), (2, 'Play Single of 8')]",1 (Play Single of 7),
+78,1,"[(2, 'Play Single of 8')]",2 (Play Single of 8),
+79,terminal,,,"returns=[2.0, 0.0, 1.0, 3.0]"

@@ -29,8 +29,8 @@ from utils.training_eval_plots import EvalPlotter
 
 # ===================== CONFIG ===================== #
 CONFIG = {
-    "EPISODES":        10_000,
-    "EVAL_INTERVAL":   2_000,
+    "EPISODES":        1_000_000,
+    "EVAL_INTERVAL":   10_000,
     "EVAL_EPISODES":   2_000,
     "DECK_SIZE":       "64",
     "SEED":            123,
@@ -38,7 +38,7 @@ CONFIG = {
     # PPO-Hyperparameter
     "PPO": {
         "learning_rate": 3e-4,
-        "num_epochs": 4,
+        "num_epochs": 1,
         "batch_size": 256,
         "entropy_cost": 0.01,
         "gamma": 0.99,

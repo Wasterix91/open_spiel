@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,version,episode,avg_return,win_rate_percent,num_wins,num_starts
+16,P0,dqn v03 ep150.000,dqn,03,150_000,0.22,0.8,80,2513
+16,Player1,max_combo v,max_combo,,,1.85,32.65,3265,2499
+16,Player2,max_combo v,max_combo,,,1.98,34.72,3472,2483
+16,Player3,max_combo v,max_combo,,,1.95,31.83,3183,2505
