@@ -1,0 +1,18 @@
+[2025-08-19 12:47:52] New Training
+[2025-08-19 12:47:52] Deck_Size: 64
+[2025-08-19 12:47:52] Episodes: 4000
+[2025-08-19 12:47:52] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k1a1/model_37
+[2025-08-19 12:48:46] 
+[2025-08-19 12:48:46] Benchmark    1000 episodes
+[2025-08-19 12:48:46] Macro Average          :  37.0%
+[2025-08-19 12:48:46] Winrate vs max_combo   :  14.9%
+[2025-08-19 12:48:46] Winrate vs random2     :  41.6%
+[2025-08-19 12:48:46] Winrate vs single_only :  54.5%
+[2025-08-19 12:48:48] Timing @ep 1000: episode 38.8s | train 0.003s | eval 36.8s | plot 2.0s | save 0.003s | cum 0.02h
+[2025-08-19 12:49:39] 
+[2025-08-19 12:49:39] Benchmark    2000 episodes
+[2025-08-19 12:49:39] Macro Average          :  49.8%
+[2025-08-19 12:49:39] Winrate vs max_combo   :  22.2%
+[2025-08-19 12:49:39] Winrate vs random2     :  57.9%
+[2025-08-19 12:49:39] Winrate vs single_only :  69.3%
+[2025-08-19 12:49:42] Timing @ep 2000: episode 38.5s | train 0.003s | eval 36.1s | plot 2.4s | save 0.001s | cum 0.03h

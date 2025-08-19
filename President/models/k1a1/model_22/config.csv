@@ -1,0 +1,2 @@
+script,version,timestamp,agent_type,num_episodes,eval_interval,eval_episodes,deck_size,num_ranks,observation_dim,num_actions,normalize,seat_onehot,opponents,models_dir,plots_dir
+k1a1,22,2025-08-19 10:30:56,PPO,100000,10000,2000,64,16,14,65,False,False,"max_combo,max_combo,max_combo",/home/wasterix/OpenSpiel/open_spiel/President/models/k1a1/model_22/models,/home/wasterix/OpenSpiel/open_spiel/President/models/k1a1/model_22/plots

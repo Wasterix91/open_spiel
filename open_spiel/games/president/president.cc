@@ -93,7 +93,20 @@ PresidentGame::PresidentGame(const GameParameters& params)
   } else if (deck_size_str == "64") {
     ranks_ = {"7", "8", "9", "10", "J", "Q", "K", "A"};
     num_suits_ = 8;
-  } else {
+  } else if (deck_size_str == "12") {
+    ranks_ = {"Q", "K", "A"};
+    num_suits_ = 4;
+  } else if (deck_size_str == "16") {
+    ranks_ = {"J", "Q", "K", "A"};
+    num_suits_ = 4;
+  } else if (deck_size_str == "20") {
+    ranks_ = {"10", "J", "Q", "K", "A"};
+    num_suits_ = 4;
+  } else if (deck_size_str == "24") {
+    ranks_ = {"9", "10", "J", "Q", "K", "A"};
+    num_suits_ = 4;
+  }
+  else {
     SpielFatalError("Unknown deck_size: " + deck_size_str);
   }
 

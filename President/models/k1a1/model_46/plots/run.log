@@ -1,0 +1,42 @@
+[2025-08-19 15:52:02] New Training
+[2025-08-19 15:52:02] Deck_Size: 12
+[2025-08-19 15:52:02] Episodes: 10
+[2025-08-19 15:52:02] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k1a1/model_46
+[2025-08-19 15:52:13] 
+[2025-08-19 15:52:13] Benchmark       2 episodes
+[2025-08-19 15:52:13] Macro Average          :  18.9%
+[2025-08-19 15:52:13] Winrate vs max_combo   :  15.2%
+[2025-08-19 15:52:13] Winrate vs random2     :  17.4%
+[2025-08-19 15:52:13] Winrate vs single_only :  24.1%
+[2025-08-19 15:52:15] Timing @ep 2: episode 12.1s | train 0.002s | eval 10.3s | plot 1.8s | save 0.002s | cum 0.00h
+[2025-08-19 15:52:25] 
+[2025-08-19 15:52:25] Benchmark       4 episodes
+[2025-08-19 15:52:25] Macro Average          :  17.4%
+[2025-08-19 15:52:25] Winrate vs max_combo   :  14.3%
+[2025-08-19 15:52:25] Winrate vs random2     :  14.8%
+[2025-08-19 15:52:25] Winrate vs single_only :  23.1%
+[2025-08-19 15:52:27] Timing @ep 4: episode 12.1s | train 0.003s | eval 10.2s | plot 1.9s | save 0.001s | cum 0.01h
+[2025-08-19 15:52:37] 
+[2025-08-19 15:52:37] Benchmark       6 episodes
+[2025-08-19 15:52:37] Macro Average          :  17.5%
+[2025-08-19 15:52:37] Winrate vs max_combo   :  14.2%
+[2025-08-19 15:52:37] Winrate vs random2     :  15.6%
+[2025-08-19 15:52:37] Winrate vs single_only :  22.7%
+[2025-08-19 15:52:39] Timing @ep 6: episode 12.3s | train 0.005s | eval 10.5s | plot 1.8s | save 0.001s | cum 0.01h
+[2025-08-19 15:52:49] 
+[2025-08-19 15:52:49] Benchmark       8 episodes
+[2025-08-19 15:52:49] Macro Average          :  18.8%
+[2025-08-19 15:52:49] Winrate vs max_combo   :  16.6%
+[2025-08-19 15:52:49] Winrate vs random2     :  16.3%
+[2025-08-19 15:52:49] Winrate vs single_only :  23.6%
+[2025-08-19 15:52:51] Timing @ep 8: episode 12.1s | train 0.003s | eval 10.1s | plot 1.9s | save 0.002s | cum 0.01h
+[2025-08-19 15:53:02] 
+[2025-08-19 15:53:02] Benchmark      10 episodes
+[2025-08-19 15:53:02] Macro Average          :  17.8%
+[2025-08-19 15:53:02] Winrate vs max_combo   :  14.3%
+[2025-08-19 15:53:02] Winrate vs random2     :  14.7%
+[2025-08-19 15:53:02] Winrate vs single_only :  24.5%
+[2025-08-19 15:53:03] Timing @ep 10: episode 12.4s | train 0.004s | eval 10.5s | plot 1.8s | save 0.001s | cum 0.02h
+[2025-08-19 15:53:03] 
+[2025-08-19 15:53:03] Gesamtzeit: 0.02h (~ 0.16 eps/s)
+[2025-08-19 15:53:03] K1 Training abgeschlossen.

@@ -1,0 +1,47 @@
+[2025-08-19 16:52:12] New Training
+[2025-08-19 16:52:12] Deck_Size: 12
+[2025-08-19 16:52:12] Episodes: 100
+[2025-08-19 16:52:12] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k1a1/model_55
+[2025-08-19 16:52:14] 
+[2025-08-19 16:52:14] Benchmark @train_ep      20 (bench_eps: 200)
+[2025-08-19 16:52:14] Macro Winrate          :  20.7%
+[2025-08-19 16:52:14] Macro Ø-Reward         :  1.275
+[2025-08-19 16:52:14] Winrate vs max_combo   :  16.5% | Σ-Reward:  223.0 | Ø-Reward:  1.115 | Places: [33 (0.17), 28 (0.14), 68 (0.34), 71 (0.35)]
+[2025-08-19 16:52:14] Winrate vs random2     :  17.5% | Σ-Reward:  240.0 | Ø-Reward:  1.200 | Places: [35 (0.17), 36 (0.18), 63 (0.32), 66 (0.33)]
+[2025-08-19 16:52:14] Winrate vs single_only :  28.0% | Σ-Reward:  302.0 | Ø-Reward:  1.510 | Places: [56 (0.28), 39 (0.20), 56 (0.28), 49 (0.24)]
+[2025-08-19 16:52:16] Timing @ep 20: episode 3.3s | train 0.002s | eval 1.1s | plot 2.3s | save 0.002s | cum 0.00h
+[2025-08-19 16:52:17] 
+[2025-08-19 16:52:17] Benchmark @train_ep      40 (bench_eps: 200)
+[2025-08-19 16:52:17] Macro Winrate          :  23.5%
+[2025-08-19 16:52:17] Macro Ø-Reward         :  1.297
+[2025-08-19 16:52:17] Winrate vs max_combo   :  16.0% | Σ-Reward:  202.0 | Ø-Reward:  1.010 | Places: [32 (0.16), 29 (0.14), 48 (0.24), 91 (0.46)]
+[2025-08-19 16:52:17] Winrate vs random2     :  20.0% | Σ-Reward:  251.0 | Ø-Reward:  1.255 | Places: [40 (0.20), 42 (0.21), 47 (0.23), 71 (0.35)]
+[2025-08-19 16:52:17] Winrate vs single_only :  34.5% | Σ-Reward:  325.0 | Ø-Reward:  1.625 | Places: [69 (0.34), 37 (0.18), 44 (0.22), 50 (0.25)]
+[2025-08-19 16:52:20] Timing @ep 40: episode 3.4s | train 0.002s | eval 1.0s | plot 2.4s | save 0.001s | cum 0.00h
+[2025-08-19 16:52:21] 
+[2025-08-19 16:52:21] Benchmark @train_ep      60 (bench_eps: 200)
+[2025-08-19 16:52:21] Macro Winrate          :  26.3%
+[2025-08-19 16:52:21] Macro Ø-Reward         :  1.317
+[2025-08-19 16:52:21] Winrate vs max_combo   :  22.0% | Σ-Reward:  212.0 | Ø-Reward:  1.060 | Places: [44 (0.22), 19 (0.10), 42 (0.21), 95 (0.47)]
+[2025-08-19 16:52:21] Winrate vs random2     :  24.0% | Σ-Reward:  275.0 | Ø-Reward:  1.375 | Places: [48 (0.24), 38 (0.19), 55 (0.28), 59 (0.29)]
+[2025-08-19 16:52:21] Winrate vs single_only :  33.0% | Σ-Reward:  303.0 | Ø-Reward:  1.515 | Places: [66 (0.33), 30 (0.15), 45 (0.23), 59 (0.29)]
+[2025-08-19 16:52:23] Timing @ep 60: episode 3.4s | train 0.002s | eval 0.9s | plot 2.5s | save 0.001s | cum 0.00h
+[2025-08-19 16:52:24] 
+[2025-08-19 16:52:24] Benchmark @train_ep      80 (bench_eps: 200)
+[2025-08-19 16:52:24] Macro Winrate          :  25.5%
+[2025-08-19 16:52:24] Macro Ø-Reward         :  1.345
+[2025-08-19 16:52:24] Winrate vs max_combo   :  20.0% | Σ-Reward:  221.0 | Ø-Reward:  1.105 | Places: [40 (0.20), 26 (0.13), 49 (0.24), 85 (0.42)]
+[2025-08-19 16:52:24] Winrate vs random2     :  26.0% | Σ-Reward:  294.0 | Ø-Reward:  1.470 | Places: [52 (0.26), 47 (0.23), 44 (0.22), 57 (0.28)]
+[2025-08-19 16:52:24] Winrate vs single_only :  30.5% | Σ-Reward:  292.0 | Ø-Reward:  1.460 | Places: [61 (0.30), 27 (0.14), 55 (0.28), 57 (0.28)]
+[2025-08-19 16:52:27] Timing @ep 80: episode 3.2s | train 0.002s | eval 0.9s | plot 2.3s | save 0.001s | cum 0.00h
+[2025-08-19 16:52:28] 
+[2025-08-19 16:52:28] Benchmark @train_ep     100 (bench_eps: 200)
+[2025-08-19 16:52:28] Macro Winrate          :  28.5%
+[2025-08-19 16:52:28] Macro Ø-Reward         :  1.452
+[2025-08-19 16:52:28] Winrate vs max_combo   :  26.0% | Σ-Reward:  270.0 | Ø-Reward:  1.350 | Places: [52 (0.26), 33 (0.17), 48 (0.24), 67 (0.34)]
+[2025-08-19 16:52:28] Winrate vs random2     :  22.5% | Σ-Reward:  271.0 | Ø-Reward:  1.355 | Places: [45 (0.23), 48 (0.24), 40 (0.20), 67 (0.34)]
+[2025-08-19 16:52:28] Winrate vs single_only :  37.0% | Σ-Reward:  330.0 | Ø-Reward:  1.650 | Places: [74 (0.37), 30 (0.15), 48 (0.24), 48 (0.24)]
+[2025-08-19 16:52:30] Timing @ep 100: episode 3.4s | train 0.002s | eval 1.0s | plot 2.4s | save 0.001s | cum 0.00h
+[2025-08-19 16:52:30] 
+[2025-08-19 16:52:30] Gesamtzeit: 0.00h (~ 5.80 eps/s)
+[2025-08-19 16:52:30] K1 Training abgeschlossen.

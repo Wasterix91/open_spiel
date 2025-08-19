@@ -1,0 +1,47 @@
+[2025-08-19 16:36:25] New Training
+[2025-08-19 16:36:25] Deck_Size: 12
+[2025-08-19 16:36:25] Episodes: 100
+[2025-08-19 16:36:25] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k1a1/model_52
+[2025-08-19 16:36:28] 
+[2025-08-19 16:36:28] Benchmark      20 episodes
+[2025-08-19 16:36:28] Macro Winrate          :  21.0%
+[2025-08-19 16:36:28] Macro Ø-Reward         :  1.285
+[2025-08-19 16:36:28] Winrate vs max_combo   :  24.0% | Σ-Reward:  252.0 | Ø-Reward:  1.260 | Places: [0 (nan), 0 (nan), 0 (nan), 0 (nan)]
+[2025-08-19 16:36:28] Winrate vs random2     :  13.0% | Σ-Reward:  223.0 | Ø-Reward:  1.115 | Places: [0 (nan), 0 (nan), 0 (nan), 0 (nan)]
+[2025-08-19 16:36:28] Winrate vs single_only :  26.0% | Σ-Reward:  296.0 | Ø-Reward:  1.480 | Places: [0 (nan), 0 (nan), 0 (nan), 0 (nan)]
+[2025-08-19 16:36:31] Timing @ep 20: episode 4.9s | train 0.004s | eval 2.3s | plot 2.5s | save 0.002s | cum 0.00h
+[2025-08-19 16:36:33] 
+[2025-08-19 16:36:33] Benchmark      40 episodes
+[2025-08-19 16:36:33] Macro Winrate          :  25.0%
+[2025-08-19 16:36:33] Macro Ø-Reward         :  1.338
+[2025-08-19 16:36:33] Winrate vs max_combo   :  22.5% | Σ-Reward:  233.0 | Ø-Reward:  1.165 | Places: [0 (nan), 0 (nan), 0 (nan), 0 (nan)]
+[2025-08-19 16:36:33] Winrate vs random2     :  20.0% | Σ-Reward:  261.0 | Ø-Reward:  1.305 | Places: [0 (nan), 0 (nan), 0 (nan), 0 (nan)]
+[2025-08-19 16:36:33] Winrate vs single_only :  32.5% | Σ-Reward:  309.0 | Ø-Reward:  1.545 | Places: [0 (nan), 0 (nan), 0 (nan), 0 (nan)]
+[2025-08-19 16:36:35] Timing @ep 40: episode 4.6s | train 0.003s | eval 2.2s | plot 2.4s | save 0.001s | cum 0.00h
+[2025-08-19 16:36:38] 
+[2025-08-19 16:36:38] Benchmark      60 episodes
+[2025-08-19 16:36:38] Macro Winrate          :  27.8%
+[2025-08-19 16:36:38] Macro Ø-Reward         :  1.405
+[2025-08-19 16:36:38] Winrate vs max_combo   :  26.5% | Σ-Reward:  270.0 | Ø-Reward:  1.350 | Places: [0 (nan), 0 (nan), 0 (nan), 0 (nan)]
+[2025-08-19 16:36:38] Winrate vs random2     :  25.5% | Σ-Reward:  281.0 | Ø-Reward:  1.405 | Places: [0 (nan), 0 (nan), 0 (nan), 0 (nan)]
+[2025-08-19 16:36:38] Winrate vs single_only :  31.5% | Σ-Reward:  292.0 | Ø-Reward:  1.460 | Places: [0 (nan), 0 (nan), 0 (nan), 0 (nan)]
+[2025-08-19 16:36:40] Timing @ep 60: episode 4.6s | train 0.002s | eval 2.2s | plot 2.5s | save 0.001s | cum 0.00h
+[2025-08-19 16:36:42] 
+[2025-08-19 16:36:42] Benchmark      80 episodes
+[2025-08-19 16:36:42] Macro Winrate          :  26.3%
+[2025-08-19 16:36:42] Macro Ø-Reward         :  1.365
+[2025-08-19 16:36:42] Winrate vs max_combo   :  24.0% | Σ-Reward:  242.0 | Ø-Reward:  1.210 | Places: [0 (nan), 0 (nan), 0 (nan), 0 (nan)]
+[2025-08-19 16:36:42] Winrate vs random2     :  23.5% | Σ-Reward:  280.0 | Ø-Reward:  1.400 | Places: [0 (nan), 0 (nan), 0 (nan), 0 (nan)]
+[2025-08-19 16:36:42] Winrate vs single_only :  31.5% | Σ-Reward:  297.0 | Ø-Reward:  1.485 | Places: [0 (nan), 0 (nan), 0 (nan), 0 (nan)]
+[2025-08-19 16:36:45] Timing @ep 80: episode 5.0s | train 0.002s | eval 2.2s | plot 2.8s | save 0.001s | cum 0.01h
+[2025-08-19 16:36:48] 
+[2025-08-19 16:36:48] Benchmark     100 episodes
+[2025-08-19 16:36:48] Macro Winrate          :  28.5%
+[2025-08-19 16:36:48] Macro Ø-Reward         :  1.372
+[2025-08-19 16:36:48] Winrate vs max_combo   :  23.0% | Σ-Reward:  234.0 | Ø-Reward:  1.170 | Places: [0 (nan), 0 (nan), 0 (nan), 0 (nan)]
+[2025-08-19 16:36:48] Winrate vs random2     :  26.0% | Σ-Reward:  277.0 | Ø-Reward:  1.385 | Places: [0 (nan), 0 (nan), 0 (nan), 0 (nan)]
+[2025-08-19 16:36:48] Winrate vs single_only :  36.5% | Σ-Reward:  312.0 | Ø-Reward:  1.560 | Places: [0 (nan), 0 (nan), 0 (nan), 0 (nan)]
+[2025-08-19 16:36:51] Timing @ep 100: episode 5.0s | train 0.002s | eval 2.4s | plot 2.6s | save 0.001s | cum 0.01h
+[2025-08-19 16:36:51] 
+[2025-08-19 16:36:51] Gesamtzeit: 0.01h (~ 4.00 eps/s)
+[2025-08-19 16:36:51] K1 Training abgeschlossen.

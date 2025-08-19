@@ -174,7 +174,7 @@ class PPOAgent:
 
     def train(self):
         if len(self._buffer.states) == 0:
-            return
+            return {}
 
         cfg = self._config
         states = torch.tensor(np.array(self._buffer.states), dtype=torch.float32, device=self.device)
@@ -185,16 +185,22 @@ class PPOAgent:
         values_np = np.array(self._buffer.values, dtype=np.float32)
         legal_masks = torch.tensor(np.array(self._buffer.legal_masks), dtype=torch.float32, device=self.device)
 
-        # GAE
+        # --- GAE ---
         adv_np, ret_np = self._compute_gae(rewards, values_np, dones, cfg.gamma, cfg.gae_lambda)
         advantages = torch.tensor(adv_np, dtype=torch.float32, device=self.device)
         returns = torch.tensor(ret_np, dtype=torch.float32, device=self.device)
 
-        # Normalize advantages
-        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+        # --- Advantage-Norm ---
+        adv_mean = float(advantages.mean().detach().cpu().item())
+        adv_std  = float(advantages.std(unbiased=False).detach().cpu().item())
+        advantages = (advantages - advantages.mean()) / (advantages.std(unbiased=False) + 1e-8)
 
         N = states.shape[0]
         idx = np.arange(N)
+
+        # Laufende Sammelgrößen für Metriken
+        policy_losses, value_losses, entropies = [], [], []
+        clip_fracs, approx_kls = [], []
 
         for _ in range(cfg.num_epochs):
             np.random.shuffle(idx)
@@ -227,10 +233,79 @@ class PPOAgent:
 
                 self._optimizer.zero_grad()
                 loss.backward()
-                nn.utils.clip_grad_norm_(list(self._policy.parameters()) + list(self._value.parameters()), cfg.max_grad_norm)
+                nn.utils.clip_grad_norm_(
+                    list(self._policy.parameters()) + list(self._value.parameters()),
+                    cfg.max_grad_norm
+                )
                 self._optimizer.step()
 
+                # --- Metriken sammeln ---
+                with torch.no_grad():
+                    # approx-KL: E[logp_old - logp_new]
+                    approx_kl = (old_logp_mb - new_logp).mean().abs().item()
+                    clipped = (torch.abs(ratio - 1.0) > cfg.clip_eps).float().mean().item()
+
+                policy_losses.append(float(policy_loss.detach().cpu().item()))
+                value_losses.append(float(value_loss.detach().cpu().item()))
+                entropies.append(float(entropy.detach().cpu().item()))
+                approx_kls.append(float(approx_kl))
+                clip_fracs.append(float(clipped))
+
+        # Buffer leeren
         self._buffer.clear()
+
+        # --- Zusammenstellen & zurückgeben ---
+        metrics = {
+            # --- Rewards & Returns ---
+            "reward_mean": float(np.mean(rewards)) if len(rewards) else 0.0,
+            # Mittelwert der Rewards pro Schritt in dieser Trainingsiteration.
+            # → Gibt Auskunft, wie stark der Agent im Schnitt belohnt wird.
+
+            "reward_std":  float(np.std(rewards)) if len(rewards) else 0.0,
+            # Standardabweichung der Rewards.
+            # → Maß für die Varianz der Belohnungen (stabil oder sehr schwankend?).
+
+            "return_mean": float(np.mean(ret_np)) if len(ret_np) else 0.0,
+            # Durchschnitt der Discounted Returns (Σ γ^t * r_t) aus den Episoden.
+            # → Wichtiger Indikator, ob der Agent über Episoden hinweg lernt, mehr zu erreichen.
+
+            # --- Advantages (vor Normalisierung) ---
+            "adv_mean_raw": adv_mean,
+            # Mittelwert der berechneten (ungeglätteten) Advantages.
+            # → Sollte im Schnitt nahe 0 liegen (wegen Baseline-Schätzung).
+
+            "adv_std_raw":  adv_std,
+            # Standardabweichung der Advantages.
+            # → Zeigt, wie stark die Vorteile zwischen guten und schlechten Aktionen streuen.
+
+            # --- PPO Verluste ---
+            "policy_loss":  float(np.mean(policy_losses)) if policy_losses else 0.0,
+            # Loss des Policy-Updates (Clipped Objective).
+            # → Misst, wie stark die Policy-Parameter angepasst werden.
+            # → Sehr kleine Werte können auf „fast kein Update“ hindeuten.
+
+            "value_loss":   float(np.mean(value_losses)) if value_losses else 0.0,
+            # Loss der Value-Funktion (MSE zwischen Schätzung und Return).
+            # → Hohe Werte bedeuten, dass der Kritiker (Value-Netz) schlecht die Returns approximiert.
+
+            # --- Exploration / Regularisierung ---
+            "entropy":      float(np.mean(entropies)) if entropies else 0.0,
+            # Entropie der Policy-Verteilung.
+            # → Maß für die Zufälligkeit der Aktionen: hoch = viel Exploration, niedrig = deterministischer.
+
+            # --- PPO Stabilitätsmetriken ---
+            "approx_kl":    float(np.mean(approx_kls)) if approx_kls else 0.0,
+            # Approximierte KL-Divergenz zwischen alter und neuer Policy.
+            # → Misst, wie stark die Policy durch das Update verändert wurde.
+            # → Sollte klein bleiben (sonst riskierst du Instabilität).
+
+            "clip_frac":    float(np.mean(clip_fracs)) if clip_fracs else 0.0,
+            # Anteil der Gradienten, die von PPO „geclippt“ wurden.
+            # → Maß dafür, wie oft die Policy-Updates die Clip-Grenze überschreiten.
+        }
+
+        return metrics
+
 
     def save(self, path):
         torch.save(self._policy.state_dict(), path + "_policy.pt")

@@ -1,0 +1,35 @@
+[2025-08-19 13:27:48] New Training
+[2025-08-19 13:27:48] Deck_Size: 64
+[2025-08-19 13:27:48] Episodes: 4000
+[2025-08-19 13:27:48] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k1a1/model_41
+[2025-08-19 13:28:38] 
+[2025-08-19 13:28:38] Benchmark    1000 episodes
+[2025-08-19 13:28:38] Macro Average          :  47.8%
+[2025-08-19 13:28:38] Winrate vs max_combo   :  17.0%
+[2025-08-19 13:28:38] Winrate vs random2     :  54.4%
+[2025-08-19 13:28:38] Winrate vs single_only :  72.0%
+[2025-08-19 13:28:40] Timing @ep 1000: episode 35.7s | train 0.002s | eval 33.6s | plot 2.1s | save 0.002s | cum 0.01h
+[2025-08-19 13:29:27] 
+[2025-08-19 13:29:27] Benchmark    2000 episodes
+[2025-08-19 13:29:27] Macro Average          :  52.8%
+[2025-08-19 13:29:27] Winrate vs max_combo   :  20.4%
+[2025-08-19 13:29:27] Winrate vs random2     :  59.6%
+[2025-08-19 13:29:27] Winrate vs single_only :  78.4%
+[2025-08-19 13:29:29] Timing @ep 2000: episode 34.7s | train 0.003s | eval 32.3s | plot 2.3s | save 0.001s | cum 0.03h
+[2025-08-19 13:30:17] 
+[2025-08-19 13:30:17] Benchmark    3000 episodes
+[2025-08-19 13:30:17] Macro Average          :  55.9%
+[2025-08-19 13:30:17] Winrate vs max_combo   :  23.4%
+[2025-08-19 13:30:17] Winrate vs random2     :  64.7%
+[2025-08-19 13:30:17] Winrate vs single_only :  79.5%
+[2025-08-19 13:30:19] Timing @ep 3000: episode 35.0s | train 0.003s | eval 32.5s | plot 2.5s | save 0.001s | cum 0.04h
+[2025-08-19 13:31:06] 
+[2025-08-19 13:31:06] Benchmark    4000 episodes
+[2025-08-19 13:31:06] Macro Average          :  56.5%
+[2025-08-19 13:31:06] Winrate vs max_combo   :  23.9%
+[2025-08-19 13:31:06] Winrate vs random2     :  63.5%
+[2025-08-19 13:31:06] Winrate vs single_only :  82.0%
+[2025-08-19 13:31:08] Timing @ep 4000: episode 34.6s | train 0.003s | eval 32.0s | plot 2.6s | save 0.002s | cum 0.06h
+[2025-08-19 13:31:08] 
+[2025-08-19 13:31:08] Gesamtzeit: 0.06h (~ 20.04 eps/s)
+[2025-08-19 13:31:08] K1 Training abgeschlossen.

@@ -1,28 +1,37 @@
-# -*- coding: utf-8 -*-
-import os, re, datetime, time, numpy as np, pandas as pd, torch
-import matplotlib.pyplot as plt
+import os, datetime, time, numpy as np, torch
 import pyspiel
 from open_spiel.python import rl_environment
+
 from agents import ppo_agent as ppo
 from utils.strategies import STRATS
 from utils.fit_tensor import FeatureConfig, augment_observation
-from utils.training_eval_plots import EvalPlotter
+from utils.plotter import MetricsPlotter
+from utils.timing import TimingMeter
+from utils.reward_shaper import RewardShaper
+
+from utils.load_save_common import find_next_version, prepare_run_dirs, save_config_csv, save_run_meta
+from utils.load_save_a1_ppo import save_checkpoint_ppo
+
+from utils.benchmark import run_benchmark
+from utils.deck import ranks_for_deck
+
 
 # ============== CONFIG  ==============
 CONFIG = {
-    "EPISODES":        1_200_000,
-    "EVAL_INTERVAL":   10_000,
-    "EVAL_EPISODES":   2_000,
-    "DECK_SIZE":       "64",      # "32" | "52" | "64"
-    "SEED":            42,
+    "EPISODES":         100_000,
+    "BENCH_INTERVAL":   5000,
+    "BENCH_EPISODES":   2000,
+    "TIMING_INTERVAL":  500,
+    "DECK_SIZE":        "12",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+    "SEED":             42,
 
     # Training-Gegner (Heuristiken)
-    "OPPONENTS":       ["max_combo", "max_combo", "max_combo"],
+    "OPPONENTS":        ["max_combo", "max_combo", "max_combo"],
 
     # PPO-Hyperparameter
     "PPO": {
         "learning_rate": 3e-4,
-        "num_epochs": 4,
+        "num_epochs": 1,
         "batch_size": 256,
         "entropy_cost": 0.01,
         "gamma": 0.99,
@@ -34,71 +43,24 @@ CONFIG = {
 
     # Reward-Shaping
     "REWARD": {
-        "STEP": "delta_hand",     # "none" | "delta_hand" | "hand_penalty"
-        "DELTA_WEIGHT": 0.0,
+        "STEP": "delta_hand",
+        "DELTA_WEIGHT": 0.5,
         "HAND_PENALTY_COEFF": 0.0,
-        "FINAL": "none",          # "none" | "placement_bonus"
-        "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
+        "FINAL": "none",
+        "BONUS_WIN": 10.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
         "ENV_REWARD": True,
     },
 
     # Feature-Toggles
     "FEATURES": {
         "NORMALIZE": False,
-        "SEAT_ONEHOT": False,     # K1: typischerweise False
+        "SEAT_ONEHOT": False,
     },
 
-    # Eval-Kurven
-    "EVAL_CURVES": ["single_only", "max_combo", "random2"],  # + Macro wird automatisch geplottet
+    # Benchmark-Gegner
+    "BENCH_OPPONENTS": ["single_only", "max_combo", "random2"],
 }
 
-# ================= Helpers / Heuristiken =================
-def find_next_version(base_dir, prefix="model"):
-    """Scans base_dir for 'prefix_XX' and returns next two-digit XX."""
-    pat = re.compile(rf"^{re.escape(prefix)}_(\d{{2}})$")
-    os.makedirs(base_dir, exist_ok=True)
-    existing = [int(m.group(1)) for m in (pat.match(n) for n in os.listdir(base_dir)) if m]
-    return f"{max(existing)+1:02d}" if existing else "01"
-
-class RewardShaper:
-    def __init__(self, cfg):
-        final = "placement_bonus" if cfg["FINAL"] in ("final_reward","placement_bonus") else cfg["FINAL"]
-        self.step, self.final, self.env = cfg["STEP"], final, bool(cfg["ENV_REWARD"])
-        self.dw, self.hp = float(cfg["DELTA_WEIGHT"]), float(cfg["HAND_PENALTY_COEFF"])
-        self.b = (float(cfg["BONUS_WIN"]), float(cfg["BONUS_2ND"]), float(cfg["BONUS_3RD"]), float(cfg["BONUS_LAST"]))
-    @staticmethod
-    def _ranks(deck): return 8 if deck in (32,64) else 13 if deck==52 else (_ for _ in ()).throw(ValueError("deck"))
-    def hand_size(self, ts, pid, deck): return int(sum(ts.observations["info_state"][pid][:self._ranks(deck)]))
-    def step_reward(self, **kw):
-        if self.step=="none": return 0.0
-        if self.step=="delta_hand": return self.dw*max(0.0, float(kw["hand_before"]-kw["hand_after"]))
-        if self.step=="hand_penalty": return -self.hp*float(self.hand_size(kw["time_step"], kw["player_id"], kw["deck_size"]))
-        raise ValueError(self.step)
-    def final_bonus(self, finals, pid):
-        if self.final=="none": return 0.0
-        order = sorted(range(len(finals)), key=lambda p: finals[p], reverse=True)
-        place = order.index(pid)+1
-        return (self.b[0],self.b[1],self.b[2],self.b[3])[place-1]
-    def include_env_reward(self): return self.env
-
-def _alias_joint_plot_names(plots_dir):
-    """
-    Falls der Plotter alte Joint-Namen erzeugt, legen wir deine gewünschten Aliase an:
-      lernkurve_alle_strategien.png       -> lernkurve_alle.png
-      lernkurve_alle_strategien_avg.png   -> lernkurve_alle_mit_macro.png
-    """
-    mapping = {
-        "lernkurve_alle_strategien.png": "lernkurve_alle.png",
-        "lernkurve_alle_strategien_avg.png": "lernkurve_alle_mit_macro.png",
-    }
-    for src, dst in mapping.items():
-        src_path = os.path.join(plots_dir, src)
-        dst_path = os.path.join(plots_dir, dst)
-        if os.path.exists(src_path) and not os.path.exists(dst_path):
-            try:
-                os.replace(src_path, dst_path)  # rename/alias
-            except Exception:
-                pass  # non-fatal
 
 # =========================== Training ===========================
 def main():
@@ -106,19 +68,33 @@ def main():
     ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     MODELS_ROOT = os.path.join(ROOT, "models")
 
-    # ---- NEW: run directory structure ----
-    family_dir = os.path.join(MODELS_ROOT, "k1a1")
-    version = find_next_version(family_dir, prefix="model")   # -> '01', '02', ...
-    run_dir = os.path.join(family_dir, f"model_{version}")
-    plots_dir = os.path.join(run_dir, "plots")
-    weights_dir = os.path.join(run_dir, "models")
-    os.makedirs(plots_dir, exist_ok=True)
-    os.makedirs(weights_dir, exist_ok=True)
-    print(f"📁 Neuer Lauf: {run_dir}")
+    # ---- Lauf-Verzeichnisse ----
+    family = "k1a1"  # K1-Konzept + A1 (PPO)
+    family_dir = os.path.join(MODELS_ROOT, family)
+    version = find_next_version(family_dir, prefix="model")
+    paths = prepare_run_dirs(MODELS_ROOT, family, version, prefix="model")
+
+    # ---- Plotter ----
+    plotter = MetricsPlotter(
+        out_dir=paths["plots_dir"],
+        benchmark_opponents=list(CONFIG["BENCH_OPPONENTS"]),
+        benchmark_csv="benchmark_curves.csv",
+        train_csv="training_metrics.csv",
+        save_csv=True,
+        verbosity=1,
+    )
+
+    plotter.log("New Training")
+    plotter.log(f"Deck_Size: {CONFIG['DECK_SIZE']}")
+    plotter.log(f"Episodes: {CONFIG['EPISODES']}")
+    plotter.log(f"Path: {paths['run_dir']}")
 
     # ---- Game/Env ----
     game = pyspiel.load_game("president", {
-        "num_players":4, "deck_size":CONFIG["DECK_SIZE"], "shuffle_cards":True, "single_card_mode":False,
+        "num_players": 4,
+        "deck_size":   CONFIG["DECK_SIZE"],
+        "shuffle_cards": True,
+        "single_card_mode": False,
     })
     env = rl_environment.Environment(game)
     info_dim = env.observation_spec()["info_state"][0]
@@ -127,20 +103,12 @@ def main():
     # ---- Features ----
     deck_int = int(CONFIG["DECK_SIZE"])
     num_players = game.num_players()
-    num_ranks   = 8 if deck_int in (32,64) else 13 if deck_int==52 else (_ for _ in ()).throw(ValueError("deck"))
+
+    num_ranks = ranks_for_deck(deck_int)
     feat_cfg = FeatureConfig(
         num_players=num_players, num_ranks=num_ranks,
-        add_seat_onehot=bool(CONFIG["FEATURES"]["SEAT_ONEHOT"]),
-        normalize=bool(CONFIG["FEATURES"]["NORMALIZE"]),
-    )
-
-    # ---- Plotter -> plots_dir ----
-    plotter = EvalPlotter(
-        opponent_names=list(CONFIG["EVAL_CURVES"]),
-        out_dir=plots_dir,
-        filename_prefix="lernkurve",
-        csv_filename="eval_curves.csv",   # in plots_dir
-        save_csv=True,
+        add_seat_onehot=CONFIG["FEATURES"]["SEAT_ONEHOT"],
+        normalize=CONFIG["FEATURES"]["NORMALIZE"],
     )
 
     # ---- Agent/opp/reward ----
@@ -150,39 +118,45 @@ def main():
     opponents = [STRATS[name] for name in CONFIG["OPPONENTS"]]
     shaper = RewardShaper(CONFIG["REWARD"])
 
-    # ---- Save config.csv at run root ----
-    pd.DataFrame([{
-        "script":"k1a1","version":version,
-        "timestamp":datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "agent_type":"PPO","num_episodes":CONFIG["EPISODES"],
-        "eval_interval":CONFIG["EVAL_INTERVAL"],"eval_episodes":CONFIG["EVAL_EPISODES"],
-        "deck_size":CONFIG["DECK_SIZE"],
-        "observation_dim":info_dim + seat_id_dim,"num_actions":A,
-        "normalize":CONFIG["FEATURES"]["NORMALIZE"], "seat_onehot":CONFIG["FEATURES"]["SEAT_ONEHOT"],
-        "opponents":",".join(CONFIG["OPPONENTS"]),
-        "models_dir":weights_dir,"plots_dir":plots_dir
-    }]).to_csv(os.path.join(run_dir, "config.csv"), index=False)
-    print(f"📝 Konfiguration gespeichert: {os.path.join(run_dir, 'config.csv')}")
+    # ---- Run-Metadaten & config ----
+    save_config_csv({
+        "script": family, "version": version,
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "agent_type": "PPO", "num_episodes": CONFIG["EPISODES"],
+        "bench_interval": CONFIG["BENCH_INTERVAL"], "bench_episodes": CONFIG["BENCH_EPISODES"],
+        "deck_size": CONFIG["DECK_SIZE"], "num_ranks": num_ranks,
+        "observation_dim": info_dim + seat_id_dim, "num_actions": A,
+        "normalize": CONFIG["FEATURES"]["NORMALIZE"], "seat_onehot": CONFIG["FEATURES"]["SEAT_ONEHOT"],
+        "opponents": ",".join(CONFIG["OPPONENTS"]),
+        "models_dir": paths["weights_dir"], "plots_dir": paths["plots_dir"],
+    }, paths["config_csv"])
 
-    # ---- Timing setup ----
-    timings_csv = os.path.join(run_dir, "timings.csv")
-    timing_rows = []
+    save_run_meta({
+        "family": family, "version": version,
+        "algo": "ppo", "deck": CONFIG["DECK_SIZE"]
+    }, paths["run_meta_json"])
+
+    # ---- Timing (streaming) ----
+    timer = TimingMeter(csv_path=paths["timings_csv"], interval=CONFIG["TIMING_INTERVAL"])
+
     t0 = time.perf_counter()
-
-    EINT, EEPS = CONFIG["EVAL_INTERVAL"], CONFIG["EVAL_EPISODES"]
+    BINT, BEPS = CONFIG["BENCH_INTERVAL"], CONFIG["BENCH_EPISODES"]
 
     # ---- Training loop ----
-    for ep in range(1, CONFIG["EPISODES"]+1):
+    for ep in range(1, CONFIG["EPISODES"] + 1):
         ep_start = time.perf_counter()
-        steps = 0
+        ep_len = 0
+        ep_shaping_return = 0.0
 
         ts = env.reset()
+
         while not ts.last():
-            steps += 1
-            p = ts.observations["current_player"]; legal = ts.observations["legal_actions"][p]
+            ep_len += 1
+            p = ts.observations["current_player"]
+            legal = ts.observations["legal_actions"][p]
             hand_before = shaper.hand_size(ts, p, deck_int)
 
-            if p==0:
+            if p == 0:
                 base_obs = ts.observations["info_state"][p]
                 obs = augment_observation(base_obs, player_id=p, cfg=feat_cfg)
                 seat_oh = None
@@ -190,113 +164,118 @@ def main():
                     seat_oh = np.zeros(num_players, dtype=np.float32); seat_oh[p] = 1.0
                 a = int(agent.step(obs, legal, seat_one_hot=seat_oh))
             else:
-                a = int(opponents[p-1](env._state))
+                a = int(opponents[p - 1](env._state))
 
             ts_next = env.step([a])
 
-            if p==0:
+            if p == 0:
                 hand_after = shaper.hand_size(ts_next, p, deck_int)
-                r = shaper.step_reward(hand_before=hand_before, hand_after=hand_after, time_step=ts_next, player_id=p, deck_size=deck_int)
+                r = shaper.step_reward(
+                    hand_before=hand_before,
+                    hand_after=hand_after,
+                    time_step=ts_next,
+                    player_id=p,
+                    deck_size=deck_int,
+                )
+                ep_shaping_return += float(r)
                 agent.post_step(r, done=ts_next.last())
 
             ts = ts_next
 
-        # train() separat timen
+        # final env return for P0:
+        ep_env_return = float(ts.rewards[0])
+        ep_final_bonus = float(shaper.final_bonus(ts.rewards, 0))
+
+        # ---- train() separat timen ----
         train_start = time.perf_counter()
-        if shaper.include_env_reward(): agent._buffer.finalize_last_reward(ts.rewards[0])
+        if shaper.include_env_reward():
+            agent._buffer.finalize_last_reward(ts.rewards[0])
         agent._buffer.finalize_last_reward(shaper.final_bonus(ts.rewards, 0))
-        agent.train()
+        train_metrics = agent.train()
         train_seconds = time.perf_counter() - train_start
 
-        # Defaults für optionale Felder
+        # Trainingsmetriken
+        if train_metrics is None:
+            train_metrics = {}
+        train_metrics.update({
+            "train_seconds":      train_seconds,
+            "ep_env_return":      ep_env_return,
+            "ep_shaping_return":  ep_shaping_return,
+            "ep_final_bonus":     ep_final_bonus,
+            "ep_length":          ep_len,
+        })
+        plotter.add_train(ep, train_metrics)
+
+        # ---- Benchmark (früher Eval) ----
         eval_seconds = 0.0
         plot_seconds = 0.0
         save_seconds = 0.0
 
-        # ---- Evaluation ----
-        if ep % EINT == 0:
+        if ep % BINT == 0:
             ev_start = time.perf_counter()
 
-            per_opponent = {}
-            for opp_name in CONFIG["EVAL_CURVES"]:
-                opp_fn = STRATS[opp_name]
-                wins = 0
-                for _ in range(EEPS):
-                    st = game.new_initial_state()
-                    while not st.is_terminal():
-                        pid = st.current_player()
-                        legal = st.legal_actions(pid)
-                        if pid == 0:
-                            obs = st.information_state_tensor(pid)
-                            obs = augment_observation(obs, player_id=pid, cfg=feat_cfg)
-                            with torch.no_grad():
-                                logits = agent._policy(torch.tensor(obs, dtype=torch.float32))
-                                mask = torch.zeros(A); mask[legal] = 1.0
-                                probs = ppo.masked_softmax(logits, mask)
-                            a = int(torch.distributions.Categorical(probs=probs).sample().item())
-                        else:
-                            a = int(opp_fn(st))
-                        st.apply_action(a)
-                    if st.returns()[0] == max(st.returns()):
-                        wins += 1
-
-                wr = 100.0 * wins / EEPS
-                per_opponent[opp_name] = wr
-                print(f"✅ Eval nach {ep:7d} – Winrate vs {opp_name:11s}: {wr:5.1f}%")
-
-            macro = float(np.mean(list(per_opponent.values())))
-            print(f"📊 Macro Average: {macro:.2f}%")
+            # NEU: ausgelagert
+            per_opponent = run_benchmark(
+                game=game,
+                agent=agent,
+                opponents_dict=STRATS,
+                opponent_names=CONFIG["BENCH_OPPONENTS"],
+                episodes=BEPS,
+                feat_cfg=feat_cfg,
+                num_actions=A,
+            )
+            plotter.log_bench_summary(ep, per_opponent)
 
             eval_seconds = time.perf_counter() - ev_start
 
-            # Plot & CSV aktualisieren (Plotter)
+            # Plot & CSV
             plot_start = time.perf_counter()
-            plotter.add(ep, per_opponent)
-            plotter.plot_all()
-            _alias_joint_plot_names(plots_dir)
+            plotter.add_benchmark(ep, per_opponent)             # CSV (Winrate, Reward, Plätze)
+            plotter.plot_benchmark_rewards()                    # Reward-Kurven
+            plotter.plot_places_latest()                        # letzte Verteilung als Balken pro Gegner
+            plotter.plot_benchmark(filename_prefix="lernkurve", with_macro=True)
+            plotter.plot_train(filename_prefix="training_metrics", separate=True)
             plot_seconds = time.perf_counter() - plot_start
 
-            # Save weights
+            # Save weights (PPO)
             save_start = time.perf_counter()
-            base = os.path.join(weights_dir, f"k1a1_model_{version}_agent_p0_ep{ep:07d}")
-            agent.save(base)  # ..._policy.pt / ..._value.pt
+            tag = f"{family}_model_{version}_agent_p0_ep{ep:07d}"
+            save_checkpoint_ppo(agent, paths["weights_dir"], tag)
             save_seconds = time.perf_counter() - save_start
-            print(f"💾 Modell gespeichert: {base}_policy.pt / {base}_value.pt")
 
-            # Konsolen-Timing (kompakt)
+            # Kompakt-Timing
             cum_seconds = time.perf_counter() - t0
-            print(f"⏱ Timing @ep {ep}: episode {time.perf_counter()-ep_start:0.3f}s | "
-                  f"train {train_seconds:0.3f}s | eval {eval_seconds:0.3f}s | "
-                  f"plot {plot_seconds:0.3f}s | save {save_seconds:0.3f}s | "
-                  f"cum {cum_seconds/3600:0.2f}h")
+            plotter.log_timing(
+                ep,
+                ep_seconds=(time.perf_counter() - ep_start),
+                train_seconds=train_seconds,
+                eval_seconds=eval_seconds,
+                plot_seconds=plot_seconds,
+                save_seconds=save_seconds,
+                cum_seconds=cum_seconds,
+            )
 
-        # Episode-Timing abschließen & loggen
+        # ---- Episoden-Timing -> CSV (verschlankt) ----
         ep_seconds = time.perf_counter() - ep_start
-        cum_seconds = time.perf_counter() - t0
-        timing_rows.append({
-            "episode": ep,
-            "steps": steps,
+        timer.maybe_log(ep, {
+            "steps": ep_len,
             "ep_seconds": ep_seconds,
             "train_seconds": train_seconds,
             "eval_seconds": eval_seconds,
             "plot_seconds": plot_seconds,
             "save_seconds": save_seconds,
-            "cum_seconds": cum_seconds,
         })
 
-        # Schreibintervall: bei jeder Eval und zusätzlich alle 1000 Episoden
-        if ep % EINT == 0:
-            pd.DataFrame(timing_rows).to_csv(timings_csv, index=False)
-            # Optional kleine Progress-Kennzahl:
-            eps_per_sec = ep / max(cum_seconds, 1e-9)
-            print(f"🚀 Fortschritt: {ep}/{CONFIG['EPISODES']} Episoden | "
-                  f"Durchsatz ~ {eps_per_sec:0.2f} eps/s")
 
-    # Ende: finale CSV schreiben & Zusammenfassung
+    # Ende
     total_seconds = time.perf_counter() - t0
-    pd.DataFrame(timing_rows).to_csv(timings_csv, index=False)
-    print(f"⏲️  Gesamtzeit: {total_seconds/3600:0.2f}h "
-          f"(~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)")
-    print("✅ K1 Training abgeschlossen.")
+    plotter.log("")
+    plotter.log(
+        f"Gesamtzeit: {total_seconds/3600:0.2f}h "
+        f"(~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)"
+    )
+    plotter.log("K1 Training abgeschlossen.")
 
-if __name__=="__main__": main()
+
+if __name__ == "__main__":
+    main()

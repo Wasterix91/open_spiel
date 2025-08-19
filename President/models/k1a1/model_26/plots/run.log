@@ -1,0 +1,33 @@
+📁 Neuer Lauf: /home/wasterix/OpenSpiel/open_spiel/President/models/k1a1/model_26
+✅ Bench @ep    4000 – Winrate vs single_only:  62.4%
+✅ Bench @ep    4000 – Winrate vs max_combo  :  31.7%
+✅ Bench @ep    4000 – Winrate vs random2    :  67.2%
+📊 Macro Average: 53.75%
+💾 Modell gespeichert: /home/wasterix/OpenSpiel/open_spiel/President/models/k1a1/model_26/models/k1a1_model_26_agent_p0_ep0004000_policy.pt / _value.pt
+⏱ Timing @ep 4000: episode 57.483s | train 0.005s | eval 55.280s | plot 2.180s | save 0.004s | cum 0.04h
+✅ Bench @ep    8000 – Winrate vs single_only:  72.0%
+✅ Bench @ep    8000 – Winrate vs max_combo  :  35.9%
+✅ Bench @ep    8000 – Winrate vs random2    :  70.4%
+📊 Macro Average: 59.43%
+💾 Modell gespeichert: /home/wasterix/OpenSpiel/open_spiel/President/models/k1a1/model_26/models/k1a1_model_26_agent_p0_ep0008000_policy.pt / _value.pt
+⏱ Timing @ep 8000: episode 54.814s | train 0.003s | eval 52.227s | plot 2.566s | save 0.001s | cum 0.08h
+✅ Bench @ep   12000 – Winrate vs single_only:  77.2%
+✅ Bench @ep   12000 – Winrate vs max_combo  :  35.0%
+✅ Bench @ep   12000 – Winrate vs random2    :  76.5%
+📊 Macro Average: 62.90%
+💾 Modell gespeichert: /home/wasterix/OpenSpiel/open_spiel/President/models/k1a1/model_26/models/k1a1_model_26_agent_p0_ep0012000_policy.pt / _value.pt
+⏱ Timing @ep 12000: episode 55.004s | train 0.003s | eval 52.263s | plot 2.721s | save 0.002s | cum 0.12h
+✅ Bench @ep   16000 – Winrate vs single_only:  57.1%
+✅ Bench @ep   16000 – Winrate vs max_combo  :  35.4%
+✅ Bench @ep   16000 – Winrate vs random2    :  76.6%
+📊 Macro Average: 56.37%
+💾 Modell gespeichert: /home/wasterix/OpenSpiel/open_spiel/President/models/k1a1/model_26/models/k1a1_model_26_agent_p0_ep0016000_policy.pt / _value.pt
+⏱ Timing @ep 16000: episode 56.614s | train 0.016s | eval 53.596s | plot 2.962s | save 0.002s | cum 0.16h
+✅ Bench @ep   20000 – Winrate vs single_only:  71.9%
+✅ Bench @ep   20000 – Winrate vs max_combo  :  41.9%
+✅ Bench @ep   20000 – Winrate vs random2    :  80.2%
+📊 Macro Average: 64.67%
+💾 Modell gespeichert: /home/wasterix/OpenSpiel/open_spiel/President/models/k1a1/model_26/models/k1a1_model_26_agent_p0_ep0020000_policy.pt / _value.pt
+⏱ Timing @ep 20000: episode 58.657s | train 0.004s | eval 55.274s | plot 3.366s | save 0.002s | cum 0.20h
+⏲️  Gesamtzeit: 0.20h (~ 28.01 eps/s)
+✅ K1 Training abgeschlossen.

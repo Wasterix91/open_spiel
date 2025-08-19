@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Heuristische Strategien für OpenSpiel 'president'.
 Alle Funktionen: f(state) -> int (Action-ID).
