@@ -1,0 +1,4 @@
+agent,type,action_id,action_text,prob,score,chosen
+P0,ppo,0,Pass,1.0,-90.23780822753906,1
+P2,max_combo,0,Pass,1.0,1.0,1
+P3,max_combo,0,Pass,1.0,1.0,1

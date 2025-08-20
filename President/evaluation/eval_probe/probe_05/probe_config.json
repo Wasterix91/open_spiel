@@ -1,0 +1,122 @@
+{
+  "game_settings": {
+    "num_players": 4,
+    "deck_size": "64",
+    "shuffle_cards": true,
+    "single_card_mode": false
+  },
+  "players": [
+    {
+      "name": "P0",
+      "type": "ppo",
+      "family": "k3a1",
+      "version": "05",
+      "episode": 20000,
+      "from_pid": 0
+    },
+    {
+      "name": "P1",
+      "type": "ppo",
+      "family": "k1a1",
+      "version": "57",
+      "episode": 200,
+      "from_pid": 0
+    },
+    {
+      "name": "P2",
+      "type": "ppo",
+      "family": "k3a1",
+      "version": "05",
+      "episode": 20000,
+      "from_pid": 0
+    },
+    {
+      "name": "P3",
+      "type": "ppo",
+      "family": "k1a1",
+      "version": "57",
+      "episode": 200,
+      "from_pid": 0
+    }
+  ],
+  "player_to_move": 0,
+  "legal_actions": "derived",
+  "infostates": {
+    "0": [
+      4.0,
+      1.0,
+      0.0,
+      3.0,
+      1.0,
+      0.0,
+      3.0,
+      2.0,
+      14.0,
+      14.0,
+      14.0,
+      2.0,
+      2.0,
+      3.0
+    ],
+    "1": [
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      14.0,
+      14.0,
+      14.0,
+      0.0,
+      0.0,
+      -1.0
+    ],
+    "2": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      14.0,
+      14.0,
+      14.0,
+      0.0,
+      0.0,
+      -1.0
+    ],
+    "3": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      14.0,
+      14.0,
+      14.0,
+      0.0,
+      0.0,
+      -1.0
+    ]
+  },
+  "rank_labels": [
+    "7",
+    "8",
+    "9",
+    "10",
+    "J",
+    "Q",
+    "K",
+    "A"
+  ],
+  "models_root": "/home/wasterix/OpenSpiel/open_spiel/President/models",
+  "temperature": 1.0
+}

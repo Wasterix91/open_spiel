@@ -1,0 +1,5 @@
+agent,type,chosen_id,chosen_text
+P0,ppo,16,Play Pair of A
+P1,ppo,15,Play Pair of K
+P2,ppo,16,Play Pair of A
+P3,ppo,15,Play Pair of K
