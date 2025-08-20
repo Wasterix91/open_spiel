@@ -68,7 +68,11 @@ def masked_softmax(logits, mask):
     # Stelle sicher, dass logits und mask auf demselben Device liegen
     mask = mask.to(logits.device)
     masked_logits = logits.clone()
-    masked_logits = torch.where(mask > 0, masked_logits, torch.tensor(-1e9, device=logits.device, dtype=logits.dtype))
+    masked_logits = torch.where(
+        mask > 0,
+        masked_logits,
+        torch.tensor(-1e9, device=logits.device, dtype=logits.dtype),
+    )
     return torch.softmax(masked_logits, dim=-1)
 
 # =============== Replay Buffer =============== #
@@ -81,8 +85,9 @@ class ReplayBuffer:
         self.log_probs = []
         self.values = []
         self.legal_masks = []
+        self.player_ids = []
 
-    def add(self, state, action, reward, done, log_prob, value, legal_mask):
+    def add(self, state, action, reward, done, log_prob, value, legal_mask, player_id=None):
         self.states.append(state)
         self.actions.append(action)
         self.rewards.append(reward)
@@ -90,6 +95,7 @@ class ReplayBuffer:
         self.log_probs.append(log_prob)
         self.values.append(value)
         self.legal_masks.append(legal_mask)
+        self.player_ids.append(player_id)
 
     def finalize_last_reward(self, delta):
         if self.rewards:
@@ -125,20 +131,21 @@ class PPOAgent:
             x = np.concatenate([x, np.array(seat_one_hot, dtype=np.float32)], axis=0)
         return torch.tensor(x, dtype=torch.float32, device=self.device)
 
-    def step(self, info_state, legal_actions, seat_one_hot=None):
+    def step(self, info_state, legal_actions, seat_one_hot=None, player_id=None):
         # legal mask (1=legal, 0=illegal)
         legal_mask = np.zeros(self._num_actions, dtype=np.float32)
         legal_mask[legal_actions] = 1.0
         legal_mask_t = torch.tensor(legal_mask, dtype=torch.float32, device=self.device)
 
         x = self._make_input(info_state, seat_one_hot)
-        logits = self._policy(x)
-        probs = masked_softmax(logits, legal_mask_t)
-        dist = torch.distributions.Categorical(probs=probs)
-        action = dist.sample()
-        log_prob = dist.log_prob(action)
 
-        value = self._value(x)
+        with torch.no_grad():
+            logits = self._policy(x)
+            probs = masked_softmax(logits, legal_mask_t)
+            dist = torch.distributions.Categorical(probs=probs)  # Fix: richtiger Konstruktor
+            action = dist.sample()
+            log_prob = dist.log_prob(action)
+            value = self._value(x)
 
         # Store transition with placeholder reward (0); will be updated via post_step
         self._buffer.add(
@@ -149,6 +156,7 @@ class PPOAgent:
             log_prob=float(log_prob.detach().cpu().item()),
             value=float(value.detach().cpu().item()),
             legal_mask=legal_mask,
+            player_id=player_id,
         )
 
         return int(action.item())
@@ -172,6 +180,24 @@ class PPOAgent:
         returns = advantages + values
         return advantages, returns
 
+    def _compute_gae_segmented(self, rewards, values, dones, player_ids, gamma, lam):
+        """
+        GAE, aber Bootstrapping nur innerhalb desselben player_id.
+        Das verhindert Credit-Assignment über Spielerwechsel hinweg (Shared Policy).
+        """
+        T = len(rewards)
+        advantages = np.zeros(T, dtype=np.float32)
+        lastgaelam = 0.0
+        for t in reversed(range(T)):
+            same_actor_next = (t < T - 1) and (player_ids[t] == player_ids[t + 1]) and (not dones[t])
+            next_nonterminal = 1.0 if same_actor_next else 0.0
+            next_value = values[t + 1] if same_actor_next else 0.0
+            delta = rewards[t] + gamma * next_value * next_nonterminal - values[t]
+            lastgaelam = delta + gamma * lam * next_nonterminal * lastgaelam
+            advantages[t] = lastgaelam
+        returns = advantages + values
+        return advantages, returns
+
     def train(self):
         if len(self._buffer.states) == 0:
             return {}
@@ -185,8 +211,17 @@ class PPOAgent:
         values_np = np.array(self._buffer.values, dtype=np.float32)
         legal_masks = torch.tensor(np.array(self._buffer.legal_masks), dtype=torch.float32, device=self.device)
 
-        # --- GAE ---
-        adv_np, ret_np = self._compute_gae(rewards, values_np, dones, cfg.gamma, cfg.gae_lambda)
+        # --- GAE (segmentiert, falls player_ids vorhanden) ---
+        pids = self._buffer.player_ids
+        use_segmented = (len(pids) == len(rewards)) and all(pid is not None for pid in pids)
+        if use_segmented:
+            player_ids = np.array(pids, dtype=np.int64)
+            adv_np, ret_np = self._compute_gae_segmented(
+                rewards, values_np, dones, player_ids, cfg.gamma, cfg.gae_lambda
+            )
+        else:
+            adv_np, ret_np = self._compute_gae(rewards, values_np, dones, cfg.gamma, cfg.gae_lambda)
+
         advantages = torch.tensor(adv_np, dtype=torch.float32, device=self.device)
         returns = torch.tensor(ret_np, dtype=torch.float32, device=self.device)
 
@@ -258,54 +293,26 @@ class PPOAgent:
         metrics = {
             # --- Rewards & Returns ---
             "reward_mean": float(np.mean(rewards)) if len(rewards) else 0.0,
-            # Mittelwert der Rewards pro Schritt in dieser Trainingsiteration.
-            # → Gibt Auskunft, wie stark der Agent im Schnitt belohnt wird.
-
             "reward_std":  float(np.std(rewards)) if len(rewards) else 0.0,
-            # Standardabweichung der Rewards.
-            # → Maß für die Varianz der Belohnungen (stabil oder sehr schwankend?).
-
             "return_mean": float(np.mean(ret_np)) if len(ret_np) else 0.0,
-            # Durchschnitt der Discounted Returns (Σ γ^t * r_t) aus den Episoden.
-            # → Wichtiger Indikator, ob der Agent über Episoden hinweg lernt, mehr zu erreichen.
 
             # --- Advantages (vor Normalisierung) ---
             "adv_mean_raw": adv_mean,
-            # Mittelwert der berechneten (ungeglätteten) Advantages.
-            # → Sollte im Schnitt nahe 0 liegen (wegen Baseline-Schätzung).
-
             "adv_std_raw":  adv_std,
-            # Standardabweichung der Advantages.
-            # → Zeigt, wie stark die Vorteile zwischen guten und schlechten Aktionen streuen.
 
             # --- PPO Verluste ---
             "policy_loss":  float(np.mean(policy_losses)) if policy_losses else 0.0,
-            # Loss des Policy-Updates (Clipped Objective).
-            # → Misst, wie stark die Policy-Parameter angepasst werden.
-            # → Sehr kleine Werte können auf „fast kein Update“ hindeuten.
-
             "value_loss":   float(np.mean(value_losses)) if value_losses else 0.0,
-            # Loss der Value-Funktion (MSE zwischen Schätzung und Return).
-            # → Hohe Werte bedeuten, dass der Kritiker (Value-Netz) schlecht die Returns approximiert.
 
             # --- Exploration / Regularisierung ---
             "entropy":      float(np.mean(entropies)) if entropies else 0.0,
-            # Entropie der Policy-Verteilung.
-            # → Maß für die Zufälligkeit der Aktionen: hoch = viel Exploration, niedrig = deterministischer.
 
             # --- PPO Stabilitätsmetriken ---
             "approx_kl":    float(np.mean(approx_kls)) if approx_kls else 0.0,
-            # Approximierte KL-Divergenz zwischen alter und neuer Policy.
-            # → Misst, wie stark die Policy durch das Update verändert wurde.
-            # → Sollte klein bleiben (sonst riskierst du Instabilität).
-
             "clip_frac":    float(np.mean(clip_fracs)) if clip_fracs else 0.0,
-            # Anteil der Gradienten, die von PPO „geclippt“ wurden.
-            # → Maß dafür, wie oft die Policy-Updates die Clip-Grenze überschreiten.
         }
 
         return metrics
-
 
     def save(self, path):
         torch.save(self._policy.state_dict(), path + "_policy.pt")

@@ -1,0 +1,4 @@
+[2025-08-20 17:00:54] New Training (k4a1): Shared-Policy PPO
+[2025-08-20 17:00:54] Deck_Size: 64
+[2025-08-20 17:00:54] Episodes: 200
+[2025-08-20 17:00:54] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k4a1/model_20

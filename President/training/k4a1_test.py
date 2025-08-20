@@ -19,12 +19,12 @@ from utils.deck import ranks_for_deck
 
 # ============== CONFIG ==============
 CONFIG = {
-    "EPISODES":         40_000,
-    "BENCH_INTERVAL":   2_000,
-    "BENCH_EPISODES":   2_000,
-    "TIMING_INTERVAL":  500,
-    "DECK_SIZE":        "64",
-    "SEED":             123,
+    "EPISODES":         200,
+    "BENCH_INTERVAL":   100,
+    "BENCH_EPISODES":   500,
+    "TIMING_INTERVAL":  50,
+    "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+    "SEED":             42,
 
     # PPO
     "PPO": {
@@ -39,14 +39,23 @@ CONFIG = {
         "max_grad_norm": 0.5,
     },
 
-    # Reward-Shaping
+    "EXTERNAL": {
+    "ENABLED": True,               # externes Training aktiv
+    "EPISODES_PER_BUNDLE": 10,     # nach X Episoden Rollouts schreiben
+    "POLL_NEW_POLICY": True,       # nach jedem Bundle nach neuen Gewichten schauen
+    "LATEST_TAG_FILE": "LATEST_POLICY.txt",   # Tag-Datei vom Trainer
+    },
+
+    # ======= Rewards =======
+    # STEP-Varianten: "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
+    # FINAL-Varianten: "none" | "env_only" | "rank_bonus" | "both"
     "REWARD": {
-        "STEP": "delta_hand",
+        "STEP_MODE": "delta_weight_only",
         "DELTA_WEIGHT": 1.0,
-        "HAND_PENALTY_COEFF": 0.0,
-        "FINAL": "none",
-        "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
-        "ENV_REWARD": True,
+        "HAND_PENALTY_COEFF": 1.0,
+
+        "FINAL_MODE": "none",
+        "BONUS_WIN": -10.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
     },
 
     # Features (Shared Policy: Seat-OneHot optional)
@@ -55,6 +64,38 @@ CONFIG = {
     # Benchmark-Gegner
     "BENCH_OPPONENTS": ["single_only", "max_combo", "random2"],
 }
+
+def _bundle_path(paths, bundle_idx):
+    roll_dir = os.path.join(paths["run_dir"], "rollouts")
+    os.makedirs(roll_dir, exist_ok=True)
+    return os.path.join(roll_dir, f"bundle_{bundle_idx:06d}.npz")
+
+def _dump_rollouts_npz(agent, path, meta):
+    import numpy as np, os, uuid
+    buf = agent._buffer
+
+    # Meta als UTF-8 Bytes (NumPy 2.0: np.bytes_ statt np.string_)
+    meta_bytes = meta.encode("utf-8")
+
+    # Optional: atomar schreiben (tmp → rename), verhindert halbe Dateien
+    tmp = f"{path}.tmp.{uuid.uuid4().hex}"
+
+    np.savez_compressed(
+        tmp,
+        states=np.array(buf.states, dtype=np.float32),
+        actions=np.array(buf.actions, dtype=np.int64),
+        rewards=np.array(buf.rewards, dtype=np.float32),
+        dones=np.array(buf.dones, dtype=np.bool_),
+        old_log_probs=np.array(buf.log_probs, dtype=np.float32),
+        values=np.array(buf.values, dtype=np.float32),
+        legal_masks=np.array(buf.legal_masks, dtype=np.float32),
+        player_ids=np.array([(-1 if pid is None else pid) for pid in buf.player_ids], dtype=np.int64),
+        meta=np.array(meta_bytes, dtype=np.bytes_),  # <-- wichtig
+    )
+
+    os.replace(tmp, path)  # atomar ins Ziel verschieben
+
+
 
 def main():
     np.random.seed(CONFIG["SEED"]); torch.manual_seed(CONFIG["SEED"])
@@ -107,6 +148,7 @@ def main():
     agent = ppo.PPOAgent(info_dim, A, seat_id_dim=seat_id_dim, config=ppo_cfg)
     shaper = RewardShaper(CONFIG["REWARD"])
 
+
     # ---- Config & Meta ----
     save_config_csv({
         "script": family, "version": version,
@@ -117,13 +159,34 @@ def main():
         "observation_dim": info_dim + seat_id_dim, "num_actions": A,
         "normalize": CONFIG["FEATURES"]["NORMALIZE"], "seat_onehot": CONFIG["FEATURES"]["SEAT_ONEHOT"],
         "models_dir": paths["weights_dir"], "plots_dir": paths["plots_dir"],
+
+        # Reward-Setup (nur neues System, direkt aus dem Shaper/CONFIG)
+        "step_mode": shaper.step_mode,
+        "delta_weight": shaper.dw,
+        "hand_penalty_coeff": shaper.hp,
+        "final_mode": shaper.final_mode,
+        "bonus_win":   CONFIG["REWARD"]["BONUS_WIN"],
+        "bonus_2nd":   CONFIG["REWARD"]["BONUS_2ND"],
+        "bonus_3rd":   CONFIG["REWARD"]["BONUS_3RD"],
+        "bonus_last":  CONFIG["REWARD"]["BONUS_LAST"],
     }, paths["config_csv"])
+
     save_run_meta({"family": family, "version": version, "algo": "ppo_shared", "deck": CONFIG["DECK_SIZE"]}, paths["run_meta_json"])
 
     # ---- Timing ----
     timer = TimingMeter(csv_path=paths["timings_csv"], interval=CONFIG["TIMING_INTERVAL"])
     t0 = time.perf_counter()
     BINT, BEPS = CONFIG["BENCH_INTERVAL"], CONFIG["BENCH_EPISODES"]
+
+    external_cfg = CONFIG.get("EXTERNAL", {})
+    EXT_ENABLED = bool(external_cfg.get("ENABLED", False))
+    EPISODES_PER_BUNDLE = int(external_cfg.get("EPISODES_PER_BUNDLE", 10))
+    POLL_NEW_POLICY = bool(external_cfg.get("POLL_NEW_POLICY", True))
+    LATEST_TAG_FILE = str(external_cfg.get("LATEST_TAG_FILE", "LATEST_POLICY.txt"))
+
+    current_policy_tag = "init"  # beliebiger Start-Tag
+    bundle_ep_count = 0
+    bundle_idx = 0
 
     # ---- Training ----
     for ep in range(1, CONFIG["EPISODES"] + 1):
@@ -134,7 +197,6 @@ def main():
         last_idx = {p: None for p in range(num_players)}  # letzte Transition je Sitz
 
         while not ts.last():
-            ep_len += 1
             p = ts.observations["current_player"]
             legal = ts.observations["legal_actions"][p]
             base_obs = ts.observations["info_state"][p]
@@ -144,37 +206,95 @@ def main():
             if CONFIG["FEATURES"]["SEAT_ONEHOT"]:
                 seat_oh = np.zeros(num_players, dtype=np.float32); seat_oh[p] = 1.0
 
-            hand_before = shaper.hand_size(ts, p, deck_int)
-            a = int(agent.step(obs, legal, seat_one_hot=seat_oh))
+            # ✅ Handgröße VOR dem Schritt nur dann merken, wenn Step-Rewards aktiv sind
+            if shaper.step_active():
+                hand_before = shaper.hand_size(ts, p, deck_int)
+
+            a = int(agent.step(obs, legal, seat_one_hot=seat_oh, player_id=p))
             last_idx[p] = len(agent._buffer.states) - 1
 
-            ts_next = env.step([a])
+            ts = env.step([a])
+            ep_len += 1
 
-            hand_after = shaper.hand_size(ts_next, p, deck_int)
-            r = shaper.step_reward(
-                hand_before=hand_before, hand_after=hand_after,
-                time_step=ts_next, player_id=p, deck_size=deck_int
-            )
-            agent.post_step(r, done=ts_next.last())
+            # ✅ Step-Reward ausschließlich über den Shaper berechnen & verbuchen
+            if shaper.step_active():
+                hand_after = shaper.hand_size(ts, p, deck_int)
+                step_r = shaper.step_reward(hand_before=hand_before, hand_after=hand_after)
+                agent.post_step(step_r, done=ts.last())
 
-            ts = ts_next
 
-        # Terminal: Env-Returns/Finalbonus auf letzte Transition je Sitz addieren
+        # ===== Episodenende: Final-Rewards auf letzte Transition je Spieler addieren =====
         finals = env._state.returns()
-        if shaper.include_env_reward():
-            for p in range(num_players):
-                li = last_idx[p]
-                if li is not None:
-                    agent._buffer.rewards[li] += finals[p]
+
         for p in range(num_players):
             li = last_idx[p]
-            if li is not None:
-                agent._buffer.rewards[li] += shaper.final_bonus(finals, p)
+            if li is None:
+                continue
 
-        # Ein gemeinsames Update
+            # ✅ ENV-Return nur, wenn der Shaper das sagt
+            if shaper.include_env_reward():
+                agent._buffer.rewards[li] += float(finals[p])
+
+            # ✅ Benutzerdefinierter Rank-Bonus nur via Shaper
+            agent._buffer.rewards[li] += float(shaper.final_bonus(finals, p))
+
+            # ✅ Terminal markieren (wichtig für GAE)
+            agent._buffer.dones[li] = True
+
+
+        # ===== Rollout-Bundling (externes Training) =====
         train_start = time.perf_counter()
-        train_metrics = agent.train()
-        train_seconds = time.perf_counter() - train_start
+
+        if EXT_ENABLED:
+            bundle_ep_count += 1
+
+            if bundle_ep_count >= EPISODES_PER_BUNDLE:
+                # 1) Rollouts -> NPZ
+                import json
+                meta = json.dumps({
+                    "algo": "ppo",
+                    "family": family,
+                    "version": version,
+                    "deck_size": CONFIG["DECK_SIZE"],
+                    "num_actions": A,
+                    "obs_dim": info_dim + seat_id_dim,
+                    "num_players": num_players,
+                    "ppo_config": CONFIG["PPO"],
+                    "reward_config": CONFIG["REWARD"],
+                    "policy_tag_used": current_policy_tag,
+                    "bundle_idx": bundle_idx,
+                })
+                out_path = _bundle_path(paths, bundle_idx)
+                _dump_rollouts_npz(agent, out_path, meta)
+                # 2) Buffer leeren (wichtig: NICHT trainieren!)
+                agent._buffer.clear()
+                bundle_ep_count = 0
+                bundle_idx += 1
+                print(f"[k4] wrote rollout bundle: {out_path}")
+
+                # 3) Optional: neue Policy laden
+                if POLL_NEW_POLICY:
+                    tag_file = os.path.join(paths["weights_dir"], LATEST_TAG_FILE)
+                    if os.path.isfile(tag_file):
+                        try:
+                            with open(tag_file, "r") as f:
+                                new_tag = f.read().strip()
+                            if new_tag and new_tag != current_policy_tag:
+                                base = os.path.join(paths["weights_dir"], new_tag)
+                                agent.restore(base)
+                                current_policy_tag = new_tag
+                                print(f"[k4] loaded new policy tag: {new_tag}")
+                        except Exception as e:
+                            print(f"[k4] WARNING: failed to load new policy: {e}")
+
+            # Keine Trainingsmetriken, wir haben nicht aktualisiert
+            train_metrics = {}
+            train_seconds = 0.0
+        else:
+            # Fallback: interner Trainer (wie früher)
+            train_metrics = agent.train()
+            train_seconds = time.perf_counter() - train_start
+
 
         if train_metrics is None:
             train_metrics = {}
@@ -185,7 +305,7 @@ def main():
         })
         plotter.add_train(ep, train_metrics)
 
-        # Benchmark & Save (nur Player-0)
+        # ===== Benchmark & Save (nur Player-0) =====
         eval_seconds = plot_seconds = save_seconds = 0.0
         if ep % BINT == 0:
             ev_start = time.perf_counter()
