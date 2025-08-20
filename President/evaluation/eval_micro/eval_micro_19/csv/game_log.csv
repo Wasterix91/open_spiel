@@ -1,0 +1,17 @@
+turn,player,legal_actions,chosen_action
+0,1,"[(1, 'Play Single of Q'), (4, 'Play Pair of Q'), (2, 'Play Single of K')]",4 (Play Pair of Q)
+1,2,"[(0, 'Pass'), (5, 'Play Pair of K')]",5 (Play Pair of K)
+2,3,"[(0, 'Pass'), (6, 'Play Pair of A')]",6 (Play Pair of A)
+3,0,"[(0, 'Pass')]",0 (Pass)
+4,1,"[(0, 'Pass')]",0 (Pass)
+5,2,"[(0, 'Pass')]",0 (Pass)
+6,3,"[(2, 'Play Single of K')]",2 (Play Single of K)
+7,0,"[(0, 'Pass'), (3, 'Play Single of A')]",3 (Play Single of A)
+8,1,"[(0, 'Pass')]",0 (Pass)
+9,2,"[(0, 'Pass')]",0 (Pass)
+10,0,"[(1, 'Play Single of Q'), (4, 'Play Pair of Q')]",4 (Play Pair of Q)
+11,1,"[(0, 'Pass')]",0 (Pass)
+12,2,"[(0, 'Pass')]",0 (Pass)
+13,1,"[(2, 'Play Single of K')]",2 (Play Single of K)
+14,2,"[(0, 'Pass'), (3, 'Play Single of A')]",3 (Play Single of A)
+15,terminal,,
