@@ -23,10 +23,10 @@ from utils.deck import ranks_for_deck
 
 # ============== CONFIG ==============
 CONFIG = {
-    "EPISODES":         50_000,      # mehr Episoden, damit mehrere Snapshot-Zyklen sichtbar werden
-    "BENCH_INTERVAL":   5000,
+    "EPISODES":         10_000,
+    "BENCH_INTERVAL":   500,
     "BENCH_EPISODES":   2000,
-    "TIMING_INTERVAL":  500,
+    "TIMING_INTERVAL":  200,
     "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
@@ -47,7 +47,7 @@ CONFIG = {
     # STEP_MODE : "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
     # FINAL_MODE: "none" | "env_only" | "rank_bonus" | "both"
     "REWARD": {
-        "STEP_MODE": "delta_weight_only",
+        "STEP_MODE": "none",
         "DELTA_WEIGHT": 1.0,
         "HAND_PENALTY_COEFF": 0.0,
 

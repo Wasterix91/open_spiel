@@ -19,11 +19,11 @@ from utils.deck import ranks_for_deck
 
 # ============== CONFIG  ==============
 CONFIG = {
-    "EPISODES":         200,
-    "BENCH_INTERVAL":   100,
-    "BENCH_EPISODES":   500,
-    "TIMING_INTERVAL":  50,
-    "DECK_SIZE":        "12",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+    "EPISODES":         10_000,
+    "BENCH_INTERVAL":   500,
+    "BENCH_EPISODES":   2000,
+    "TIMING_INTERVAL":  200,
+    "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
     # Training-Gegner (Heuristiken) für Seats 1..3
@@ -46,7 +46,7 @@ CONFIG = {
     # STEP_MODE : "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
     # FINAL_MODE: "none" | "env_only" | "rank_bonus" | "both"
     "REWARD": {
-        "STEP_MODE": "delta_weight_only",
+        "STEP_MODE": "none",
         "DELTA_WEIGHT": 0.5,
         "HAND_PENALTY_COEFF": 0.0,
 
