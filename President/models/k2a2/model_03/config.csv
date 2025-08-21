@@ -1,2 +1,0 @@
-script,version,timestamp,agent_type,num_episodes,eval_interval,eval_episodes,deck_size,observation_dim,num_actions,normalize,seat_onehot,models_dir,plots_dir
-k2a2,03,2025-08-18 06:09:25,DQN-K2 (4x),200000,10000,2000,64,14,65,False,False,/home/wasterix/OpenSpiel/open_spiel/President/models/k2a2/model_03/models,/home/wasterix/OpenSpiel/open_spiel/President/models/k2a2/model_03/plots
