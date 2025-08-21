@@ -1,5 +1,7 @@
+# President/training/k4a1_rec.py
 # -*- coding: utf-8 -*-
-# President/training/k4a1.py — PPO (K4): Shared Policy, k1a1-Stil
+# PPO (K4 Recommended): Shared Policy (4 Sammler) + In-Proc "External" Trainer (Bundle-Updates)
+
 import os, datetime, time, numpy as np, torch
 import pyspiel
 from open_spiel.python import rl_environment
@@ -17,13 +19,14 @@ from utils.load_save_a1_ppo import save_checkpoint_ppo
 from utils.benchmark import run_benchmark
 from utils.deck import ranks_for_deck
 
+
 # ============== CONFIG ==============
 CONFIG = {
-    "EPISODES":         50_000,
-    "BENCH_INTERVAL":   5000,
-    "BENCH_EPISODES":   2000,
-    "TIMING_INTERVAL":  500,
-    "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+    "EPISODES":         3000,
+    "BENCH_INTERVAL":   600,
+    "BENCH_EPISODES":   500,
+    "TIMING_INTERVAL":  300,
+    "DECK_SIZE":        "12",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
     # PPO
@@ -39,9 +42,16 @@ CONFIG = {
         "max_grad_norm": 0.5,
     },
 
-    # ======= Rewards =======
-    # STEP-Varianten: "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
-    # FINAL-Varianten: "none" | "env_only" | "rank_bonus" | "both"
+    # ===== In-Proc „External“ Trainer =====
+    # Sammle N Episoden → mache K PPO-Updates → Buffer clear → weiter sammeln
+    "INPROC_TRAINER": {
+        "EPISODES_PER_UPDATE": 100,  # Bundle-Größe
+        "UPDATES_PER_CALL":     1,    # wie oft agent.train() pro Bundle
+    },
+
+    # ======= Rewards (NEUES System) =======
+    # STEP_MODE : "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
+    # FINAL_MODE: "none" | "env_only" | "rank_bonus" | "both"
     "REWARD": {
         "STEP_MODE": "none",
         "DELTA_WEIGHT": 1.0,
@@ -58,13 +68,14 @@ CONFIG = {
     "BENCH_OPPONENTS": ["single_only", "max_combo", "random2"],
 }
 
+
 def main():
     np.random.seed(CONFIG["SEED"]); torch.manual_seed(CONFIG["SEED"])
     ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     MODELS_ROOT = os.path.join(ROOT, "models")
 
     # ---- Verzeichnisse (k1a1-Stil) ----
-    family = "k4a1"
+    family = "k4a1_rec"
     family_dir = os.path.join(MODELS_ROOT, family)
     version = find_next_version(family_dir, prefix="model")
     paths = prepare_run_dirs(MODELS_ROOT, family, version, prefix="model")
@@ -77,7 +88,7 @@ def main():
         train_csv="training_metrics.csv",
         save_csv=True, verbosity=1,
     )
-    plotter.log("New Training (k4a1): Shared-Policy PPO")
+    plotter.log("New Training (k4a1_rec): Shared-Policy PPO — In-Proc External Trainer (Bundle-Updates)")
     plotter.log(f"Deck_Size: {CONFIG['DECK_SIZE']}")
     plotter.log(f"Episodes: {CONFIG['EPISODES']}")
     plotter.log(f"Path: {paths['run_dir']}")
@@ -109,19 +120,18 @@ def main():
     agent = ppo.PPOAgent(info_dim, A, seat_id_dim=seat_id_dim, config=ppo_cfg)
     shaper = RewardShaper(CONFIG["REWARD"])
 
-
     # ---- Config & Meta ----
+    from utils.load_save_common import save_config_csv, save_run_meta
     save_config_csv({
         "script": family, "version": version,
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "agent_type": "PPO_shared", "num_episodes": CONFIG["EPISODES"],
+        "agent_type": "PPO_shared_inproc", "num_episodes": CONFIG["EPISODES"],
         "bench_interval": CONFIG["BENCH_INTERVAL"], "bench_episodes": CONFIG["BENCH_EPISODES"],
         "deck_size": CONFIG["DECK_SIZE"], "num_ranks": num_ranks,
         "observation_dim": info_dim + seat_id_dim, "num_actions": A,
         "normalize": CONFIG["FEATURES"]["NORMALIZE"], "seat_onehot": CONFIG["FEATURES"]["SEAT_ONEHOT"],
         "models_dir": paths["weights_dir"], "plots_dir": paths["plots_dir"],
-
-        # Reward-Setup (nur neues System, direkt aus dem Shaper/CONFIG)
+        # Reward-Setup
         "step_mode": shaper.step_mode,
         "delta_weight": shaper.dw,
         "hand_penalty_coeff": shaper.hp,
@@ -130,22 +140,30 @@ def main():
         "bonus_2nd":   CONFIG["REWARD"]["BONUS_2ND"],
         "bonus_3rd":   CONFIG["REWARD"]["BONUS_3RD"],
         "bonus_last":  CONFIG["REWARD"]["BONUS_LAST"],
+        # In-Proc Trainer
+        "episodes_per_update": CONFIG["INPROC_TRAINER"]["EPISODES_PER_UPDATE"],
+        "updates_per_call":    CONFIG["INPROC_TRAINER"]["UPDATES_PER_CALL"],
     }, paths["config_csv"])
-
-    save_run_meta({"family": family, "version": version, "algo": "ppo_shared", "deck": CONFIG["DECK_SIZE"]}, paths["run_meta_json"])
+    save_run_meta({"family": family, "version": version, "algo": "ppo_shared_inproc", "deck": CONFIG["DECK_SIZE"]},
+                  paths["run_meta_json"])
 
     # ---- Timing ----
     timer = TimingMeter(csv_path=paths["timings_csv"], interval=CONFIG["TIMING_INTERVAL"])
     t0 = time.perf_counter()
     BINT, BEPS = CONFIG["BENCH_INTERVAL"], CONFIG["BENCH_EPISODES"]
 
-    # ---- Training ----
+    # ---- In-Proc External Trainer Steuerung ----
+    EPISODES_PER_UPDATE = int(CONFIG["INPROC_TRAINER"]["EPISODES_PER_UPDATE"])
+    UPDATES_PER_CALL    = int(CONFIG["INPROC_TRAINER"]["UPDATES_PER_CALL"])
+    ep_in_bundle = 0  # zählt gesammelte Episoden seit letztem Update
+
+    # ---- Training (Sammeln → Bündel-Update) ----
     for ep in range(1, CONFIG["EPISODES"] + 1):
         ep_start = time.perf_counter()
         ep_len = 0
 
         ts = env.reset()
-        last_idx = {p: None for p in range(num_players)}  # letzte Transition je Sitz
+        last_idx = {p: None for p in range(num_players)}  # letzte Transition je Sitz (für Finals)
 
         while not ts.last():
             p = ts.observations["current_player"]
@@ -157,7 +175,7 @@ def main():
             if CONFIG["FEATURES"]["SEAT_ONEHOT"]:
                 seat_oh = np.zeros(num_players, dtype=np.float32); seat_oh[p] = 1.0
 
-            # ✅ Handgröße VOR dem Schritt nur dann merken, wenn Step-Rewards aktiv sind
+            # optionaler Step-Reward
             if shaper.step_active():
                 hand_before = shaper.hand_size(ts, p, deck_int)
 
@@ -167,58 +185,47 @@ def main():
             ts = env.step([a])
             ep_len += 1
 
-            # ✅ Step-Reward ausschließlich über den Shaper berechnen & verbuchen
             if shaper.step_active():
                 hand_after = shaper.hand_size(ts, p, deck_int)
                 step_r = shaper.step_reward(hand_before=hand_before, hand_after=hand_after)
                 agent.post_step(step_r, done=ts.last())
 
-
-        # ===== Episodenende: Final-Rewards auf letzte Transition je Spieler addieren =====
+        # Episodenende: Finals/Bonis je Sitz in die *letzte* Transition buchen + done markieren
         finals = env._state.returns()
-
         for p in range(num_players):
             li = last_idx[p]
-            if li is None:
-                continue
-
-            # ✅ ENV-Return nur, wenn der Shaper das sagt
+            if li is None: continue
             if shaper.include_env_reward():
                 agent._buffer.rewards[li] += float(finals[p])
-
-            # ✅ Benutzerdefinierter Rank-Bonus nur via Shaper
             agent._buffer.rewards[li] += float(shaper.final_bonus(finals, p))
-
-            # ✅ Terminal markieren (wichtig für GAE)
             agent._buffer.dones[li] = True
 
+        # Sammelzähler hoch
+        ep_in_bundle += 1
 
-        # ===== Ein gemeinsames Update =====
-        train_start = time.perf_counter()
+        # Logging (nur Sammelmetriken; Training erst beim Bundle-Update)
+        plotter.add_train(ep, {"ep_length": ep_len, "ep_env_return": float(finals[0])})
 
-        # Debug: Summe der Trainings-Rewards pro Spieler (aus dem Buffer)
-        #sum_per_player = {p: 0.0 for p in range(num_players)}
-        #for r, pid in zip(agent._buffer.rewards, agent._buffer.player_ids):
-        #    if pid is not None:
-        #        sum_per_player[pid] += float(r)
-        #print(f"[DEBUG] Train-Reward-Summen (vor Update): {sum_per_player}")
-        
+        # ======= In-Proc „External“ Trainer: Update nach N Episoden =======
+        train_seconds = 0.0
+        if ep_in_bundle >= EPISODES_PER_UPDATE:
+            t_train = time.perf_counter()
 
-        train_metrics = agent.train()
-        train_seconds = time.perf_counter() - train_start
+            # Mehrfach-Update auf dem gesammelten Bundle
+            for _ in range(UPDATES_PER_CALL):
+                agent.train()
 
-        if train_metrics is None:
-            train_metrics = {}
-        train_metrics.update({
-            "train_seconds": train_seconds,
-            "ep_length": ep_len,
-            "ep_env_return": float(finals[0]),  # Player-0 als Referenz
-        })
-        plotter.add_train(ep, train_metrics)
+            train_seconds = time.perf_counter() - t_train
+            ep_in_bundle = 0
+            # Nach dem Update den Rollout-Buffer leeren (klassische Actor→Learner-Übergabe)
+            agent._buffer.clear()
 
-        # ===== Benchmark & Save (nur Player-0) =====
+            # Trainingszeit nachtragen
+            plotter.add_train(ep, {"train_seconds": train_seconds})
+
+        # ===== Benchmark & Save (Policy von Player 0) =====
         eval_seconds = plot_seconds = save_seconds = 0.0
-        if ep % BINT == 0:
+        if BINT > 0 and (ep % BINT == 0):
             ev_start = time.perf_counter()
             per_opponent = run_benchmark(
                 game=game, agent=agent, opponents_dict=STRATS,
@@ -266,7 +273,7 @@ def main():
     total_seconds = time.perf_counter() - t0
     plotter.log("")
     plotter.log(f"Gesamtzeit: {total_seconds/3600:0.2f}h (~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)")
-    plotter.log("K4 (Shared-Policy) Training abgeschlossen.")
+    plotter.log("K4 (Shared-Policy PPO, In-Proc External Trainer) abgeschlossen.")
 
 if __name__ == "__main__":
     main()

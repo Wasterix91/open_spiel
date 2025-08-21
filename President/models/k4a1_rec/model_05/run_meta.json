@@ -1,0 +1,7 @@
+{
+  "family": "k4a1_rec",
+  "version": "05",
+  "algo": "ppo_shared_inproc",
+  "deck": "12",
+  "timestamp": "2025-08-21 12:25:19"
+}

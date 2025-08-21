@@ -1,0 +1,47 @@
+[2025-08-21 12:30:58] New Training (k4a2): Shared-Policy DQN
+[2025-08-21 12:30:58] Deck_Size: 16
+[2025-08-21 12:30:58] Episodes: 1000
+[2025-08-21 12:30:58] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k4a2/model_04
+[2025-08-21 12:31:22] 
+[2025-08-21 12:31:22] Benchmark @train_ep     200 (bench_eps: 500)
+[2025-08-21 12:31:22] Macro Winrate          :  24.5%
+[2025-08-21 12:31:22] Macro Ø-Reward         :  1.381
+[2025-08-21 12:31:22] Winrate vs max_combo   :  19.4% | Σ-Reward:  582.0 | Ø-Reward:  1.164 | Places: [97 (0.19), 85 (0.17), 121 (0.24), 197 (0.39)]
+[2025-08-21 12:31:22] Winrate vs random2     :  20.0% | Σ-Reward:  669.0 | Ø-Reward:  1.338 | Places: [100 (0.20), 105 (0.21), 159 (0.32), 136 (0.27)]
+[2025-08-21 12:31:22] Winrate vs single_only :  34.0% | Σ-Reward:  820.0 | Ø-Reward:  1.640 | Places: [170 (0.34), 92 (0.18), 126 (0.25), 112 (0.22)]
+[2025-08-21 12:31:23] Timing @ep 200: episode 4.3s | train 0.000s | eval 2.3s | plot 1.9s | save 0.006s | cum 0.01h
+[2025-08-21 12:31:44] 
+[2025-08-21 12:31:44] Benchmark @train_ep     400 (bench_eps: 500)
+[2025-08-21 12:31:44] Macro Winrate          :  24.2%
+[2025-08-21 12:31:44] Macro Ø-Reward         :  1.405
+[2025-08-21 12:31:44] Winrate vs max_combo   :  22.4% | Σ-Reward:  680.0 | Ø-Reward:  1.360 | Places: [112 (0.22), 115 (0.23), 114 (0.23), 159 (0.32)]
+[2025-08-21 12:31:44] Winrate vs random2     :  18.4% | Σ-Reward:  673.0 | Ø-Reward:  1.346 | Places: [92 (0.18), 121 (0.24), 155 (0.31), 132 (0.26)]
+[2025-08-21 12:31:44] Winrate vs single_only :  31.8% | Σ-Reward:  755.0 | Ø-Reward:  1.510 | Places: [159 (0.32), 87 (0.17), 104 (0.21), 150 (0.30)]
+[2025-08-21 12:31:46] Timing @ep 400: episode 4.5s | train 0.000s | eval 2.3s | plot 2.1s | save 0.003s | cum 0.01h
+[2025-08-21 12:32:11] 
+[2025-08-21 12:32:11] Benchmark @train_ep     600 (bench_eps: 500)
+[2025-08-21 12:32:11] Macro Winrate          :  18.1%
+[2025-08-21 12:32:11] Macro Ø-Reward         :  1.179
+[2025-08-21 12:32:11] Winrate vs max_combo   :  13.4% | Σ-Reward:  465.0 | Ø-Reward:  0.930 | Places: [67 (0.13), 72 (0.14), 120 (0.24), 241 (0.48)]
+[2025-08-21 12:32:11] Winrate vs random2     :  18.2% | Σ-Reward:  650.0 | Ø-Reward:  1.300 | Places: [91 (0.18), 110 (0.22), 157 (0.31), 142 (0.28)]
+[2025-08-21 12:32:11] Winrate vs single_only :  22.6% | Σ-Reward:  653.0 | Ø-Reward:  1.306 | Places: [113 (0.23), 84 (0.17), 146 (0.29), 157 (0.31)]
+[2025-08-21 12:32:13] Timing @ep 600: episode 4.8s | train 0.000s | eval 2.7s | plot 2.0s | save 0.005s | cum 0.02h
+[2025-08-21 12:32:37] 
+[2025-08-21 12:32:37] Benchmark @train_ep     800 (bench_eps: 500)
+[2025-08-21 12:32:37] Macro Winrate          :  26.6%
+[2025-08-21 12:32:37] Macro Ø-Reward         :  1.479
+[2025-08-21 12:32:37] Winrate vs max_combo   :  22.0% | Σ-Reward:  660.0 | Ø-Reward:  1.320 | Places: [110 (0.22), 103 (0.21), 124 (0.25), 163 (0.33)]
+[2025-08-21 12:32:37] Winrate vs random2     :  22.4% | Σ-Reward:  736.0 | Ø-Reward:  1.472 | Places: [112 (0.22), 129 (0.26), 142 (0.28), 117 (0.23)]
+[2025-08-21 12:32:37] Winrate vs single_only :  35.4% | Σ-Reward:  822.0 | Ø-Reward:  1.644 | Places: [177 (0.35), 81 (0.16), 129 (0.26), 113 (0.23)]
+[2025-08-21 12:32:39] Timing @ep 800: episode 4.8s | train 0.000s | eval 2.3s | plot 2.3s | save 0.005s | cum 0.03h
+[2025-08-21 12:33:08] 
+[2025-08-21 12:33:08] Benchmark @train_ep    1000 (bench_eps: 500)
+[2025-08-21 12:33:08] Macro Winrate          :  27.7%
+[2025-08-21 12:33:08] Macro Ø-Reward         :  1.412
+[2025-08-21 12:33:08] Winrate vs max_combo   :  22.6% | Σ-Reward:  620.0 | Ø-Reward:  1.240 | Places: [113 (0.23), 86 (0.17), 109 (0.22), 192 (0.38)]
+[2025-08-21 12:33:08] Winrate vs random2     :  24.4% | Σ-Reward:  707.0 | Ø-Reward:  1.414 | Places: [122 (0.24), 103 (0.21), 135 (0.27), 140 (0.28)]
+[2025-08-21 12:33:08] Winrate vs single_only :  36.0% | Σ-Reward:  791.0 | Ø-Reward:  1.582 | Places: [180 (0.36), 67 (0.13), 117 (0.23), 136 (0.27)]
+[2025-08-21 12:33:10] Timing @ep 1000: episode 5.0s | train 0.000s | eval 2.7s | plot 2.1s | save 0.004s | cum 0.04h
+[2025-08-21 12:33:10] 
+[2025-08-21 12:33:10] Gesamtzeit: 0.04h (~ 7.62 eps/s)
+[2025-08-21 12:33:10] K4 (Shared-Policy DQN) Training abgeschlossen.

@@ -42,14 +42,16 @@ CONFIG = {
         "max_grad_norm": 0.5,
     },
 
-    # Reward-Shaping
+    # ======= Rewards (NEUES System) =======
+    # STEP_MODE : "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
+    # FINAL_MODE: "none" | "env_only" | "rank_bonus" | "both"
     "REWARD": {
-        "STEP": "delta_hand",             # "none" | "delta_hand" | "hand_penalty"
+        "STEP_MODE": "delta_weight_only",
         "DELTA_WEIGHT": 1.0,
         "HAND_PENALTY_COEFF": 0.0,
-        "FINAL": "none",                  # "none" | "placement_bonus"
+
+        "FINAL_MODE": "env_only",
         "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
-        "ENV_REWARD": True,
     },
 
     # Feature-Toggles
@@ -100,10 +102,10 @@ def main():
     env = rl_environment.Environment(game)
     info_dim = env.observation_spec()["info_state"][0]
     A = env.action_spec()["num_actions"]
+    num_players = game.num_players()
 
     # ---- Features ----
     deck_int = int(CONFIG["DECK_SIZE"])
-    num_players = game.num_players()
     num_ranks = ranks_for_deck(deck_int)
     feat_cfg = FeatureConfig(
         num_players=num_players, num_ranks=num_ranks,
@@ -130,6 +132,16 @@ def main():
         "observation_dim": info_dim + seat_id_dim, "num_actions": A,
         "normalize": CONFIG["FEATURES"]["NORMALIZE"], "seat_onehot": CONFIG["FEATURES"]["SEAT_ONEHOT"],
         "models_dir": paths["weights_dir"], "plots_dir": paths["plots_dir"],
+
+        # Reward-Setup (neues System)
+        "step_mode": shaper.step_mode,
+        "delta_weight": shaper.dw,
+        "hand_penalty_coeff": shaper.hp,
+        "final_mode": shaper.final_mode,
+        "bonus_win":   CONFIG["REWARD"]["BONUS_WIN"],
+        "bonus_2nd":   CONFIG["REWARD"]["BONUS_2ND"],
+        "bonus_3rd":   CONFIG["REWARD"]["BONUS_3RD"],
+        "bonus_last":  CONFIG["REWARD"]["BONUS_LAST"],
     }, paths["config_csv"])
 
     save_run_meta({
@@ -150,8 +162,9 @@ def main():
         ep_shaping_returns = [0.0 for _ in range(num_players)]  # pro Agent
 
         ts = env.reset()
+        last_idx = {p: None for p in range(num_players)}  # Index der letzten Transition je Agent
+
         while not ts.last():
-            ep_len += 1
             p = ts.observations["current_player"]
             legal = ts.observations["legal_actions"][p]
 
@@ -162,58 +175,70 @@ def main():
             if CONFIG["FEATURES"]["SEAT_ONEHOT"]:
                 seat_oh = np.zeros(num_players, dtype=np.float32); seat_oh[p] = 1.0
 
+            # Handgröße vor der Aktion (nur wenn Step-Rewards aktiv)
+            if shaper.step_active():
+                hand_before = shaper.hand_size(ts, p, deck_int)
+
             # Action aus eigenem Netz des aktuellen Sitzes
-            a = int(agents[p].step(obs, legal, seat_one_hot=seat_oh))
+            a = int(agents[p].step(obs, legal, seat_one_hot=seat_oh, player_id=p))
+            last_idx[p] = len(agents[p]._buffer.states) - 1
 
-            # Schritt
-            hand_before = shaper.hand_size(ts, p, deck_int)
+            # Schritt in der Env
             ts_next = env.step([a])
-            hand_after = shaper.hand_size(ts_next, p, deck_int)
+            ep_len += 1
 
-            # Shaping-Reward nur für den aktuell handelnden Agent p
-            r = shaper.step_reward(
-                hand_before=hand_before,
-                hand_after=hand_after,
-                time_step=ts_next,
-                player_id=p,
-                deck_size=deck_int,
-            )
-            ep_shaping_returns[p] += float(r)
-            agents[p].post_step(r, done=ts_next.last())
+            # Step-Shaping direkt auf die zuletzt gespeicherte Transition des aktiven Agents
+            if shaper.step_active():
+                hand_after = shaper.hand_size(ts_next, p, deck_int)
+                r = shaper.step_reward(hand_before=hand_before, hand_after=hand_after)
+                ep_shaping_returns[p] += float(r)
+                agents[p].post_step(r, done=ts_next.last())
 
             ts = ts_next
 
-        # Finale Rewards/Boni und Training FÜR ALLE Agents
-        ep_env_returns = [float(ts.rewards[i]) for i in range(num_players)]
-        ep_final_bonuses = [float(shaper.final_bonus(ts.rewards, i)) for i in range(num_players)]
+        # ===== Episodenende: Final-Rewards & done-Markierung je Agent =====
+        finals = [float(ts.rewards[i]) for i in range(num_players)]
 
+        for p in range(num_players):
+            li = last_idx[p]
+            if li is None:
+                continue  # (sollte praktisch nie passieren)
+
+            # ENV-Return nur, wenn der Shaper es vorsieht
+            if shaper.include_env_reward():
+                agents[p]._buffer.rewards[li] += finals[p]
+
+            # Benutzerdefinierter Platzierungsbonus
+            agents[p]._buffer.rewards[li] += float(shaper.final_bonus(finals, p))
+
+            # Terminal markieren (wichtig für GAE)
+            agents[p]._buffer.dones[li] = True
+
+        # ===== Training (ein Update pro Agent am Episodenende) =====
         train_seconds_sum = 0.0
         train_seconds_p0 = 0.0
         for i in range(num_players):
-            train_start = time.perf_counter()
-            if shaper.include_env_reward():
-                agents[i]._buffer.finalize_last_reward(ts.rewards[i])
-            agents[i]._buffer.finalize_last_reward(ep_final_bonuses[i])
-            train_metrics_i = agents[i].train()
-            dt = time.perf_counter() - train_start
+            t_start = time.perf_counter()
+            agents[i].train()
+            dt = time.perf_counter() - t_start
             train_seconds_sum += dt
             if i == 0:
                 train_seconds_p0 = dt
 
-        # Trainingsmetriken (aggregiert + p0-spezifisch, damit die Standardplots funktionieren)
-        avg_env_return = float(np.mean(ep_env_returns))
+        # Trainingsmetriken (aggregiert + p0-spezifisch für Plot-Kompatibilität)
+        avg_env_return   = float(np.mean(finals))
         avg_shape_return = float(np.mean(ep_shaping_returns))
-        avg_final_bonus = float(np.mean(ep_final_bonuses))
+        avg_final_bonus  = float(np.mean([shaper.final_bonus(finals, i) for i in range(num_players)]))
         train_metrics = {
-            "train_seconds_total": train_seconds_sum,
-            "train_seconds_p0":    train_seconds_p0,
-            "ep_env_return_p0":    ep_env_returns[0],
-            "ep_shaping_return_p0":ep_shaping_returns[0],
-            "ep_final_bonus_p0":   ep_final_bonuses[0],
-            "ep_env_return_avg":   avg_env_return,
+            "train_seconds_total":   train_seconds_sum,
+            "train_seconds_p0":      train_seconds_p0,
+            "ep_env_return_p0":      finals[0],
+            "ep_shaping_return_p0":  ep_shaping_returns[0],
+            "ep_final_bonus_p0":     float(shaper.final_bonus(finals, 0)),
+            "ep_env_return_avg":     avg_env_return,
             "ep_shaping_return_avg": avg_shape_return,
-            "ep_final_bonus_avg":  avg_final_bonus,
-            "ep_length":           ep_len,
+            "ep_final_bonus_avg":    avg_final_bonus,
+            "ep_length":             ep_len,
         }
         plotter.add_train(ep, train_metrics)
 
@@ -257,14 +282,14 @@ def main():
             plotter.log_timing(
                 ep,
                 ep_seconds=(time.perf_counter() - ep_start),
-                train_seconds=train_seconds_p0,     # zur Orientierung (p0)
+                train_seconds=train_seconds_p0,     # p0 als Referenz
                 eval_seconds=eval_seconds,
                 plot_seconds=plot_seconds,
                 save_seconds=save_seconds,
                 cum_seconds=cum_seconds,
             )
 
-        # ---- Episoden-Timing -> CSV (verschlankt) ----
+        # ---- Episoden-Timing -> CSV ----
         ep_seconds = time.perf_counter() - ep_start
         timer.maybe_log(ep, {
             "steps": ep_len,

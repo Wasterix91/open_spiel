@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-# President/training/k3a1.py — PPO (K3): Snapshot-Selfplay, k1a1-Stil
+# President/training/k3a1_rec.py — PPO (K3 Recommended): Snapshot-Selfplay, 1 Learner + 3 Sparring
+# Hinweis: minimale Änderungen gegenüber k3a1_test.py
+#  - family-Name geändert (eigener Output-Ordner)
+#  - Konfig getuned, damit Snapshots bei kurzen Läufen sichtbar sind (kürzeres SNAPSHOT_INTERVAL)
+
 import os, datetime, time, copy, numpy as np, torch
 import pyspiel
 from open_spiel.python import rl_environment
@@ -19,10 +23,10 @@ from utils.deck import ranks_for_deck
 
 # ============== CONFIG ==============
 CONFIG = {
-    "EPISODES":         200,
-    "BENCH_INTERVAL":   100,
-    "BENCH_EPISODES":   500,
-    "TIMING_INTERVAL":  50,
+    "EPISODES":         50_000,      # mehr Episoden, damit mehrere Snapshot-Zyklen sichtbar werden
+    "BENCH_INTERVAL":   5000,
+    "BENCH_EPISODES":   2000,
+    "TIMING_INTERVAL":  500,
     "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
@@ -39,14 +43,16 @@ CONFIG = {
         "max_grad_norm": 0.5,
     },
 
-    # Reward-Shaping
+    # ======= Rewards (NEUES System) =======
+    # STEP_MODE : "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
+    # FINAL_MODE: "none" | "env_only" | "rank_bonus" | "both"
     "REWARD": {
-        "STEP": "delta_hand",
+        "STEP_MODE": "delta_weight_only",
         "DELTA_WEIGHT": 1.0,
         "HAND_PENALTY_COEFF": 0.0,
-        "FINAL": "none",
+
+        "FINAL_MODE": "env_only",
         "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
-        "ENV_REWARD": True,
     },
 
     # Features
@@ -56,7 +62,7 @@ CONFIG = {
     "SNAPSHOT": {
         "LEARNER_SEAT": 0,
         "MIX_CURRENT": 0.8,            # Wahrscheinlichkeit, Seats 1–3 mit aktueller Policy spielen zu lassen
-        "SNAPSHOT_INTERVAL": 10_000,   # alle N Episoden aktuelle Policy in den Pool
+        "SNAPSHOT_INTERVAL": 200,      # kürzer als in *_test, damit bei 5k Eps viele Snapshots anfallen
         "POOL_CAP": 20,
     },
 
@@ -90,7 +96,7 @@ def main():
     MODELS_ROOT = os.path.join(ROOT, "models")
 
     # ---- Verzeichnisse (k1a1-Stil) ----
-    family = "k3a1"
+    family = "k3a1"  # eigene Familie für recommended Variante
     family_dir = os.path.join(MODELS_ROOT, family)
     version = find_next_version(family_dir, prefix="model")
     paths = prepare_run_dirs(MODELS_ROOT, family, version, prefix="model")
@@ -103,7 +109,7 @@ def main():
         train_csv="training_metrics.csv",
         save_csv=True, verbosity=1,
     )
-    plotter.log("New Training (k3a1): Snapshot-Selfplay PPO")
+    plotter.log("New Training (k3a1_rec): Snapshot-Selfplay PPO")
     plotter.log(f"Deck_Size: {CONFIG['DECK_SIZE']}")
     plotter.log(f"Episodes: {CONFIG['EPISODES']}")
     plotter.log(f"Path: {paths['run_dir']}")
@@ -123,15 +129,16 @@ def main():
     # ---- Features ----
     deck_int = int(CONFIG["DECK_SIZE"])
     num_ranks = ranks_for_deck(deck_int)
+    # Seat-OneHot wird über agent._make_input angehängt → hier False
     feat_cfg = FeatureConfig(
         num_players=num_players, num_ranks=num_ranks,
-        add_seat_onehot=False,  # Seat-OneHot wird via agent._make_input angehängt
+        add_seat_onehot=False,
         normalize=CONFIG["FEATURES"]["NORMALIZE"],
     )
     seat_id_dim = (num_players if CONFIG["FEATURES"]["SEAT_ONEHOT"] else 0)
 
     # ---- Agent / Shaper ----
-    ppo_cfg = ppo.PPOConfig(**CONFIG["PPO"])
+    ppo_cfg = ppo.PPOConfig(**CONFIG["PPO"]) 
     agent = ppo.PPOAgent(info_dim, A, seat_id_dim=seat_id_dim, config=ppo_cfg)
     shaper = RewardShaper(CONFIG["REWARD"])
 
@@ -149,15 +156,25 @@ def main():
         "snapshot_interval": CONFIG["SNAPSHOT"]["SNAPSHOT_INTERVAL"],
         "pool_cap": CONFIG["SNAPSHOT"]["POOL_CAP"],
         "learner_seat": CONFIG["SNAPSHOT"]["LEARNER_SEAT"],
+
+        # Reward-Setup (neues System)
+        "step_mode": shaper.step_mode,
+        "delta_weight": shaper.dw,
+        "hand_penalty_coeff": shaper.hp,
+        "final_mode": shaper.final_mode,
+        "bonus_win":   CONFIG["REWARD"]["BONUS_WIN"],
+        "bonus_2nd":   CONFIG["REWARD"]["BONUS_2ND"],
+        "bonus_3rd":   CONFIG["REWARD"]["BONUS_3RD"],
+        "bonus_last":  CONFIG["REWARD"]["BONUS_LAST"],
     }, paths["config_csv"])
     save_run_meta({"family": family, "version": version, "algo": "ppo_snapshot", "deck": CONFIG["DECK_SIZE"]}, paths["run_meta_json"])
 
     # ---- Snapshot-Pool ----
     pool: list[dict] = []
-    MIX = float(CONFIG["SNAPSHOT"]["MIX_CURRENT"])
-    SNAPINT = int(CONFIG["SNAPSHOT"]["SNAPSHOT_INTERVAL"])
-    POOL_CAP = int(CONFIG["SNAPSHOT"]["POOL_CAP"])
-    LEARNER_SEAT = int(CONFIG["SNAPSHOT"]["LEARNER_SEAT"])
+    MIX = float(CONFIG["SNAPSHOT"]["MIX_CURRENT"]) 
+    SNAPINT = int(CONFIG["SNAPSHOT"]["SNAPSHOT_INTERVAL"]) 
+    POOL_CAP = int(CONFIG["SNAPSHOT"]["POOL_CAP"]) 
+    LEARNER_SEAT = int(CONFIG["SNAPSHOT"]["LEARNER_SEAT"]) 
 
     # ---- Timing ----
     timer = TimingMeter(csv_path=paths["timings_csv"], interval=CONFIG["TIMING_INTERVAL"])
@@ -171,20 +188,19 @@ def main():
         ep_shaping_return = 0.0
 
         ts = env.reset()
+        last_idx_learner = None  # Index der letzten Transition des Learner-Seats
 
-        # Für Seats 1–3 vor der Episode festlegen, ob aktuelle Policy oder Snapshot genutzt wird
+        # Seats != LEARNER_SEAT: aktuelle Policy oder Snapshot
         seat_actor = {}
         for seat in [s for s in range(num_players) if s != LEARNER_SEAT]:
             use_current = (len(pool) == 0) or (np.random.rand() < MIX)
             if use_current:
                 seat_actor[seat] = "current"
             else:
-                # Einen Snapshot auswählen und als inferenzfähiges Netz aufsetzen
                 sd = pool[np.random.randint(len(pool))]
                 seat_actor[seat] = SnapshotPolicy(info_dim + seat_id_dim, A, sd)
 
         while not ts.last():
-            ep_len += 1
             p = ts.observations["current_player"]
             legal = ts.observations["legal_actions"][p]
 
@@ -195,10 +211,13 @@ def main():
             if CONFIG["FEATURES"]["SEAT_ONEHOT"]:
                 seat_oh = np.zeros(num_players, dtype=np.float32); seat_oh[p] = 1.0
 
-            hand_before = shaper.hand_size(ts, p, deck_int)
+            # Step-Reward-Prep
+            if shaper.step_active():
+                hand_before = shaper.hand_size(ts, p, deck_int)
 
             if p == LEARNER_SEAT:
-                a = int(agent.step(obs, legal, seat_one_hot=seat_oh))
+                a = int(agent.step(obs, legal, seat_one_hot=seat_oh, player_id=p))
+                last_idx_learner = len(agent._buffer.states) - 1
             else:
                 actor = seat_actor[p]
                 if actor == "current":
@@ -213,27 +232,28 @@ def main():
                     a = int(actor.act(x, legal))
 
             ts_next = env.step([a])
+            ep_len += 1
 
-            if p == LEARNER_SEAT:
+            if p == LEARNER_SEAT and shaper.step_active():
                 hand_after = shaper.hand_size(ts_next, p, deck_int)
-                r = shaper.step_reward(
-                    hand_before=hand_before, hand_after=hand_after,
-                    time_step=ts_next, player_id=p, deck_size=deck_int
-                )
+                r = shaper.step_reward(hand_before=hand_before, hand_after=hand_after)
                 ep_shaping_return += float(r)
                 agent.post_step(r, done=ts_next.last())
 
             ts = ts_next
 
         # Finale Returns/Bonis für Lern-Sitz
-        ep_env_return = float(ts.rewards[LEARNER_SEAT])
+        ep_env_return  = float(ts.rewards[LEARNER_SEAT])
         ep_final_bonus = float(shaper.final_bonus(ts.rewards, LEARNER_SEAT))
+
+        if last_idx_learner is not None:
+            if shaper.include_env_reward():
+                agent._buffer.rewards[last_idx_learner] += ep_env_return
+            agent._buffer.rewards[last_idx_learner] += ep_final_bonus
+            agent._buffer.dones[last_idx_learner] = True
 
         # Train
         train_start = time.perf_counter()
-        if shaper.include_env_reward():
-            agent._buffer.finalize_last_reward(ts.rewards[LEARNER_SEAT])
-        agent._buffer.finalize_last_reward(ep_final_bonus)
         train_metrics = agent.train()
         train_seconds = time.perf_counter() - train_start
 
@@ -249,16 +269,15 @@ def main():
         plotter.add_train(ep, train_metrics)
 
         # Snapshot in Pool?
-        if ep % SNAPINT == 0:
+        if SNAPINT > 0 and (ep % SNAPINT == 0):
             pool.append(copy.deepcopy(agent._policy.state_dict()))
             if len(pool) > POOL_CAP:
                 pool.pop(0)
 
-        # Benchmark & Save (nur Player-0)
+        # Benchmark & Save (nur Learner-Policy)
         eval_seconds = plot_seconds = save_seconds = 0.0
-        if ep % BINT == 0:
+        if BINT > 0 and (ep % BINT == 0):
             ev_start = time.perf_counter()
-
             per_opponent = run_benchmark(
                 game=game,
                 agent=agent,
@@ -281,7 +300,7 @@ def main():
             plot_seconds = time.perf_counter() - plot_start
 
             save_start = time.perf_counter()
-            tag = f"{family}_model_{version}_agent_p0_ep{ep:07d}"
+            tag = f"{family}_model_{version}_agent_p{LEARNER_SEAT}_ep{ep:07d}"
             save_checkpoint_ppo(agent, paths["weights_dir"], tag)
             save_seconds = time.perf_counter() - save_start
 
@@ -295,7 +314,6 @@ def main():
                 save_seconds=save_seconds,
                 cum_seconds=cum_seconds,
             )
-
 
         # Timing CSV
         ep_seconds = time.perf_counter() - ep_start
@@ -311,7 +329,7 @@ def main():
     total_seconds = time.perf_counter() - t0
     plotter.log("")
     plotter.log(f"Gesamtzeit: {total_seconds/3600:0.2f}h (~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)")
-    plotter.log("K3 (Snapshot-Selfplay) Training abgeschlossen.")
+    plotter.log("K3 (Snapshot-Selfplay, recommended) Training abgeschlossen.")
 
 if __name__ == "__main__":
     main()

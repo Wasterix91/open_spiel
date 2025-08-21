@@ -1,0 +1,47 @@
+[2025-08-21 12:25:18] New Training (k4a1_rec): Shared-Policy PPO — In-Proc External Trainer (Bundle-Updates)
+[2025-08-21 12:25:18] Deck_Size: 12
+[2025-08-21 12:25:18] Episodes: 3000
+[2025-08-21 12:25:18] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k4a1_rec/model_05
+[2025-08-21 12:25:28] 
+[2025-08-21 12:25:28] Benchmark @train_ep     600 (bench_eps: 500)
+[2025-08-21 12:25:28] Macro Winrate          :  36.6%
+[2025-08-21 12:25:28] Macro Ø-Reward         :  1.708
+[2025-08-21 12:25:28] Winrate vs max_combo   :  27.0% | Σ-Reward:  761.0 | Ø-Reward:  1.522 | Places: [135 (0.27), 121 (0.24), 114 (0.23), 130 (0.26)]
+[2025-08-21 12:25:28] Winrate vs random2     :  34.0% | Σ-Reward:  843.0 | Ø-Reward:  1.686 | Places: [170 (0.34), 116 (0.23), 101 (0.20), 113 (0.23)]
+[2025-08-21 12:25:28] Winrate vs single_only :  48.8% | Σ-Reward:  958.0 | Ø-Reward:  1.916 | Places: [244 (0.49), 71 (0.14), 84 (0.17), 101 (0.20)]
+[2025-08-21 12:25:29] Timing @ep 600: episode 3.5s | train 0.100s | eval 2.2s | plot 1.2s | save 0.003s | cum 0.00h
+[2025-08-21 12:25:37] 
+[2025-08-21 12:25:37] Benchmark @train_ep    1200 (bench_eps: 500)
+[2025-08-21 12:25:37] Macro Winrate          :  36.8%
+[2025-08-21 12:25:37] Macro Ø-Reward         :  1.756
+[2025-08-21 12:25:37] Winrate vs max_combo   :  24.8% | Σ-Reward:  730.0 | Ø-Reward:  1.460 | Places: [124 (0.25), 109 (0.22), 140 (0.28), 127 (0.25)]
+[2025-08-21 12:25:37] Winrate vs random2     :  32.4% | Σ-Reward:  875.0 | Ø-Reward:  1.750 | Places: [162 (0.32), 141 (0.28), 107 (0.21), 90 (0.18)]
+[2025-08-21 12:25:37] Winrate vs single_only :  53.2% | Σ-Reward:  1029.0 | Ø-Reward:  2.058 | Places: [266 (0.53), 71 (0.14), 89 (0.18), 74 (0.15)]
+[2025-08-21 12:25:38] Timing @ep 1200: episode 3.5s | train 0.080s | eval 2.1s | plot 1.2s | save 0.001s | cum 0.01h
+[2025-08-21 12:25:46] 
+[2025-08-21 12:25:46] Benchmark @train_ep    1800 (bench_eps: 500)
+[2025-08-21 12:25:46] Macro Winrate          :  35.9%
+[2025-08-21 12:25:46] Macro Ø-Reward         :  1.757
+[2025-08-21 12:25:46] Winrate vs max_combo   :  25.2% | Σ-Reward:  733.0 | Ø-Reward:  1.466 | Places: [126 (0.25), 123 (0.25), 109 (0.22), 142 (0.28)]
+[2025-08-21 12:25:46] Winrate vs random2     :  29.6% | Σ-Reward:  848.0 | Ø-Reward:  1.696 | Places: [148 (0.30), 139 (0.28), 126 (0.25), 87 (0.17)]
+[2025-08-21 12:25:46] Winrate vs single_only :  53.0% | Σ-Reward:  1055.0 | Ø-Reward:  2.110 | Places: [265 (0.53), 92 (0.18), 76 (0.15), 67 (0.13)]
+[2025-08-21 12:25:47] Timing @ep 1800: episode 3.6s | train 0.083s | eval 2.2s | plot 1.3s | save 0.001s | cum 0.01h
+[2025-08-21 12:25:55] 
+[2025-08-21 12:25:55] Benchmark @train_ep    2400 (bench_eps: 500)
+[2025-08-21 12:25:55] Macro Winrate          :  35.5%
+[2025-08-21 12:25:55] Macro Ø-Reward         :  1.708
+[2025-08-21 12:25:55] Winrate vs max_combo   :  24.8% | Σ-Reward:  726.0 | Ø-Reward:  1.452 | Places: [124 (0.25), 118 (0.24), 118 (0.24), 140 (0.28)]
+[2025-08-21 12:25:55] Winrate vs random2     :  29.2% | Σ-Reward:  813.0 | Ø-Reward:  1.626 | Places: [146 (0.29), 131 (0.26), 113 (0.23), 110 (0.22)]
+[2025-08-21 12:25:55] Winrate vs single_only :  52.6% | Σ-Reward:  1023.0 | Ø-Reward:  2.046 | Places: [263 (0.53), 71 (0.14), 92 (0.18), 74 (0.15)]
+[2025-08-21 12:25:56] Timing @ep 2400: episode 3.5s | train 0.093s | eval 2.2s | plot 1.2s | save 0.001s | cum 0.01h
+[2025-08-21 12:26:05] 
+[2025-08-21 12:26:05] Benchmark @train_ep    3000 (bench_eps: 500)
+[2025-08-21 12:26:05] Macro Winrate          :  34.6%
+[2025-08-21 12:26:05] Macro Ø-Reward         :  1.727
+[2025-08-21 12:26:05] Winrate vs max_combo   :  25.0% | Σ-Reward:  737.0 | Ø-Reward:  1.474 | Places: [125 (0.25), 116 (0.23), 130 (0.26), 129 (0.26)]
+[2025-08-21 12:26:05] Winrate vs random2     :  29.4% | Σ-Reward:  836.0 | Ø-Reward:  1.672 | Places: [147 (0.29), 145 (0.29), 105 (0.21), 103 (0.21)]
+[2025-08-21 12:26:05] Winrate vs single_only :  49.4% | Σ-Reward:  1018.0 | Ø-Reward:  2.036 | Places: [247 (0.49), 96 (0.19), 85 (0.17), 72 (0.14)]
+[2025-08-21 12:26:06] Timing @ep 3000: episode 3.7s | train 0.096s | eval 2.3s | plot 1.3s | save 0.002s | cum 0.01h
+[2025-08-21 12:26:06] 
+[2025-08-21 12:26:06] Gesamtzeit: 0.01h (~ 63.42 eps/s)
+[2025-08-21 12:26:06] K4 (Shared-Policy PPO, In-Proc External Trainer) abgeschlossen.

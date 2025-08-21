@@ -1,3 +1,4 @@
+# President/training/k1a1.py
 import os, datetime, time, numpy as np, torch
 import pyspiel
 from open_spiel.python import rl_environment
@@ -22,10 +23,10 @@ CONFIG = {
     "BENCH_INTERVAL":   100,
     "BENCH_EPISODES":   500,
     "TIMING_INTERVAL":  50,
-    "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+    "DECK_SIZE":        "12",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
-    # Training-Gegner (Heuristiken)
+    # Training-Gegner (Heuristiken) für Seats 1..3
     "OPPONENTS":        ["max_combo", "max_combo", "max_combo"],
 
     # PPO-Hyperparameter
@@ -41,14 +42,16 @@ CONFIG = {
         "max_grad_norm": 0.5,
     },
 
-    # Reward-Shaping
+    # ======= Rewards (NEUES System) =======
+    # STEP_MODE : "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
+    # FINAL_MODE: "none" | "env_only" | "rank_bonus" | "both"
     "REWARD": {
-        "STEP": "delta_hand",
+        "STEP_MODE": "delta_weight_only",
         "DELTA_WEIGHT": 0.5,
         "HAND_PENALTY_COEFF": 0.0,
-        "FINAL": "none",
+
+        "FINAL_MODE": "env_only",
         "BONUS_WIN": 10.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
-        "ENV_REWARD": True,
     },
 
     # Feature-Toggles
@@ -84,7 +87,7 @@ def main():
         verbosity=1,
     )
 
-    plotter.log("New Training")
+    plotter.log("New Training (k1a1)")
     plotter.log(f"Deck_Size: {CONFIG['DECK_SIZE']}")
     plotter.log(f"Episodes: {CONFIG['EPISODES']}")
     plotter.log(f"Path: {paths['run_dir']}")
@@ -99,21 +102,20 @@ def main():
     env = rl_environment.Environment(game)
     info_dim = env.observation_spec()["info_state"][0]
     A = env.action_spec()["num_actions"]
+    num_players = game.num_players()
 
     # ---- Features ----
     deck_int = int(CONFIG["DECK_SIZE"])
-    num_players = game.num_players()
-
     num_ranks = ranks_for_deck(deck_int)
     feat_cfg = FeatureConfig(
         num_players=num_players, num_ranks=num_ranks,
         add_seat_onehot=CONFIG["FEATURES"]["SEAT_ONEHOT"],
         normalize=CONFIG["FEATURES"]["NORMALIZE"],
     )
+    seat_id_dim = (num_players if CONFIG["FEATURES"]["SEAT_ONEHOT"] else 0)
 
     # ---- Agent/opp/reward ----
     ppo_cfg = ppo.PPOConfig(**CONFIG["PPO"])
-    seat_id_dim = (num_players if CONFIG["FEATURES"]["SEAT_ONEHOT"] else 0)
     agent = ppo.PPOAgent(info_dim, A, seat_id_dim=seat_id_dim, config=ppo_cfg)
     opponents = [STRATS[name] for name in CONFIG["OPPONENTS"]]
     shaper = RewardShaper(CONFIG["REWARD"])
@@ -129,6 +131,16 @@ def main():
         "normalize": CONFIG["FEATURES"]["NORMALIZE"], "seat_onehot": CONFIG["FEATURES"]["SEAT_ONEHOT"],
         "opponents": ",".join(CONFIG["OPPONENTS"]),
         "models_dir": paths["weights_dir"], "plots_dir": paths["plots_dir"],
+
+        # Reward-Setup (neues System)
+        "step_mode": shaper.step_mode,
+        "delta_weight": shaper.dw,
+        "hand_penalty_coeff": shaper.hp,
+        "final_mode": shaper.final_mode,
+        "bonus_win":   CONFIG["REWARD"]["BONUS_WIN"],
+        "bonus_2nd":   CONFIG["REWARD"]["BONUS_2ND"],
+        "bonus_3rd":   CONFIG["REWARD"]["BONUS_3RD"],
+        "bonus_last":  CONFIG["REWARD"]["BONUS_LAST"],
     }, paths["config_csv"])
 
     save_run_meta({
@@ -149,48 +161,54 @@ def main():
         ep_shaping_return = 0.0
 
         ts = env.reset()
+        last_idx_p0 = None  # Index der letzten P0-Transition im Buffer
 
         while not ts.last():
-            ep_len += 1
             p = ts.observations["current_player"]
             legal = ts.observations["legal_actions"][p]
-            hand_before = shaper.hand_size(ts, p, deck_int)
 
             if p == 0:
+                # Handgröße vorher nur ermitteln, wenn Step-Rewards aktiv sind
+                if shaper.step_active():
+                    hand_before = shaper.hand_size(ts, p, deck_int)
+
                 base_obs = ts.observations["info_state"][p]
                 obs = augment_observation(base_obs, player_id=p, cfg=feat_cfg)
                 seat_oh = None
                 if CONFIG["FEATURES"]["SEAT_ONEHOT"]:
                     seat_oh = np.zeros(num_players, dtype=np.float32); seat_oh[p] = 1.0
-                a = int(agent.step(obs, legal, seat_one_hot=seat_oh))
+
+                # wichtig: player_id=0 mitgeben
+                a = int(agent.step(obs, legal, seat_one_hot=seat_oh, player_id=0))
+                last_idx_p0 = len(agent._buffer.states) - 1
             else:
                 a = int(opponents[p - 1](env._state))
 
             ts_next = env.step([a])
+            ep_len += 1
 
-            if p == 0:
+            if p == 0 and shaper.step_active():
                 hand_after = shaper.hand_size(ts_next, p, deck_int)
-                r = shaper.step_reward(
-                    hand_before=hand_before,
-                    hand_after=hand_after,
-                    time_step=ts_next,
-                    player_id=p,
-                    deck_size=deck_int,
-                )
+                # Step-Reward direkt verbuchen (Kreditvergabe pro Zug)
+                r = shaper.step_reward(hand_before=hand_before, hand_after=hand_after)
                 ep_shaping_return += float(r)
                 agent.post_step(r, done=ts_next.last())
 
             ts = ts_next
 
-        # final env return for P0:
-        ep_env_return = float(ts.rewards[0])
+        # final env return / bonus für P0:
+        ep_env_score = float(ts.rewards[0])  # reine Metrik
         ep_final_bonus = float(shaper.final_bonus(ts.rewards, 0))
 
-        # ---- train() separat timen ----
+        # ---- Episodenende: Final-Rewards auf letzte P0-Transition addieren + done markieren ----
+        if last_idx_p0 is not None:
+            if shaper.include_env_reward():
+                agent._buffer.rewards[last_idx_p0] += float(ts.rewards[0])
+            agent._buffer.rewards[last_idx_p0] += float(shaper.final_bonus(ts.rewards, 0))
+            agent._buffer.dones[last_idx_p0] = True  # wichtig für GAE-Segmentierung
+
+        # ---- Update (einmal pro Episode) ----
         train_start = time.perf_counter()
-        if shaper.include_env_reward():
-            agent._buffer.finalize_last_reward(ts.rewards[0])
-        agent._buffer.finalize_last_reward(shaper.final_bonus(ts.rewards, 0))
         train_metrics = agent.train()
         train_seconds = time.perf_counter() - train_start
 
@@ -199,22 +217,20 @@ def main():
             train_metrics = {}
         train_metrics.update({
             "train_seconds":      train_seconds,
-            "ep_env_return":      ep_env_return,
-            "ep_shaping_return":  ep_shaping_return,
-            "ep_final_bonus":     ep_final_bonus,
+            "ep_env_score":       ep_env_score,       # ENV-Score als Metrik
+            "ep_shaping_return":  ep_shaping_return,  # Summe Step-Shaping P0
+            "ep_final_bonus":     ep_final_bonus,     # Bonus P0 (kann 0 sein)
             "ep_length":          ep_len,
         })
         plotter.add_train(ep, train_metrics)
 
-        # ---- Benchmark (früher Eval) ----
+        # ---- Benchmark ----
         eval_seconds = 0.0
         plot_seconds = 0.0
         save_seconds = 0.0
 
         if ep % BINT == 0:
             ev_start = time.perf_counter()
-
-            # NEU: ausgelagert
             per_opponent = run_benchmark(
                 game=game,
                 agent=agent,
@@ -225,14 +241,13 @@ def main():
                 num_actions=A,
             )
             plotter.log_bench_summary(ep, per_opponent)
-
             eval_seconds = time.perf_counter() - ev_start
 
             # Plot & CSV
             plot_start = time.perf_counter()
-            plotter.add_benchmark(ep, per_opponent)             # CSV (Winrate, Reward, Plätze)
-            plotter.plot_benchmark_rewards()                    # Reward-Kurven
-            plotter.plot_places_latest()                        # letzte Verteilung als Balken pro Gegner
+            plotter.add_benchmark(ep, per_opponent)
+            plotter.plot_benchmark_rewards()
+            plotter.plot_places_latest()
             plotter.plot_benchmark(filename_prefix="lernkurve", with_macro=True)
             plotter.plot_train(filename_prefix="training_metrics", separate=True)
             plot_seconds = time.perf_counter() - plot_start
@@ -255,7 +270,7 @@ def main():
                 cum_seconds=cum_seconds,
             )
 
-        # ---- Episoden-Timing -> CSV (verschlankt) ----
+        # ---- Episoden-Timing -> CSV ----
         ep_seconds = time.perf_counter() - ep_start
         timer.maybe_log(ep, {
             "steps": ep_len,
@@ -265,7 +280,6 @@ def main():
             "plot_seconds": plot_seconds,
             "save_seconds": save_seconds,
         })
-
 
     # Ende
     total_seconds = time.perf_counter() - t0
