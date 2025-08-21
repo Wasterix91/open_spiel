@@ -19,10 +19,10 @@ from utils.deck import ranks_for_deck
 
 # ============== CONFIG ==============
 CONFIG = {
-    "EPISODES":         200,
-    "BENCH_INTERVAL":   100,
-    "BENCH_EPISODES":   500,
-    "TIMING_INTERVAL":  50,
+    "EPISODES":         50_000,
+    "BENCH_INTERVAL":   5000,
+    "BENCH_EPISODES":   2000,
+    "TIMING_INTERVAL":  500,
     "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
@@ -43,11 +43,11 @@ CONFIG = {
     # STEP-Varianten: "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
     # FINAL-Varianten: "none" | "env_only" | "rank_bonus" | "both"
     "REWARD": {
-        "STEP_MODE": "delta_weight_only",
+        "STEP_MODE": "none",
         "DELTA_WEIGHT": 1.0,
         "HAND_PENALTY_COEFF": 1.0,
 
-        "FINAL_MODE": "none",
+        "FINAL_MODE": "env_only",
         "BONUS_WIN": -10.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
     },
 
@@ -197,11 +197,11 @@ def main():
         train_start = time.perf_counter()
 
         # Debug: Summe der Trainings-Rewards pro Spieler (aus dem Buffer)
-        sum_per_player = {p: 0.0 for p in range(num_players)}
-        for r, pid in zip(agent._buffer.rewards, agent._buffer.player_ids):
-            if pid is not None:
-                sum_per_player[pid] += float(r)
-        print(f"[DEBUG] Train-Reward-Summen (vor Update): {sum_per_player}")
+        #sum_per_player = {p: 0.0 for p in range(num_players)}
+        #for r, pid in zip(agent._buffer.rewards, agent._buffer.player_ids):
+        #    if pid is not None:
+        #        sum_per_player[pid] += float(r)
+        #print(f"[DEBUG] Train-Reward-Summen (vor Update): {sum_per_player}")
         
 
         train_metrics = agent.train()

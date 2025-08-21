@@ -20,14 +20,14 @@ from open_spiel.python import rl_environment
 from agents import dqn_agent as dqn
 from utils.fit_tensor import FeatureConfig, augment_observation
 from utils.strategies import STRATS
-from utils.training_eval_plots import EvalPlotter
+from utils.plotter import EvalPlotter
 
 # ============== CONFIG (wie k1a1) ==============
 CONFIG = {
     "EPISODES":        200_000,
     "EVAL_INTERVAL":   10_000,     # auch Save-Intervall
     "EVAL_EPISODES":   2_000,
-    "DECK_SIZE":       "64",       # "32" | "52" | "64"
+    "DECK_SIZE":       "16",       # "32" | "52" | "64"
     "SEED":            123,
 
     # DQN-Hyperparameter

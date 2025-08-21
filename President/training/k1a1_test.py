@@ -23,7 +23,7 @@ CONFIG = {
     "BENCH_INTERVAL":   100,
     "BENCH_EPISODES":   500,
     "TIMING_INTERVAL":  50,
-    "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+    "DECK_SIZE":        "12",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
     # Training-Gegner (Heuristiken) für Seats 1..3

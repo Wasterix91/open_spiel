@@ -78,6 +78,12 @@ class RewardShaper:
             # >>> Quadratische Belohnung für Kombos
             r += self.dw * (delta_cards ** 2)
 
+            # >>> Alternative (optional): Dreiecksbelohnung für Kombos
+            # tri = delta_cards * (delta_cards + 1.0) / 2.0
+            # r += self.dw * tri
+            # Hinweis: Falls du die Dreiecksformel nutzt, kommentiere die
+            # quadratische Zeile oben aus, damit nicht doppelt addiert wird.
+
         if mode in ("hand_penalty_coeff_only", "combined"):
             r += -self.hp * float(hand_after)
 

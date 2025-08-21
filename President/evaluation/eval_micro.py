@@ -1,15 +1,18 @@
 # -*- coding: utf-8 -*-
-# evaluation/eval_micro.py — Single-Game Debug/Eval
-# - Lädt PPO/DQN Checkpoints robust (mit/ohne Seat-One-Hot; DQN auch League-Checkpoints)
-# - Hängt bei Bedarf automatisch eine Seat-One-Hot an (nur wenn das Netz sie erwartet)
-# - Loggt ein einzelnes Spiel detailliert in CSV + Mini-Plot
+# evaluation/eval_micro.py — Single-Game Debug/Eval (greedy, explizite Checkpoints)
+# - bricht ab, wenn Checkpoints fehlen (kein Random-Init)
+# - nutzt Trainings-Loader (load_checkpoint_ppo/dqn)
+# - erstellt Run-Ordner erst nach erfolgreichem Laden
+# - schreibt zusätzlich action_probs.csv mit Wahrscheinlichkeiten über legalen Aktionen pro Zug
 
-import os, json, glob, numpy as np, pandas as pd, torch, pyspiel, matplotlib.pyplot as plt
-from collections import defaultdict, namedtuple
+import os, re, json, numpy as np, pandas as pd, torch, pyspiel
+from collections import namedtuple
 
 from agents import ppo_agent as ppo
 from agents import dqn_agent as dqn
-from utils import STRATS
+from utils.strategies import STRATS
+from utils.load_save_a1_ppo import load_checkpoint_ppo
+from utils.load_save_a2_dqn import load_checkpoint_dqn
 
 # ====== Setup ======
 GAME_SETTINGS = {
@@ -19,245 +22,278 @@ GAME_SETTINGS = {
     "single_card_mode": False,
 }
 
-# Beispiel-Config (beliebig anpassen)
+# Beispiel-Config (alle ppo/dqn-Spieler MÜSSEN family/version/episode haben)
+""" PLAYER_CONFIG = [
+    {"name":"P0","type":"ppo","family":"k3a1","version":"05","episode":"20_000","from_pid":0},
+    {"name":"P1","type":"max_combo"},
+    {"name":"P2","type":"max_combo"},
+    {"name":"P3","type":"max_combo"},
+] """
+
 PLAYER_CONFIG = [
-    {"name": "Player0", "type": "ppo", "version": "15", "episode": "20_000"}, 
-    {"name": "Player1", "type": "max_combo"},
-    {"name": "Player2", "type": "max_combo"},
-    {"name": "Player3", "type": "max_combo"},
+    {"name": "P0", "type": "ppo", "family": "k3a1", "version": "05", "episode": 20_000, "from_pid": 0},
+    {"name": "P1", "type": "ppo", "family": "k1a1", "version": "57", "episode": 200, "from_pid": 0},
+    {"name": "P2", "type": "ppo", "family": "k3a1", "version": "05", "episode": 20_000, "from_pid": 0},
+    {"name": "P3", "type": "ppo", "family": "k1a1", "version": "57", "episode": 200, "from_pid": 0},
 ]
 
-# --- Versioniertes Output wie eval_macro ---
+# ====== Pfade & kleine Utils ======
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-EVAL_MICRO_ROOT = os.path.join(BASE_DIR, "eval_micro")
-os.makedirs(EVAL_MICRO_ROOT, exist_ok=True)
+MODELS_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "models"))
 
-existing_runs = sorted([d for d in os.listdir(EVAL_MICRO_ROOT) if d.startswith("eval_micro_")])
-next_run_num = int(existing_runs[-1].split("_")[-1]) + 1 if existing_runs else 1
-RUN_DIR  = os.path.join(EVAL_MICRO_ROOT, f"eval_micro_{next_run_num:02d}")
-CSV_DIR  = os.path.join(RUN_DIR, "csv")
-PLOTS_DIR = os.path.join(RUN_DIR, "plots")
-os.makedirs(CSV_DIR, exist_ok=True)
-os.makedirs(PLOTS_DIR, exist_ok=True)
+def _fatal(msg, tried=None):
+    lines = [f"[FATAL] {msg}"]
+    if tried:
+        lines.append("  Versucht:")
+        for t in tried[:30]:
+            lines.append(f"    {t}")
+        if len(tried) > 30:
+            lines.append("    ...")
+    raise SystemExit("\n".join(lines))
 
-# Dateien in den Run-Ordner
-CONFIG_CSV = os.path.join(RUN_DIR, "config.csv")
-LOG_CSV    = os.path.join(CSV_DIR, "game_log.csv")
-PLOT_PNG   = os.path.join(PLOTS_DIR, "plots.png")
-
-with open(os.path.join(RUN_DIR, "game_settings.json"), "w") as f:
-    json.dump(GAME_SETTINGS, f, indent=2)
-
-pd.DataFrame(PLAYER_CONFIG).to_csv(os.path.join(RUN_DIR, "player_config.csv"), index=False)
-print(f"📁 Eval-Micro Run-Ordner: {RUN_DIR}")
-
-# ====== Helpers ======
 def _norm_episode(ep):
-    if ep is None:
-        return None
-    s = str(ep).replace("_", "").strip()
+    s = str(ep).replace("_","").strip()
     if s.isdigit():
         return int(s)
-    raise ValueError(f"Ungültige Episode: {ep!r}")
+    _fatal(f"Episode muss explizit gesetzt sein (int oder numerischer String), erhalten: {ep!r}")
 
-def _root_here(file=__file__):
-    return os.path.dirname(os.path.dirname(os.path.abspath(file)))
+def _ppo_expected_stem(family: str, version: str, seat_on_disk: int, episode: int):
+    base_dir = os.path.join(MODELS_ROOT, family, f"model_{version}", "models")
+    stem = os.path.join(base_dir, f"{family}_model_{version}_agent_p{seat_on_disk}_ep{episode:07d}")
+    pol, val = stem + "_policy.pt", stem + "_value.pt"
+    if not (os.path.exists(pol) and os.path.exists(val)):
+        _fatal(
+            f"PPO-Checkpoint fehlt: family={family}, version={version}, seat={seat_on_disk}, episode={episode}",
+            tried=[pol, val],
+        )
+    return stem
 
-# Basispfad für *Modell*-Familien aufbauen (ohne Suffixe)
-def _model_bases(kind_family: str, version: str, pid_runtime: int, episode: int|None, pid_files: int|None, *, file=__file__):
-    # kind_family ∈ {"ppo_model", "dqn_model", "dqn_league"}
-    pid_disk = pid_files if pid_files is not None else pid_runtime
-    base = os.path.join(_root_here(file), "models", f"{kind_family}_{version}", "train",
-                        f"{kind_family}_{version}_agent_p{pid_disk}")
-    if episode is not None:
-        return [f"{base}_ep{episode:07d}"]
-    else:
-        # sowohl "latest"-Stamm als auch alle ep-Stämme (für Fallback)
-        stems = [base]
-        stems += [p[:-3] if p.endswith(".pt") else p for p in glob.glob(base + "_ep*")]
-        return stems
+def _dqn_expected_stem(family: str, version: str, seat_on_disk: int, episode: int):
+    base_dir = os.path.join(MODELS_ROOT, family, f"model_{version}", "models")
+    stem = os.path.join(base_dir, f"{family}_model_{version}_agent_p{seat_on_disk}_ep{episode:07d}")
+    qpth = stem + "_q.pt"
+    if not os.path.exists(qpth):
+        _fatal(
+            f"DQN-Checkpoint fehlt: family={family}, version={version}, seat={seat_on_disk}, episode={episode}",
+            tried=[qpth],
+        )
+    return stem
 
-# ====== Loader ======
-AgentOut = namedtuple("AgentOut", ["action"])  # kleines Wrapper-Objekt
+def _alias_dqn_attrs(agent):
+    # Adapter, damit Loader mit evtl. abweichenden Attributnamen klarkommen
+    if not hasattr(agent, "q_net") and hasattr(agent, "q_network"):
+        agent.q_net = agent.q_network
+    if not hasattr(agent, "target_net") and hasattr(agent, "target_network"):
+        agent.target_net = agent.target_network
+    return agent
 
-def load_agents(cfgs, game):
-    num_actions = game.num_distinct_actions()
-    INFO_DIM = game.information_state_tensor_shape()[0]
-    OBS_DIM  = game.observation_tensor_shape()[0]
-    NUM_PLAYERS = game.num_players()
-
-    agents = []
-    for pid, cfg in enumerate(cfgs):
-        kind = cfg["type"]
-        version = cfg.get("version", "01")
-        episode = _norm_episode(cfg.get("episode"))
-        from_pid = cfg.get("from_pid")
-
-        if kind == "ppo":
-            # Versuche erst ohne, dann mit Seat-One-Hot zu laden
-            bases = _model_bases("ppo_model", version, pid, episode, from_pid, file=__file__)
-            loaded = None
-            for seat_id_dim in (0, NUM_PLAYERS):
-                ag = ppo.PPOAgent(info_state_size=INFO_DIM, num_actions=num_actions, seat_id_dim=seat_id_dim)
-                ok=False
-                for stem in bases:
-                    try:
-                        ag._policy.load_state_dict(torch.load(stem + "_policy.pt", map_location=ag.device))
-                        ag._value.load_state_dict(torch.load(stem + "_value.pt",  map_location=ag.device))
-                        ag._policy.eval(); ag._value.eval()
-                        ok=True; break
-                    except FileNotFoundError:
-                        continue
-                    except RuntimeError:
-                        # Shape mismatch → nächsten seat_id_dim probieren
-                        ok=False; break
-                    except Exception:
-                        continue
-                if ok:
-                    loaded = ag; break
-            if loaded is None:
-                print(f"[WARN] PPO-Checkpoint für P{pid} nicht gefunden – Random-Init.")
-                loaded = ppo.PPOAgent(info_state_size=INFO_DIM, num_actions=num_actions, seat_id_dim=0)
-            agents.append(loaded)
-
-        elif kind == "dqn":
-            # Probiere beide DQN-Familien + zwei mögliche State-Sizes (ohne/mit Seat-One-Hot)
-            families = ("dqn_model", "dqn_league")
-            stems = []
-            for fam in families:
-                stems.extend(_model_bases(fam, version, pid, episode, from_pid, file=__file__))
-            # Dedupliziere Reihenfolge beibehaltend
-            seen=set(); stems=[s for s in stems if not (s in seen or seen.add(s))]
-
-            loaded = None
-            for state_size in (OBS_DIM, OBS_DIM + NUM_PLAYERS):
-                ag = dqn.DQNAgent(state_size=state_size, num_actions=num_actions)
-                ok=False
-                for stem in stems:
-                    try:
-                        ag.restore(stem)
-                        ok=True; break
-                    except FileNotFoundError:
-                        continue
-                    except RuntimeError:
-                        # Shape mismatch → andere state_size testen
-                        ok=False; break
-                    except Exception:
-                        continue
-                if ok:
-                    ag.epsilon = 0.0  # greedy in Eval
-                    loaded = ag; break
-            if loaded is None:
-                print(f"[WARN] DQN-Checkpoint für P{pid} nicht gefunden – Random-Init.")
-                loaded = dqn.DQNAgent(state_size=OBS_DIM, num_actions=num_actions)
-            agents.append(loaded)
-
-        elif kind in STRATS:
-            agents.append(STRATS[kind])
-        else:
-            raise ValueError(f"Unbekannter Agententyp: {kind}")
-    return agents
-
-# ====== Softmax mit Legal-Masking (für PPO-Debug) ======
+# ====== Softmax mit Legal-Masking ======
 def _masked_softmax_numpy(logits, legal):
     logits = np.asarray(logits, dtype=np.float32)
+    if len(legal) == 0:
+        # corner-case: keine legalen (sollte nicht passieren)
+        return np.ones_like(logits) / len(logits)
     mask = np.full_like(logits, -np.inf, dtype=np.float32)
-    if len(legal):
-        mask[legal] = logits[legal]
-        m = np.max(mask[legal])
-    else:
-        m = 0.0
+    mask[list(legal)] = logits[list(legal)]
+    m = np.max(mask[list(legal)])
     ex = np.exp(mask - m)
     ex[~np.isfinite(ex)] = 0.0
     s = ex.sum()
     if s <= 0 or not np.isfinite(s):
         p = np.zeros_like(logits, dtype=np.float32)
-        if len(legal): p[legal] = 1.0 / len(legal)
+        p[list(legal)] = 1.0 / len(legal)
         return p
     return ex / s
 
-# ====== Forward mit Auto-Pad (falls Netz mehr Input erwartet) ======
-def _forward_policy_with_autopad(policy_net, obs_1d, device):
+# ====== Laden & Vorwärtswege ======
+AgentOut = namedtuple("AgentOut", ["action"])
+
+def _load_ppo_agent(info_dim, num_actions, seat_id_dim, *, family, version, episode, from_pid, device="cpu"):
+    ep = _norm_episode(episode)
+    stem = _ppo_expected_stem(family, version, from_pid, ep)
+    ag = ppo.PPOAgent(info_state_size=info_dim, num_actions=num_actions, seat_id_dim=seat_id_dim, device=device)
+    weights_dir, tag = os.path.dirname(stem), os.path.basename(stem)
+    try:
+        load_checkpoint_ppo(ag, weights_dir, tag)
+        ag._policy.eval(); ag._value.eval()
+        return ag
+    except Exception as e:
+        _fatal("Fehler beim Laden via load_checkpoint_ppo(...).", tried=[f"{stem}: {e}"])
+
+def _load_dqn_agent(obs_dim, num_actions, *, family, version, episode, from_pid, num_players, device="cpu"):
+    ep = _norm_episode(episode)
+    stem = _dqn_expected_stem(family, version, from_pid, ep)
+    tried = []
+    for state_size in (obs_dim, obs_dim + num_players):  # ohne/mit Seat-One-Hot
+        ag = dqn.DQNAgent(state_size=state_size, num_actions=num_actions, device=device)
+        _alias_dqn_attrs(ag)
+        weights_dir, tag = os.path.dirname(stem), os.path.basename(stem)
+        try:
+            load_checkpoint_dqn(ag, weights_dir, tag)
+            if hasattr(ag, "epsilon"): ag.epsilon = 0.0
+            return ag
+        except Exception as e:
+            tried.append(f"{stem} (state_size={state_size}): {e}")
+    _fatal("Fehler beim Laden von DQN-Gewichten.", tried=tried)
+
+def load_agents(cfgs, game):
+    info_dim    = game.information_state_tensor_shape()[0]
+    obs_dim     = game.observation_tensor_shape()[0]
+    num_actions = game.num_distinct_actions()
+    num_players = game.num_players()
+
+    agents = []
+    for pid, cfg in enumerate(cfgs):
+        kind = cfg["type"]
+
+        if kind == "ppo":
+            if not all(k in cfg for k in ("family","version","episode")):
+                _fatal(f"PPO-Spieler P{pid}: 'family', 'version' und 'episode' sind Pflicht. Erhalten: {cfg}")
+            # zuerst MIT, dann OHNE Seat-One-Hot versuchen
+            try:
+                ag = _load_ppo_agent(info_dim, num_actions, num_players,
+                                     family=cfg["family"], version=cfg["version"], episode=cfg["episode"],
+                                     from_pid=cfg.get("from_pid", pid))
+            except SystemExit:
+                ag = _load_ppo_agent(info_dim, num_actions, 0,
+                                     family=cfg["family"], version=cfg["version"], episode=cfg["episode"],
+                                     from_pid=cfg.get("from_pid", pid))
+            agents.append(ag); continue
+
+        if kind == "dqn":
+            if not all(k in cfg for k in ("family","version","episode")):
+                _fatal(f"DQN-Spieler P{pid}: 'family', 'version' und 'episode' sind Pflicht. Erhalten: {cfg}")
+            ag = _load_dqn_agent(obs_dim, game.num_distinct_actions(),
+                                 family=cfg["family"], version=cfg["version"], episode=cfg["episode"],
+                                 from_pid=cfg.get("from_pid", pid), num_players=num_players)
+            agents.append(ag); continue
+
+        if kind in STRATS:
+            agents.append(STRATS[kind]); continue
+
+        _fatal(f"Unbekannter Agententyp bei P{pid}: {kind!r}")
+
+    return agents
+
+def _ppo_logits(agent: ppo.PPOAgent, info_state_1d: np.ndarray, seat_id: int, num_players: int):
+    # immer Seat-OneHot bauen; _make_input ignoriert sie, wenn _seat_id_dim==0
+    seat_oh = np.zeros(num_players, dtype=np.float32); seat_oh[seat_id] = 1.0
+    x = agent._make_input(info_state_1d, seat_one_hot=seat_oh)
+    with torch.no_grad():
+        return agent._policy(x).detach().cpu().numpy()
+
+def _dqn_qvalues(agent: dqn.DQNAgent, obs_1d: np.ndarray, seat_id: int, num_players: int):
+    # robust: ggf. um Seat-OneHot erweitern, falls Netz mehr Eingänge erwartet
     x = np.asarray(obs_1d, dtype=np.float32)
     try:
-        in_features = policy_net.net[0].in_features
+        in_features = agent.q_network.net[0].in_features
     except Exception:
         in_features = x.shape[0]
     if x.shape[0] < in_features:
-        x = np.concatenate([x, np.zeros(in_features - x.shape[0], dtype=np.float32)], axis=0)
+        extra = in_features - x.shape[0]
+        if extra == num_players:
+            seat_oh = np.zeros(num_players, dtype=np.float32); seat_oh[seat_id] = 1.0
+            x = np.concatenate([x, seat_oh], axis=0)
+        else:
+            x = np.concatenate([x, np.zeros(extra, dtype=np.float32)], axis=0)
     elif x.shape[0] > in_features:
         x = x[:in_features]
     with torch.no_grad():
-        xt = torch.tensor(x, dtype=torch.float32, device=device).unsqueeze(0)
-        out = policy_net(xt).squeeze(0).detach().cpu().numpy()
-    return out
+        xt = torch.tensor(x, dtype=torch.float32, device=getattr(agent, "device", "cpu")).unsqueeze(0)
+        q = agent.q_network(xt).squeeze(0).detach().cpu().numpy()
+    return q
 
-# ====== Aktionswahl (hängt Seat-1Hot nur an, wenn nötig) ======
-def choose_policy_action(agent, state, player, NUM_PLAYERS):
+def choose_policy_action(agent, state, player, num_players, num_actions):
     legal = state.legal_actions(player)
 
+    # PPO: greedy (argmax über masked softmax der Logits)
     if isinstance(agent, ppo.PPOAgent):
-        obs = np.array(state.information_state_tensor(player), dtype=np.float32)
-        # prüfe, ob das Netz mehr Features erwartet (z.B. Seat-One-Hot)
-        try:
-            in_features = agent._policy.net[0].in_features
-        except Exception:
-            in_features = obs.shape[0]
-        if in_features > obs.shape[0]:
-            extra = in_features - obs.shape[0]
-            if extra == NUM_PLAYERS:
-                seat_oh = np.zeros(NUM_PLAYERS, dtype=np.float32); seat_oh[player] = 1.0
-                obs = np.concatenate([obs, seat_oh], axis=0)
-        device = getattr(agent, "device", "cpu")
-        logits = _forward_policy_with_autopad(agent._policy, obs, device)
-        probs = _masked_softmax_numpy(logits, legal)
-        action = int(np.random.choice(len(probs), p=probs))
-        return AgentOut(action)
+        info_vec = np.array(state.information_state_tensor(player), dtype=np.float32)
+        logits = _ppo_logits(agent, info_vec, player, num_players)
+        probs  = _masked_softmax_numpy(logits, legal)
+        return AgentOut(int(np.argmax(probs))), probs, logits
 
-    elif isinstance(agent, dqn.DQNAgent):
-        obs = np.array(state.observation_tensor(player), dtype=np.float32)
-        try:
-            in_features = agent.q_network.net[0].in_features
-        except Exception:
-            in_features = obs.shape[0]
-        if in_features > obs.shape[0]:
-            extra = in_features - obs.shape[0]
-            if extra == NUM_PLAYERS:
-                seat_oh = np.zeros(NUM_PLAYERS, dtype=np.float32); seat_oh[player] = 1.0
-                obs = np.concatenate([obs, seat_oh], axis=0)
-        old_eps = getattr(agent, "epsilon", 0.0)
-        agent.epsilon = 0.0
-        try:
-            action = int(agent.select_action(obs, legal))
-        finally:
-            agent.epsilon = old_eps
-        return AgentOut(action)
+    # DQN: greedy (argmax der Qs). Für Logging: Softmax über legalen Qs als Pseudo-Prob.
+    if isinstance(agent, dqn.DQNAgent):
+        obs_vec = np.array(state.observation_tensor(player), dtype=np.float32)
+        qvals = _dqn_qvalues(agent, obs_vec, player, num_players)
+        probs = _masked_softmax_numpy(qvals, legal)  # Pseudo-Probabilitäten
+        return AgentOut(int(np.argmax(probs))), probs, qvals
 
-    elif callable(agent):
-        action = int(agent(state))
-        if action not in legal:
-            action = int(np.random.choice(legal))
-        return AgentOut(action)
+    # Heuristik
+    if callable(agent):
+        a = int(agent(state))
+        if a not in legal: a = int(np.random.choice(legal))
+        # Dummy-Probs: uniform über legal
+        probs = np.zeros(num_actions, dtype=np.float32)
+        probs[legal] = 1.0 / max(1, len(legal))
+        scores = probs.copy()
+        return AgentOut(a), probs, scores
 
-    else:
-        raise ValueError("Unbekannter Agententyp bei choose_policy_action.")
+    _fatal("Unbekannter Agententyp in choose_policy_action.")
+
+# ====== Initiale Hände (CSV) ======
+def write_initial_ist_csv(game, state, csv_dir, filename="initial_info_state_tensor.csv"):
+    info_dim = game.information_state_tensor_shape()[0]
+    rows = []
+    for pid in range(game.num_players()):
+        ist = state.information_state_tensor(pid)  # list[float]
+        # zur Sicherheit in float konvertieren und auf Länge trimmen
+        vec = list(map(float, ist))[:info_dim]
+        row = {"player": pid}
+        # breite Spalten f0..f{info_dim-1}
+        row.update({f"f{i}": vec[i] for i in range(info_dim)})
+        rows.append(row)
+    cols = ["player"] + [f"f{i}" for i in range(info_dim)]
+    out = os.path.join(csv_dir, filename)
+    pd.DataFrame(rows, columns=cols).to_csv(out, index=False)
+    print(f"🧮 Initialer InformationStateTensor gespeichert: {out}")
+
+
 
 # ====== 1-Spiel-Debug ======
 def main():
     game = pyspiel.load_game("president", GAME_SETTINGS)
     NUM_PLAYERS = game.num_players()
+    NUM_ACTIONS = game.num_distinct_actions()
 
+    # --- Agents laden (bricht ggf. mit FATAL ab) ---
     agents = load_agents(PLAYER_CONFIG, game)
 
-    # Config schreiben
+    # --- Run-Verzeichnisse jetzt (erst nach erfolgreichem Laden) anlegen ---
+    eval_root = os.path.join(BASE_DIR, "eval_micro")
+    existing = sorted([d for d in os.listdir(eval_root)] if os.path.isdir(eval_root) else [])
+    existing = [d for d in existing if d.startswith("eval_micro_")]
+    next_run_num = int(existing[-1].split("_")[-1]) + 1 if existing else 1
+
+    run_dir   = os.path.join(eval_root, f"eval_micro_{next_run_num:02d}")
+    csv_dir   = os.path.join(run_dir, "csv")
+   
+    os.makedirs(csv_dir, exist_ok=True)
+
+
+    CONFIG_CSV = os.path.join(run_dir, "config.csv")
+    LOG_CSV    = os.path.join(csv_dir, "game_log.csv")
+    PROBS_CSV  = os.path.join(csv_dir, "action_probs.csv")
+
+    with open(os.path.join(run_dir, "game_settings.json"), "w") as f:
+        json.dump(GAME_SETTINGS, f, indent=2)
+    pd.DataFrame(PLAYER_CONFIG).to_csv(os.path.join(run_dir, "player_config.csv"), index=False)
+    print(f"📁 Eval-Micro Run-Ordner: {run_dir}")
+
+    # Config schreiben (kompakt)
     pd.DataFrame([{
         "game_settings": json.dumps(GAME_SETTINGS),
         "players": json.dumps(PLAYER_CONFIG),
     }]).to_csv(CONFIG_CSV, index=False)
 
-    # Log vorbereiten
-    rows = []
+    # --- Spiel starten ---
+    rows_log = []
+    rows_probs = []  # NEU: pro Zug Wahrscheinlichkeiten über LEGAL actions
     state = game.new_initial_state()
+
+    # Initiale Hände (vor dem ersten Zug) dumpen
+    write_initial_ist_csv(game, state, csv_dir)
     turn = 0
 
     while not state.is_terminal():
@@ -266,56 +302,55 @@ def main():
         legal_txt = [state.action_to_string(pid, a) for a in legal]
 
         agent = agents[pid]
-        ao = choose_policy_action(agent, state, pid, NUM_PLAYERS)
+        ao, probs, scores = choose_policy_action(agent, state, pid, NUM_PLAYERS, NUM_ACTIONS)
         action = int(ao.action)
-
-        # Für PPO: Debug-Probabilities über legal actions (optional)
-        probs_info = ""
-        if isinstance(agent, ppo.PPOAgent):
-            obs = np.array(state.information_state_tensor(pid), dtype=np.float32)
-            try:
-                in_features = agent._policy.net[0].in_features
-            except Exception:
-                in_features = obs.shape[0]
-            if in_features > obs.shape[0] and (in_features - obs.shape[0]) == NUM_PLAYERS:
-                seat_oh = np.zeros(NUM_PLAYERS, dtype=np.float32); seat_oh[pid] = 1.0
-                obs = np.concatenate([obs, seat_oh], axis=0)
-            device = getattr(agent, "device", "cpu")
-            logits = _forward_policy_with_autopad(agent._policy, obs, device)
-            probs = _masked_softmax_numpy(logits, legal)
-            probs_info = "; ".join(f"{i}:{p:.2f}" for i, p in enumerate(probs) if p > 0)
-
         action_txt = state.action_to_string(pid, action)
-        rows.append({
+
+        # --- Haupt-Log ---
+        rows_log.append({
             "turn": turn, "player": pid,
             "legal_actions": str(list(zip(legal, legal_txt))),
             "chosen_action": f"{action} ({action_txt})",
-            "policy_probs_over_legal": probs_info
         })
+
+        # --- Probs-Log (nur mögliche/legale Aktionen) ---
+        for a, txt in zip(legal, legal_txt):
+            rows_probs.append({
+                "turn": turn,
+                "player": pid,
+                "action_id": a,
+                "action_text": txt,
+                "prob": float(probs[a]),
+                # Score: PPO⇒Logit, DQN⇒Q-Value, Heuristik⇒Prob
+                "score": float(scores[a]),
+                "chosen": int(a == action),
+            })
 
         state.apply_action(action)
         turn += 1
 
     # Finale Returns
     rets = state.returns()
-    rows.append({"turn": turn, "player": "terminal", "legal_actions": "", "chosen_action": "", "policy_probs_over_legal": f"returns={rets}"})
-    pd.DataFrame(rows).to_csv(LOG_CSV, index=False)
-    print(f"📄 Game-Log gespeichert: {LOG_CSV}")
+    rows_log.append({"turn": turn, "player": "terminal", "legal_actions": "", "chosen_action": "",})
 
-    # Minimaler Platzhalter-Plot (Zugnummern)
-    plt.figure(figsize=(6,2))
-    plt.plot(range(turn))
-    plt.title("Eval Micro – Zugverlauf")
-    plt.tight_layout()
-    plt.savefig(PLOT_PNG); plt.close()
-    print(f"🖼️ Plot gespeichert: {PLOT_PNG}")
+    # --- Dateien schreiben ---
+    pd.DataFrame(rows_log).to_csv(LOG_CSV, index=False)
+    pd.DataFrame(rows_probs,
+                 columns=["turn","player","action_id","action_text","prob","score","chosen"]
+                 ).to_csv(PROBS_CSV, index=False)
+    print(f"📄 Game-Log gespeichert: {LOG_CSV}")
+    print(f"📄 Aktions-Wahrscheinlichkeiten gespeichert: {PROBS_CSV}")
 
     summary = {
         "micro_id": next_run_num,
         "num_turns": turn,
         "returns": rets,
     }
-    with open(os.path.join(RUN_DIR, "summary.json"), "w") as f:
+    # Save full OpenSpiel action history (incl. chance outcomes)
+    with open(os.path.join(run_dir, "history.json"), "w") as f:
+        json.dump(state.history(), f)
+
+    with open(os.path.join(run_dir, "summary.json"), "w") as f:
         json.dump(summary, f, indent=2)
 
 if __name__ == "__main__":

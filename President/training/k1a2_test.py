@@ -19,7 +19,7 @@ CONFIG = {
     "BENCH_INTERVAL":   5_000,
     "BENCH_EPISODES":   2_000,
     "TIMING_INTERVAL":  500,
-    "DECK_SIZE":        "64",
+    "DECK_SIZE":        "16",
     "SEED":             42,
 
     "OPPONENTS":        ["max_combo", "max_combo", "max_combo"],

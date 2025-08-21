@@ -388,3 +388,79 @@ class MetricsPlotter:
             f"plot {plot_seconds:0.1f}s | save {save_seconds:0.3f}s | "
             f"cum {cum_seconds/3600:0.2f}h"
         )
+
+class EvalPlotter:
+    """
+    Minimaler Plotter für k2a2/k3a2:
+      - add(episode, {"opp": winrate_float, ...}) schreibt CSV (wide)
+      - plot_all() erzeugt:
+          lernkurve_<opp>.png
+          lernkurve_alle_strategien.png
+          lernkurve_alle_strategien_avg.png
+    """
+    def __init__(self, opponent_names, out_dir,
+                 filename_prefix="lernkurve",
+                 csv_filename="eval_curves.csv",
+                 save_csv=True):
+        self.opps = list(opponent_names or [])
+        self.out_dir = out_dir
+        os.makedirs(self.out_dir, exist_ok=True)
+        self.prefix = filename_prefix
+        self.csv_path = os.path.join(self.out_dir, csv_filename)
+        self.save_csv = bool(save_csv)
+        self.episodes = []
+        self.hist = {n: [] for n in self.opps}
+        if self.save_csv and (not os.path.exists(self.csv_path)):
+            with open(self.csv_path, "w", newline="") as f:
+                csv.writer(f).writerow(["episode"] + self.opps)
+
+    def add(self, episode: int, per_opponent: dict):
+        self.episodes.append(int(episode))
+        row = [episode]
+        for name in self.opps:
+            val = float(per_opponent.get(name, float("nan")))
+            self.hist[name].append(val)
+            row.append(val)
+        if self.save_csv:
+            with open(self.csv_path, "a", newline="") as f:
+                csv.writer(f).writerow(row)
+
+    def plot_all(self):
+        if not self.episodes:
+            return
+
+        # Einzelplots
+        for name in self.opps:
+            ys = self.hist[name]
+            plt.figure(figsize=(10,6))
+            plt.plot(self.episodes, ys, marker="o")
+            plt.title(f"{self.prefix} – Winrate vs {name}")
+            plt.xlabel("Episode"); plt.ylabel("Winrate (%)"); plt.grid(True)
+            plt.tight_layout()
+            plt.savefig(os.path.join(self.out_dir, f"{self.prefix}_{name}.png"))
+            plt.close()
+
+        # Alle Strategien
+        plt.figure(figsize=(12,8))
+        for name in self.opps:
+            plt.plot(self.episodes, self.hist[name], marker="o", label=name)
+        plt.title(f"{self.prefix} – Winrate vs Gegner")
+        plt.xlabel("Episode"); plt.ylabel("Winrate (%)"); plt.grid(True); plt.legend()
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.out_dir, f"{self.prefix}_alle_strategien.png"))
+        plt.close()
+
+        # + Macro Average (Dateiname endet auf *_avg.png für Kompatibilität mit deinen Aliasen)
+        macro = []
+        for t in range(len(self.episodes)):
+            vals = [self.hist[name][t] for name in self.opps]
+            macro.append(float(np.nanmean(vals)))
+        plt.figure(figsize=(12,8))
+        for name in self.opps:
+            plt.plot(self.episodes, self.hist[name], marker="o", label=name)
+        plt.plot(self.episodes, macro, marker="o", linestyle="--", label="macro_wr")
+        plt.title(f"{self.prefix} – Winrate (mit Macro Average)")
+        plt.xlabel("Episode"); plt.ylabel("Winrate (%)"); plt.grid(True); plt.legend()
+        plt.tight_layout()
+        plt.savefig(os.path.join(self.out_dir, f"{self.prefix}_alle_strategien_avg.png"))
+        plt.close()

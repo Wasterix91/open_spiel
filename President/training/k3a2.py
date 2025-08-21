@@ -20,7 +20,7 @@ from open_spiel.python import rl_environment
 from agents import dqn_agent as dqn
 from utils.fit_tensor import FeatureConfig, augment_observation
 from utils.strategies import STRATS
-from utils.training_eval_plots import EvalPlotter
+from utils.plotter import EvalPlotter
 
 # ============== CONFIG (wie k1a1/k3a1) ==============
 CONFIG = {

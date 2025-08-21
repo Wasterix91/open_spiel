@@ -21,10 +21,10 @@ from utils.deck import ranks_for_deck
 
 # ============== CONFIG ==============
 CONFIG = {
-    "EPISODES":         200,
-    "BENCH_INTERVAL":   100,
-    "BENCH_EPISODES":   500,
-    "TIMING_INTERVAL":  50,
+    "EPISODES":         100_000,
+    "BENCH_INTERVAL":   5000,
+    "BENCH_EPISODES":   200,
+    "TIMING_INTERVAL":  500,
     "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
@@ -44,15 +44,15 @@ CONFIG = {
     # Externes Training (Rollout-Bundles)
     "EXTERNAL": {
         "ENABLED": True,               # externes Training aktiv
-        "EPISODES_PER_BUNDLE": 10,     # nach X Episoden Rollouts schreiben
+        "EPISODES_PER_BUNDLE": 100,     # nach X Episoden Rollouts schreiben
         "POLL_NEW_POLICY": True,       # nach jedem Bundle nach neuen Gewichten schauen
         "LATEST_TAG_FILE": "LATEST_POLICY.txt",   # Tag-Datei vom Trainer
     },
 
     # RAM-Snapshot-Gegner (nur im Speicher, kein Filesystem)
     "SNAPSHOT": {
-        "MIX_CURRENT": 0.8,            # W'keit, dass ein Sitz die aktuelle Policy nutzt (sonst Snapshot)
-        "SNAPSHOT_INTERVAL": 50,       # alle N Episoden aktuellen Policy-Snapshot in den RAM-Pool
+        "MIX_CURRENT": 1.0,            # Wahrscheinlichkeit, dass ein Sitz die aktuelle Policy nutzt (sonst Snapshot)
+        "SNAPSHOT_INTERVAL": 0,       # alle N Episoden aktuellen Policy-Snapshot in den RAM-Pool
         "POOL_CAP": 20,                # max. Anzahl RAM-Snapshots
     },
 
@@ -60,7 +60,7 @@ CONFIG = {
     # STEP_MODE : "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
     # FINAL_MODE: "none" | "env_only" | "rank_bonus" | "both"
     "REWARD": {
-        "STEP_MODE": "delta_weight_only",
+        "STEP_MODE": "none",
         "DELTA_WEIGHT": 1.0,
         "HAND_PENALTY_COEFF": 0.0,
 

@@ -1,0 +1,12 @@
+[2025-08-21 11:14:09] New Training (k2a2): 4x DQN simultan — k1-Style
+[2025-08-21 11:14:09] Deck_Size: 16
+[2025-08-21 11:14:09] Episodes: 200000
+[2025-08-21 11:14:09] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k2a2/model_05
+[2025-08-21 11:22:24] 
+[2025-08-21 11:22:24] Benchmark @train_ep   10000 (bench_eps: 2000)
+[2025-08-21 11:22:24] Macro Winrate          :  10.5%
+[2025-08-21 11:22:24] Macro Ø-Reward         :  0.796
+[2025-08-21 11:22:24] Winrate vs max_combo   :   9.8% | Σ-Reward:  1435.0 | Ø-Reward:  0.718 | Places: [197 (0.10), 210 (0.10), 424 (0.21), 1169 (0.58)]
+[2025-08-21 11:22:24] Winrate vs random2     :   7.2% | Σ-Reward:  1506.0 | Ø-Reward:  0.753 | Places: [145 (0.07), 267 (0.13), 537 (0.27), 1051 (0.53)]
+[2025-08-21 11:22:24] Winrate vs single_only :  14.3% | Σ-Reward:  1838.0 | Ø-Reward:  0.919 | Places: [286 (0.14), 248 (0.12), 484 (0.24), 982 (0.49)]
+[2025-08-21 11:22:27] Timing @ep 10000: episode 12.9s | train 0.000s | eval 9.6s | plot 3.3s | save 0.006s | cum 0.14h

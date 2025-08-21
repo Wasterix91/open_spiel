@@ -1,0 +1,12 @@
+[2025-08-21 11:29:59] New Training (k3a2): Snapshot-Selfplay DQN
+[2025-08-21 11:29:59] Deck_Size: 64
+[2025-08-21 11:29:59] Episodes: 50000
+[2025-08-21 11:29:59] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k3a2/model_03
+[2025-08-21 11:36:43] 
+[2025-08-21 11:36:43] Benchmark @train_ep    5000 (bench_eps: 2000)
+[2025-08-21 11:36:43] Macro Winrate          :   1.1%
+[2025-08-21 11:36:43] Macro Ø-Reward         :  0.325
+[2025-08-21 11:36:43] Winrate vs max_combo   :   0.1% | Σ-Reward:  228.0 | Ø-Reward:  0.114 | Places: [1 (0.00), 14 (0.01), 197 (0.10), 1788 (0.89)]
+[2025-08-21 11:36:43] Winrate vs random2     :   3.0% | Σ-Reward:  1157.0 | Ø-Reward:  0.579 | Places: [60 (0.03), 214 (0.11), 549 (0.27), 1177 (0.59)]
+[2025-08-21 11:36:43] Winrate vs single_only :   0.1% | Σ-Reward:  564.0 | Ø-Reward:  0.282 | Places: [3 (0.00), 60 (0.03), 435 (0.22), 1502 (0.75)]
+[2025-08-21 11:36:45] Timing @ep 5000: episode 40.5s | train 0.000s | eval 38.5s | plot 1.9s | save 0.002s | cum 0.11h
