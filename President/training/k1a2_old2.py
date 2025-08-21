@@ -13,20 +13,26 @@
 #       eval_curves.csv
 #     models/
 #       k1a2_model_XX_agent_p0_ep0001000_*.pt
+#
+# WICHTIGER FIX:
+#  - DQN-Transitions werden zwischen zwei aufeinanderfolgenden P0-Entscheidungen gebildet:
+#    (s_P0, a_P0, r_step, s'_P0, done), wobei s'_P0 = Beobachtung, wenn P0 wieder am Zug ist
+#    (oder Terminal). Gegnerzüge werden dazwischen "vorgespult", ohne neue P0-Transitions
+#    zu erzeugen. Dadurch stimmen next_legal_actions & Bootstrapping-Zustände.
 
 import os, re, datetime, time
 import numpy as np, pandas as pd, torch, matplotlib.pyplot as plt
 import pyspiel
 from open_spiel.python import rl_environment
-from agents import dqn_agent_old as dqn
+from agents import dqn_agent_old_new as dqn
 from utils.fit_tensor import FeatureConfig, augment_observation
 from utils.strategies import STRATS
 from utils.plotter import EvalPlotter
 
 # ============== CONFIG  ==============
 CONFIG = {
-    "EPISODES":        10_000,
-    "EVAL_INTERVAL":   1_000,
+    "EPISODES":        200_000,
+    "EVAL_INTERVAL":   5000,
     "EVAL_EPISODES":   2_000,
     "DECK_SIZE":       "64",      # "32" | "52" | "64"
     "SEED":            42,
@@ -56,7 +62,7 @@ CONFIG = {
         "DELTA_WEIGHT": 1.0,
         "HAND_PENALTY_COEFF": 0.0,
         "FINAL": "none",          # "none" | "placement_bonus"
-        "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
+        "BONUS_WIN": 10.0, "BONUS_2ND": 3.0, "BONUS_3RD": 2.0, "BONUS_LAST": 0.0,
         "ENV_REWARD": True,
     },
 
@@ -191,69 +197,85 @@ def main():
 
     EINT, EEPS = CONFIG["EVAL_INTERVAL"], CONFIG["EVAL_EPISODES"]
 
-    # ---- Training loop ----
+    # ---- Training loop (FIXED: P0->P0 Transitions) ----
     for ep in range(1, CONFIG["EPISODES"]+1):
         ep_t0 = time.perf_counter()
 
         ts = env.reset()
-        last_idx_p = {p: None for p in range(num_players)}
+        last_idx_p0 = None
         steps_in_ep = 0
         p0_transitions = 0
         train_calls = 0
 
         while not ts.last():
-            p = ts.observations["current_player"]; legal = ts.observations["legal_actions"][p]
 
-            # Beobachtung pro Sitz
-            base_s = np.array(env._state.observation_tensor(p), dtype=np.float32)
-            s = augment_observation(base_s, player_id=p, cfg=feat_cfg)
+            # 1) Vorspulen, bis P0 am Zug ist (Gegner spielen Heuristiken)
+            while not ts.last() and ts.observations["current_player"] != 0:
+                pid = ts.observations["current_player"]
+                a_opp = int(opponents[pid-1](env._state))
+                ts = env.step([a_opp])
+                steps_in_ep += 1
 
-            # Aktion (K1: nur p0 lernt; Gegner = Heuristiken)
-            if p == 0:
-                a = int(agent.select_action(s, legal))
-            else:
-                a = int(opponents[p-1](env._state))
+            if ts.last():
+                break  # Episode vorbei, kein P0-Zug mehr
 
-            ts_next = env.step([a])
+            # 2) P0-Zug: s, a, r_step (Reward nur für diesen P0-Schritt)
+            legal0 = ts.observations["legal_actions"][0]
+            s_base = np.array(env._state.observation_tensor(0), dtype=np.float32)
+            s      = augment_observation(s_base, player_id=0, cfg=feat_cfg)
 
-            # Next-Obs (Terminal: Dummy next_legals = range(A), um Buffer-Stack zu stabilisieren)
-            if not ts_next.last():
-                base_s_next = np.array(env._state.observation_tensor(p), dtype=np.float32)
-                s_next = augment_observation(base_s_next, player_id=p, cfg=feat_cfg)
-                next_legals = ts_next.observations["legal_actions"][p]
-            else:
-                s_next = s
-                next_legals = list(range(A))
+            hand_before = shaper.hand_size(ts, 0, deck_int)
+            a0 = int(agent.select_action(s, legal0))
 
-            # Nur p0 sammelt/lernt
-            if p == 0:
-                hand_before = shaper.hand_size(ts, p, deck_int)
-                hand_after  = shaper.hand_size(ts_next, p, deck_int)
-                r = shaper.step_reward(hand_before=hand_before, hand_after=hand_after,
-                                       time_step=ts_next, player_id=p, deck_size=deck_int)
-
-                agent.buffer.add(s, a, float(r), s_next, bool(ts_next.last()),
-                                 next_legal_actions=next_legals)
-                last_idx_p[p] = len(agent.buffer.buffer) - 1
-                agent.train_step()
-                p0_transitions += 1
-                train_calls += 1
-
-            ts = ts_next
+            ts = env.step([a0])   # führt P0-Zug aus
             steps_in_ep += 1
 
-        # Terminal: optional Env-Reward + Finalbonus auf die letzte Transition von P0 addieren
-        li = last_idx_p.get(0, None)
-        if li is not None:
+            hand_after = shaper.hand_size(ts, 0, deck_int)
+            r_step = shaper.step_reward(
+                hand_before=hand_before, hand_after=hand_after,
+                time_step=ts, player_id=0, deck_size=deck_int
+            )
+
+            # 3) Vorspulen bis P0 wieder am Zug ist oder Terminal
+            while not ts.last() and ts.observations["current_player"] != 0:
+                pid = ts.observations["current_player"]
+                a_opp = int(opponents[pid-1](env._state))
+                ts = env.step([a_opp])
+                steps_in_ep += 1
+
+            # 4) s' und next_legals für P0 definieren
+            if ts.last():
+                s_next = s
+                next_legals = list(range(A))  # nie None in Buffer
+                done = True
+            else:
+                next_legals = ts.observations["legal_actions"][0]
+                s_next_base = np.array(env._state.observation_tensor(0), dtype=np.float32)
+                s_next = augment_observation(s_next_base, player_id=0, cfg=feat_cfg)
+                done = False
+
+            # 5) Transition speichern & lernen
+            agent.buffer.add(s, a0, float(r_step), s_next, done, next_legal_actions=next_legals)
+
+
+            last_idx_p0 = len(agent.buffer.buffer) - 1
+            agent.train_step()
+            p0_transitions += 1
+            train_calls += 1
+
+        # Terminal: optional Env-Reward + Finalbonus auf letzte P0-Transition addieren
+        if last_idx_p0 is not None:
             bonus = 0.0
             if shaper.include_env_reward():
                 bonus += ts.rewards[0]
             bonus += shaper.final_bonus(ts.rewards, 0)
             if abs(bonus) > 1e-8:
                 buf = agent.buffer
-                old = buf.buffer[li]
-                new = buf.Experience(old.state, old.action, float(old.reward + bonus), old.next_state, old.done, old.next_legal_mask)
-                buf.buffer[li] = new
+                old = buf.buffer[last_idx_p0]
+                new = buf.Experience(old.state, old.action, float(old.reward + bonus),
+                                    old.next_state, old.done, old.next_legal_mask)
+                buf.buffer[last_idx_p0] = new
+
 
         # ---- Episode-Timing erfassen ----
         ep_wall = time.perf_counter() - ep_t0
@@ -272,19 +294,24 @@ def main():
             df.to_csv(timings_path, mode="a", index=False, header=write_header)
             timings_buffer.clear()
 
-        # ---- Evaluation (identisch zu k1a1 – per Gegner + Macro + Plotter) ----
+
+        # ---- Evaluation (per Gegner + Macro + Plotter) ----
         if ep % EINT == 0:
-            per_opponent = {}
             old_eps = agent.epsilon
             agent.epsilon = 0.0  # greedy Eval
 
+            per_opponent_wr = {}  # nur Winrates für den (alten) EvalPlotter
             for opp_name in CONFIG["EVAL_CURVES"]:
                 opp_fn = STRATS[opp_name]
                 wins = 0
+                place_counts = [0, 0, 0, 0]  # 1st..4th
+                reward_sum = 0.0
+
                 for _ in range(EEPS):
                     st = game.new_initial_state()
                     while not st.is_terminal():
-                        pid = st.current_player(); legal = st.legal_actions(pid)
+                        pid = st.current_player()
+                        legal = st.legal_actions(pid)
                         if pid == 0:
                             obs_base = np.array(st.observation_tensor(pid), dtype=np.float32)
                             obs = augment_observation(obs_base, player_id=pid, cfg=feat_cfg)
@@ -292,26 +319,40 @@ def main():
                         else:
                             a = int(opp_fn(st))
                         st.apply_action(a)
-                    if st.returns()[0] == max(st.returns()):
+
+                    rets = st.returns()
+                    reward_sum += float(rets[0])
+
+                    # Platzierung aus Returns ableiten (höher = besser).
+                    order = sorted(range(len(rets)), key=lambda i: rets[i], reverse=True)
+                    place_idx = order.index(0)  # 0 => 1st, 1 => 2nd, ...
+                    place_counts[place_idx] += 1
+                    if place_idx == 0:
                         wins += 1
+
                 wr = 100.0 * wins / EEPS
-                per_opponent[opp_name] = wr
+                per_opponent_wr[opp_name] = wr
+
+                # Optional: hilfreiche Konsole-Ausgabe (zeigt auch Platzverteilung)
+                p1, p2, p3, p4 = (c / EEPS for c in place_counts)
                 print(f"✅ Eval nach {ep:7d} – Winrate vs {opp_name:11s}: {wr:5.1f}%")
+                print(f"   Plätze: [1st {p1:.2f}, 2nd {p2:.2f}, 3rd {p3:.2f}, 4th {p4:.2f}]  Ø-Reward: {reward_sum/EEPS:.3f}")
 
             agent.epsilon = old_eps
 
-            macro = float(np.mean(list(per_opponent.values())))
+            macro = float(np.mean(list(per_opponent_wr.values())))
             print(f"📊 Macro Average: {macro:.2f}%")
 
-            # loggen & plotten (ins plots_dir)
-            plotter.add(ep, per_opponent)
+            # Plotter (alter EvalPlotter erwartet name->float)
+            plotter.add(ep, per_opponent_wr)
             plotter.plot_all()
             _alias_joint_plot_names(plots_dir)
 
-            # Checkpoints (episodiert) in weights_dir
+            # Checkpoint
             base_ep = os.path.join(weights_dir, f"k1a2_model_{version}_agent_p0_ep{ep:07d}")
             agent.save(base_ep)
             print(f"💾 Modell gespeichert: {base_ep}_*")
+
 
     total_wall = time.perf_counter() - run_start
     print(f"⏱️  Gesamtlaufzeit: {total_wall/3600:.2f} h ({total_wall:.0f} s)")
