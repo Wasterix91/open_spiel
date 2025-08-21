@@ -1,0 +1,4 @@
+[2025-08-21 19:01:45] New Training (k1a2_old): DQN Single-Agent vs Heuristiken
+[2025-08-21 19:01:45] Deck_Size: 64
+[2025-08-21 19:01:45] Episodes: 10000
+[2025-08-21 19:01:45] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k1a2_old/model_01
