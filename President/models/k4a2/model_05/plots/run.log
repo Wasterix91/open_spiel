@@ -1,0 +1,4 @@
+[2025-08-22 11:03:45] New Training (k4a2): Shared-Policy DQN
+[2025-08-22 11:03:45] Deck_Size: 64
+[2025-08-22 11:03:45] Episodes: 10000
+[2025-08-22 11:03:45] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k4a2/model_05

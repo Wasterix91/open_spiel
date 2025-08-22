@@ -23,12 +23,13 @@ from utils.deck import ranks_for_deck
 
 # ============== CONFIG ==============
 CONFIG = {
-    "EPISODES":         10_000,
-    "BENCH_INTERVAL":   500,
-    "BENCH_EPISODES":   2000,
-    "TIMING_INTERVAL":  200,
-    "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
-    "SEED":             42,
+    "EPISODES":        10_000,
+    "BENCH_INTERVAL":  1000,
+    "BENCH_EPISODES":  2000,
+    "TIMING_INTERVAL": 400,
+    "DECK_SIZE":       "64",
+    "SEED":            42,
+
 
     # PPO
     "PPO": {

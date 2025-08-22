@@ -1,0 +1,28 @@
+[2025-08-22 10:58:30] New Training (k3a1_rec): Snapshot-Selfplay PPO
+[2025-08-22 10:58:30] Deck_Size: 64
+[2025-08-22 10:58:30] Episodes: 10000
+[2025-08-22 10:58:30] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k3a1/model_11
+[2025-08-22 10:59:52] 
+[2025-08-22 10:59:52] Benchmark @train_ep    1000 (bench_eps: 2000)
+[2025-08-22 10:59:52] Macro Winrate          :  31.4%
+[2025-08-22 10:59:52] Macro Ø-Reward         :  1.610
+[2025-08-22 10:59:52] Winrate vs max_combo   :  10.8% | Σ-Reward:  1770.0 | Ø-Reward:  0.885 | Places: [217 (0.11), 303 (0.15), 513 (0.26), 967 (0.48)]
+[2025-08-22 10:59:52] Winrate vs random2     :  42.2% | Σ-Reward:  4006.0 | Ø-Reward:  2.003 | Places: [844 (0.42), 553 (0.28), 368 (0.18), 235 (0.12)]
+[2025-08-22 10:59:52] Winrate vs single_only :  41.2% | Σ-Reward:  3885.0 | Ø-Reward:  1.942 | Places: [825 (0.41), 512 (0.26), 386 (0.19), 277 (0.14)]
+[2025-08-22 10:59:54] Timing @ep 1000: episode 46.4s | train 0.003s | eval 43.6s | plot 2.7s | save 0.003s | cum 0.02h
+[2025-08-22 11:01:14] 
+[2025-08-22 11:01:14] Benchmark @train_ep    2000 (bench_eps: 2000)
+[2025-08-22 11:01:14] Macro Winrate          :  44.9%
+[2025-08-22 11:01:14] Macro Ø-Reward         :  2.043
+[2025-08-22 11:01:14] Winrate vs max_combo   :  19.6% | Σ-Reward:  2615.0 | Ø-Reward:  1.308 | Places: [393 (0.20), 446 (0.22), 544 (0.27), 617 (0.31)]
+[2025-08-22 11:01:14] Winrate vs random2     :  65.6% | Σ-Reward:  5007.0 | Ø-Reward:  2.503 | Places: [1312 (0.66), 456 (0.23), 159 (0.08), 73 (0.04)]
+[2025-08-22 11:01:14] Winrate vs single_only :  49.4% | Σ-Reward:  4635.0 | Ø-Reward:  2.317 | Places: [987 (0.49), 711 (0.36), 252 (0.13), 50 (0.03)]
+[2025-08-22 11:01:17] Timing @ep 2000: episode 45.9s | train 0.003s | eval 42.9s | plot 3.0s | save 0.001s | cum 0.05h
+[2025-08-22 11:02:32] 
+[2025-08-22 11:02:32] Benchmark @train_ep    3000 (bench_eps: 2000)
+[2025-08-22 11:02:32] Macro Winrate          :  54.8%
+[2025-08-22 11:02:32] Macro Ø-Reward         :  2.221
+[2025-08-22 11:02:32] Winrate vs max_combo   :  24.4% | Σ-Reward:  2990.0 | Ø-Reward:  1.495 | Places: [488 (0.24), 517 (0.26), 492 (0.25), 503 (0.25)]
+[2025-08-22 11:02:32] Winrate vs random2     :  68.8% | Σ-Reward:  5100.0 | Ø-Reward:  2.550 | Places: [1377 (0.69), 406 (0.20), 157 (0.08), 60 (0.03)]
+[2025-08-22 11:02:32] Winrate vs single_only :  71.3% | Σ-Reward:  5239.0 | Ø-Reward:  2.619 | Places: [1426 (0.71), 423 (0.21), 115 (0.06), 36 (0.02)]
+[2025-08-22 11:02:35] Timing @ep 3000: episode 43.5s | train 0.005s | eval 40.4s | plot 3.0s | save 0.001s | cum 0.07h

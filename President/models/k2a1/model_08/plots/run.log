@@ -1,0 +1,12 @@
+[2025-08-22 10:27:28] New Training (k2a1): 4 getrennte PPO-Agents — simultanes Lernen
+[2025-08-22 10:27:28] Deck_Size: 64
+[2025-08-22 10:27:28] Episodes: 10000
+[2025-08-22 10:27:28] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k2a1/model_08
+[2025-08-22 10:28:56] 
+[2025-08-22 10:28:56] Benchmark @train_ep     500 (bench_eps: 2000)
+[2025-08-22 10:28:56] Macro Winrate          :  34.1%
+[2025-08-22 10:28:56] Macro Ø-Reward         :  1.663
+[2025-08-22 10:28:56] Winrate vs max_combo   :  14.1% | Σ-Reward:  2173.0 | Ø-Reward:  1.087 | Places: [282 (0.14), 387 (0.19), 553 (0.28), 778 (0.39)]
+[2025-08-22 10:28:56] Winrate vs random2     :  46.5% | Σ-Reward:  4053.0 | Ø-Reward:  2.026 | Places: [929 (0.46), 473 (0.24), 320 (0.16), 278 (0.14)]
+[2025-08-22 10:28:56] Winrate vs single_only :  41.9% | Σ-Reward:  3754.0 | Ø-Reward:  1.877 | Places: [837 (0.42), 439 (0.22), 365 (0.18), 359 (0.18)]
+[2025-08-22 10:28:58] Timing @ep 500: episode 45.8s | train 0.010s | eval 44.0s | plot 1.7s | save 0.005s | cum 0.02h

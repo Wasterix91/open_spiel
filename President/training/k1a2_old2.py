@@ -58,7 +58,7 @@ CONFIG = {
 
     # Reward-Shaping (analog zu k1a1)
     "REWARD": {
-        "STEP": "delta_hand",     # "none" | "delta_hand" | "hand_penalty"
+        "STEP": "none",     # "none" | "delta_hand" | "hand_penalty"
         "DELTA_WEIGHT": 1.0,
         "HAND_PENALTY_COEFF": 0.0,
         "FINAL": "none",          # "none" | "placement_bonus"
