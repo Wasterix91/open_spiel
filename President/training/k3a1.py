@@ -23,12 +23,12 @@ from utils.deck import ranks_for_deck
 
 # ============== CONFIG ==============
 CONFIG = {
-    "EPISODES":        10_000,
-    "BENCH_INTERVAL":  1000,
-    "BENCH_EPISODES":  2000,
-    "TIMING_INTERVAL": 400,
-    "DECK_SIZE":       "64",
-    "SEED":            42,
+    "EPISODES":         1_000_000,
+    "BENCH_INTERVAL":   5000,
+    "BENCH_EPISODES":   2_000,
+    "TIMING_INTERVAL":  500,
+    "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+    "SEED":             42,
 
 
     # PPO
@@ -49,7 +49,7 @@ CONFIG = {
     # FINAL_MODE: "none" | "env_only" | "rank_bonus" | "both"
     "REWARD": {
         "STEP_MODE": "none",
-        "DELTA_WEIGHT": 1.0,
+        "DELTA_WEIGHT": 0.0,
         "HAND_PENALTY_COEFF": 0.0,
 
         "FINAL_MODE": "env_only",
@@ -110,7 +110,7 @@ def main():
         train_csv="training_metrics.csv",
         save_csv=True, verbosity=1,
     )
-    plotter.log("New Training (k3a1_rec): Snapshot-Selfplay PPO")
+    plotter.log("New Training (k3a1): Snapshot-Selfplay PPO")
     plotter.log(f"Deck_Size: {CONFIG['DECK_SIZE']}")
     plotter.log(f"Episodes: {CONFIG['EPISODES']}")
     plotter.log(f"Path: {paths['run_dir']}")
@@ -330,7 +330,7 @@ def main():
     total_seconds = time.perf_counter() - t0
     plotter.log("")
     plotter.log(f"Gesamtzeit: {total_seconds/3600:0.2f}h (~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)")
-    plotter.log("K3 (Snapshot-Selfplay, recommended) Training abgeschlossen.")
+    plotter.log("K3 (Snapshot-Selfplay) Training abgeschlossen.")
 
 if __name__ == "__main__":
     main()

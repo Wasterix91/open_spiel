@@ -24,12 +24,10 @@ from utils.deck import ranks_for_deck
 CONFIG = {
     "EPISODES":         10_000,
     "BENCH_INTERVAL":   500,
-    "BENCH_EPISODES":   2000,
-    "TIMING_INTERVAL":  200,
+    "BENCH_EPISODES":   2_000,
+    "TIMING_INTERVAL":  500,
     "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
-
-    "OPPONENTS":        ["max_combo", "max_combo", "max_combo"],
 
     # PPO-Hyperparameter (für alle vier Agents identisch)
     "PPO": {
@@ -49,7 +47,7 @@ CONFIG = {
     # FINAL_MODE: "none" | "env_only" | "rank_bonus" | "both"
     "REWARD": {
         "STEP_MODE": "none",
-        "DELTA_WEIGHT": 1.0,
+        "DELTA_WEIGHT": 0.0,
         "HAND_PENALTY_COEFF": 0.0,
 
         "FINAL_MODE": "env_only",

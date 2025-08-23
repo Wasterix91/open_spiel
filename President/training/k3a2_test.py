@@ -10,7 +10,7 @@ import os, datetime, time, copy, numpy as np, torch
 import pyspiel
 from open_spiel.python import rl_environment
 
-from agents import dqn_agent_old_new as dqn
+from agents import dqn_agent as dqn
 from utils.strategies import STRATS
 from utils.fit_tensor import FeatureConfig, augment_observation
 from utils.plotter import MetricsPlotter
@@ -22,34 +22,39 @@ from utils.deck import ranks_for_deck
 
 # ============== CONFIG ==============
 CONFIG = {
-    "EPISODES":        10_000,
-    "BENCH_INTERVAL":  1000,
-    "BENCH_EPISODES":  2000,
-    "TIMING_INTERVAL": 400,
-    "DECK_SIZE":       "64",
-    "SEED":            42,
-    "DEVICE":          "cpu",
+    "EPISODES":         10_000,
+    "BENCH_INTERVAL":   500,
+    "BENCH_EPISODES":   2_000,
+    "TIMING_INTERVAL":  500,
+    "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+    "SEED":             42,
 
-    # Nur die Felder, die in agents/dqn_agent.py::DQNConfig existieren
+    "DEVICE":           "cpu",
+
+    # DQN (exakt die Keys aus agents/dqn_agent.py::DQNConfig)
     "DQN": {
         "learning_rate":     3e-4,
         "batch_size":        128,
         "gamma":             0.995,
         "epsilon_start":     1.0,
         "epsilon_end":       0.05,
-        "epsilon_decay":     0.9997,     # pro train_step (zackiger als extrem langsame 0.9999986)
+        "epsilon_decay":     0.9997,        # multiplikativ pro train_step
         "buffer_size":       200_000,
-        "target_update_freq": 5000,
+        "target_update_freq": 5000,         # oder soft_target_tau > 0 für Polyak
         "soft_target_tau":   0.0,
         "max_grad_norm":     1.0,
         "use_double_dqn":    True,
         "loss_huber_delta":  1.0,
     },
 
+    # ======= Rewards (NEUES System wie k1a1/k1a2) =======
+    # STEP_MODE : "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
+    # FINAL_MODE: "none" | "env_only" | "rank_bonus" | "both"
     "REWARD": {
         "STEP_MODE": "none",
-        "DELTA_WEIGHT": 1.0,
+        "DELTA_WEIGHT": 0.0,
         "HAND_PENALTY_COEFF": 0.0,
+
         "FINAL_MODE": "env_only",
         "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
     },

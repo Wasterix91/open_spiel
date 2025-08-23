@@ -6,7 +6,7 @@ import numpy as np, torch
 import pyspiel
 from open_spiel.python import rl_environment
 
-from agents.dqn_agent_old_new import DQNAgent, DQNConfig
+from agents.dqn_agent import DQNAgent, DQNConfig
 from utils.fit_tensor import FeatureConfig, augment_observation
 from utils.deck import ranks_for_deck
 from utils.plotter import MetricsPlotter

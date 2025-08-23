@@ -10,7 +10,7 @@ import os, time, datetime, numpy as np, torch
 import pyspiel
 from open_spiel.python import rl_environment
 
-from agents import dqn_agent_old_new as dqn
+from agents import dqn_agent as dqn
 from utils.fit_tensor import FeatureConfig, augment_observation
 from utils.strategies import STRATS
 from utils.plotter import MetricsPlotter
@@ -22,13 +22,13 @@ from utils.load_save_common import find_next_version, prepare_run_dirs, save_con
 
 # ============== CONFIG ==============
 CONFIG = {
-    "EPISODES":        10_000,
-    "BENCH_INTERVAL":  1000,
-    "BENCH_EPISODES":  2_000,
-    "TIMING_INTERVAL": 400,
-    "DECK_SIZE":       "64",       # "12" | "16" | "20" | "24" | "32" | "52" | "64"
-    "SEED":            42,
-    "DEVICE":          "cpu",
+    "EPISODES":         10_000,
+    "BENCH_INTERVAL":   500,
+    "BENCH_EPISODES":   2_000,
+    "TIMING_INTERVAL":  500,
+    "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+    "SEED":             42,
+
 
     # DQNConfig-kompatibel (siehe agents/dqn_agent.py)
     "DQN": {
@@ -37,19 +37,21 @@ CONFIG = {
         "gamma":             0.995,
         "epsilon_start":     1.0,
         "epsilon_end":       0.05,
-        "epsilon_decay":     0.9997,     # pro train_step (praxisnäher als extrem träge)
+        "epsilon_decay":     0.9997,        # multiplikativ pro train_step
         "buffer_size":       200_000,
-        "target_update_freq": 5000,
-        "soft_target_tau":   0.0,        # z.B. 0.005 für Polyak
+        "target_update_freq": 5000,         # oder soft_target_tau > 0 für Polyak
+        "soft_target_tau":   0.0,
         "max_grad_norm":     1.0,
         "use_double_dqn":    True,
         "loss_huber_delta":  1.0,
     },
 
-    # ======= Rewards (wie k4a1/k1a1) =======
+    # ======= Rewards (NEUES System) =======
+    # STEP_MODE : "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
+    # FINAL_MODE: "none" | "env_only" | "rank_bonus" | "both"
     "REWARD": {
         "STEP_MODE": "none",
-        "DELTA_WEIGHT": 1.0,
+        "DELTA_WEIGHT": 0.0,
         "HAND_PENALTY_COEFF": 0.0,
 
         "FINAL_MODE": "env_only",
@@ -115,7 +117,7 @@ def main():
     overrides = {k: CONFIG["DQN"][k] for k in CONFIG["DQN"] if k in base_cfg._fields}
     dqn_cfg = base_cfg._replace(**overrides)
 
-    agent = dqn.DQNAgent(state_size=state_size, num_actions=A, config=dqn_cfg, device=CONFIG["DEVICE"])
+    agent = dqn.DQNAgent(state_size=state_size, num_actions=A, config=dqn_cfg, device="cpu")
     shaper = RewardShaper(CONFIG["REWARD"])
 
     # ---- Config & Meta speichern ----

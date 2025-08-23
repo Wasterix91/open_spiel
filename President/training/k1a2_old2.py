@@ -24,7 +24,7 @@ import os, re, datetime, time
 import numpy as np, pandas as pd, torch, matplotlib.pyplot as plt
 import pyspiel
 from open_spiel.python import rl_environment
-from agents import dqn_agent_old_new as dqn
+from agents import dqn_agent as dqn
 from utils.fit_tensor import FeatureConfig, augment_observation
 from utils.strategies import STRATS
 from utils.plotter import EvalPlotter

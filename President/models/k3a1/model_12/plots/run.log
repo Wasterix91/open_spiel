@@ -1,0 +1,4 @@
+[2025-08-22 16:31:11] New Training (k3a1_rec): Snapshot-Selfplay PPO
+[2025-08-22 16:31:11] Deck_Size: 64
+[2025-08-22 16:31:11] Episodes: 10000
+[2025-08-22 16:31:11] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k3a1/model_12

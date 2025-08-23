@@ -1,0 +1,2 @@
+script,version,timestamp,agent_type,num_episodes,bench_interval,bench_episodes,deck_size,num_ranks,observation_dim,num_actions,normalize,seat_onehot,models_dir,plots_dir,step_mode,delta_weight,hand_penalty_coeff,final_mode,bonus_win,bonus_2nd,bonus_3rd,bonus_last
+k4a2,09,2025-08-22 17:29:12,DQN_shared,10000,500,2000,64,8,18,65,False,True,/home/wasterix/OpenSpiel/open_spiel/President/models/k4a2/model_09/models,/home/wasterix/OpenSpiel/open_spiel/President/models/k4a2/model_09/plots,none,0.0,0.0,env_only,0.0,0.0,0.0,0.0

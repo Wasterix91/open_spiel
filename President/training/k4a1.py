@@ -22,17 +22,17 @@ from utils.deck import ranks_for_deck
 
 # ============== CONFIG ==============
 CONFIG = {
-    "EPISODES":         3000,
-    "BENCH_INTERVAL":   600,
-    "BENCH_EPISODES":   500,
-    "TIMING_INTERVAL":  300,
-    "DECK_SIZE":        "12",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+    "EPISODES":         10_000,
+    "BENCH_INTERVAL":   500,
+    "BENCH_EPISODES":   2_000,
+    "TIMING_INTERVAL":  500,
+    "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
     # PPO
     "PPO": {
         "learning_rate": 3e-4,
-        "num_epochs": 4,
+        "num_epochs": 1,
         "batch_size": 256,
         "entropy_cost": 0.01,
         "gamma": 0.99,
@@ -42,10 +42,11 @@ CONFIG = {
         "max_grad_norm": 0.5,
     },
 
+
     # ===== In-Proc „External“ Trainer =====
     # Sammle N Episoden → mache K PPO-Updates → Buffer clear → weiter sammeln
     "INPROC_TRAINER": {
-        "EPISODES_PER_UPDATE": 100,  # Bundle-Größe
+        "EPISODES_PER_UPDATE": 50,  # Bundle-Größe
         "UPDATES_PER_CALL":     1,    # wie oft agent.train() pro Bundle
     },
 
@@ -54,11 +55,11 @@ CONFIG = {
     # FINAL_MODE: "none" | "env_only" | "rank_bonus" | "both"
     "REWARD": {
         "STEP_MODE": "none",
-        "DELTA_WEIGHT": 1.0,
-        "HAND_PENALTY_COEFF": 1.0,
+        "DELTA_WEIGHT": 0.0,
+        "HAND_PENALTY_COEFF": 0.0,
 
         "FINAL_MODE": "env_only",
-        "BONUS_WIN": -10.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
+        "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
     },
 
     # Features (Shared Policy: Seat-OneHot optional)
@@ -75,7 +76,7 @@ def main():
     MODELS_ROOT = os.path.join(ROOT, "models")
 
     # ---- Verzeichnisse (k1a1-Stil) ----
-    family = "k4a1_rec"
+    family = "k4a1"
     family_dir = os.path.join(MODELS_ROOT, family)
     version = find_next_version(family_dir, prefix="model")
     paths = prepare_run_dirs(MODELS_ROOT, family, version, prefix="model")
@@ -88,7 +89,7 @@ def main():
         train_csv="training_metrics.csv",
         save_csv=True, verbosity=1,
     )
-    plotter.log("New Training (k4a1_rec): Shared-Policy PPO — In-Proc External Trainer (Bundle-Updates)")
+    plotter.log("New Training (k4a1): Shared-Policy PPO — In-Proc External Trainer (Bundle-Updates)")
     plotter.log(f"Deck_Size: {CONFIG['DECK_SIZE']}")
     plotter.log(f"Episodes: {CONFIG['EPISODES']}")
     plotter.log(f"Path: {paths['run_dir']}")

@@ -8,7 +8,7 @@ import numpy as np, torch
 import pyspiel
 from open_spiel.python import rl_environment
 
-from agents.dqn_agent_old_new import DQNAgent, DQNConfig
+from agents.dqn_agent import DQNAgent, DQNConfig
 from utils.fit_tensor import FeatureConfig, augment_observation
 from utils.deck import ranks_for_deck
 from utils.plotter import MetricsPlotter
@@ -20,7 +20,7 @@ from utils.reward_shaper import RewardShaper
 
 CONFIG = {
     "EPISODES":         100_000,
-    "BENCH_INTERVAL":   500,
+    "BENCH_INTERVAL":   5000,
     "BENCH_EPISODES":   2_000,
     "TIMING_INTERVAL":  500,
     "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"

@@ -6,7 +6,7 @@ import os, time, datetime, numpy as np, torch
 import pyspiel
 from open_spiel.python import rl_environment
 
-from agents import dqn_agent_old_new as dqn
+from agents import dqn_agent as dqn
 from utils.strategies import STRATS
 from utils.fit_tensor import FeatureConfig, augment_observation
 from utils.plotter import MetricsPlotter
@@ -20,12 +20,13 @@ from utils.deck import ranks_for_deck
 
 # ============== CONFIG  ==============
 CONFIG = {
-    "EPISODES":         20_000,
-    "BENCH_INTERVAL":   1000,
-    "BENCH_EPISODES":   2000,
+    "EPISODES":         10_000,
+    "BENCH_INTERVAL":   500,
+    "BENCH_EPISODES":   2_000,
     "TIMING_INTERVAL":  500,
     "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
+
     "DEVICE":           "cpu",
 
     # DQN (exakt die Keys aus agents/dqn_agent.py::DQNConfig)
@@ -49,7 +50,7 @@ CONFIG = {
     # FINAL_MODE: "none" | "env_only" | "rank_bonus" | "both"
     "REWARD": {
         "STEP_MODE": "none",
-        "DELTA_WEIGHT": 1.0,
+        "DELTA_WEIGHT": 0.0,
         "HAND_PENALTY_COEFF": 0.0,
 
         "FINAL_MODE": "env_only",

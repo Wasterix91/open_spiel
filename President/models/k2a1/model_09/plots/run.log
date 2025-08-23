@@ -1,0 +1,4 @@
+[2025-08-22 15:00:16] New Training (k2a1): 4 getrennte PPO-Agents — simultanes Lernen
+[2025-08-22 15:00:16] Deck_Size: 64
+[2025-08-22 15:00:16] Episodes: 10000
+[2025-08-22 15:00:16] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k2a1/model_09
