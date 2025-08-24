@@ -10,6 +10,7 @@ import os, json, numpy as np, pandas as pd, torch, pyspiel
 
 from agents import ppo_agent as ppo
 from agents import dqn_agent as dqn
+from agents import v_table_agent
 from utils.strategies import STRATS
 from collections import namedtuple
 
@@ -24,19 +25,25 @@ INFOSTATE_PER_LINE = 16   # wie viele Werte pro Zeile drucken
 # ===== Spiel-Setup =====
 GAME_SETTINGS = {
     "num_players": 4,
-    "deck_size": "64",
+    "deck_size": "16",
     "shuffle_cards": True,
     "single_card_mode": False,
 }
 
 # Gegner: Heuristiken oder Policies; für Policies sind family/version/episode Pflicht!
 # from_pid: von welchem Seat die Gewichte auf der Platte geladen werden (für shared policy etc.)
-OPPONENTS = [
+""" OPPONENTS = [
     {"name": "P1", "type": "dqn", "family": "k1a2", "version": "38", "episode": 75_000, "from_pid": 0},
     {"name": "P2", "type": "dqn", "family": "k1a2", "version": "38", "episode": 75_000, "from_pid": 0},
     # Beispiel PPO:
     {"name": "P3", "type": "dqn", "family": "k1a2", "version": "38", "episode": 75_000, "from_pid": 0},
     #{"name": "Opp3", "type": "ppo", "family": "k1a1", "version": "55", "episode": 80, "from_pid": 0},  # Player3 für 12 Karten
+] """
+
+OPPONENTS = [
+    {"name": "dqn", "type": "dqn", "family": "k1a2", "version": "46", "episode": 40_000, "from_pid": 0},
+    {"name": "v_table", "type": "v_table"},
+    {"name": "max_combo", "type": "max_combo"},
 ]
 
 # ===== Pfade & kleine Utils =====
@@ -149,9 +156,9 @@ def load_opponent(cfg, pid, game):
     num_actions = game.num_distinct_actions()
     NUM_PLAYERS = game.num_players()
 
-    t = cfg.get("type")
+    kind = cfg.get("type")
 
-    if t == "ppo":
+    if kind == "ppo":
         if not all(k in cfg for k in ("family","version","episode")):
             _fatal(f"PPO-Gegner P{pid}: 'family', 'version' und 'episode' sind Pflicht. Erhalten: {cfg}")
         # zuerst MIT, dann OHNE Seat-One-Hot versuchen
@@ -164,17 +171,20 @@ def load_opponent(cfg, pid, game):
                                    family=cfg["family"], version=cfg["version"], episode=cfg["episode"],
                                    from_pid=cfg.get("from_pid", pid))
 
-    if t == "dqn":
+    if kind == "dqn":
         if not all(k in cfg for k in ("family","version","episode")):
             _fatal(f"DQN-Gegner P{pid}: 'family', 'version' und 'episode' sind Pflicht. Erhalten: {cfg}")
         return _load_dqn_agent(obs_dim, num_actions,
                                family=cfg["family"], version=cfg["version"], episode=cfg["episode"],
                                from_pid=cfg.get("from_pid", pid), num_players=NUM_PLAYERS)
 
-    if t in STRATS:
-        return STRATS[t]
+    if kind == "v_table":
+        return v_table_agent.ValueTableAgent("agents/tables/v_table_4_4_4")
 
-    _fatal(f"Unbekannter Gegner-Typ: {t}")
+    if kind in STRATS:
+        return STRATS[kind]
+
+    _fatal(f"Unbekannter Gegner-Typ: {kind}")
 
 # ===== Vorwärtswege (Logits/Qs) =====
 def _ppo_logits(agent: ppo.PPOAgent, info_state_1d: np.ndarray, seat_id: int, num_players: int):
@@ -273,8 +283,8 @@ def print_info_state(state, pid, decimals=None, per_line=None):
     L = vec.shape[0]
 
     # Erwartetes Layout: [0..n-1]=Rang-Counts, [n..n+2]=P1,P2,P3, [n+3..n+5]=LastP,nTop,TopRank
-    if L >= 6:
-        n_ranks = L - 6
+    if L >= 10:
+        n_ranks = L - 10
         r = list(map(int, vec[:n_ranks]))
         try:
             p1, p2, p3 = map(int, vec[n_ranks:n_ranks+3])

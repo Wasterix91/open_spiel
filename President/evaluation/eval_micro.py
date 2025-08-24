@@ -10,12 +10,14 @@ from collections import namedtuple
 
 from agents import ppo_agent as ppo
 from agents import dqn_agent as dqn
+from agents import v_table_agent
 from utils.strategies import STRATS
 from utils.load_save_a1_ppo import load_checkpoint_ppo
 from utils.load_save_a2_dqn import load_checkpoint_dqn
 
-NUM_EPISODES = 10_000
-DECK = "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+
+#NUM_EPISODES = 10_000
+DECK = "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
 
 # ====== Setup ======
 GAME_SETTINGS = {
@@ -27,10 +29,17 @@ GAME_SETTINGS = {
 
 
 # Beispiel: PPO vs 3x Heuristik
-PLAYER_CONFIG = [
+""" PLAYER_CONFIG = [
     {"name": "P0", "type": "max_combo"},
     {"name": "P1", "type": "max_combo"},
     {"name": "P2", "type": "dqn", "family": "k1a2", "version": "38", "episode": 75_000, "from_pid": 0},
+    {"name": "P3", "type": "max_combo"},
+] """
+
+PLAYER_CONFIG = [
+    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "46", "episode": 40_000, "from_pid": 0},
+    {"name": "P1", "type": "v_table"},
+    {"name": "P2", "type": "max_combo"},
     {"name": "P3", "type": "max_combo"},
 ]
 
@@ -186,6 +195,11 @@ def load_agents(cfgs, game):
                                  family=cfg["family"], version=cfg["version"], episode=cfg["episode"],
                                  from_pid=cfg.get("from_pid", pid), num_players=num_players)
             agents.append(ag); continue
+        
+        if kind == "v_table":
+            ag = v_table_agent.ValueTableAgent("agents/tables/v_table_4_4_4")
+            agents.append(ag)
+            continue
 
         if kind in STRATS:
             agents.append(STRATS[kind]); continue

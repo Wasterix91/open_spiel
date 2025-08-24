@@ -304,7 +304,7 @@ bool PresidentGameState::IsOut(int player) const {
 
 // === Für Reinforcement Learning ===
 std::vector<int> PresidentGame::ObservationTensorShape() const {
-  return {kNumRanks + num_players_ - 1 + 3};
+  return {kNumRanks + num_players_ - 1 + 3 + kNumRanks};
 }
 
 void PresidentGameState::ObservationTensor(Player player, absl::Span<float> values) const {
@@ -329,6 +329,19 @@ void PresidentGameState::ObservationTensor(Player player, absl::Span<float> valu
   values[last_index] = last_played_relative == 0 ? 0 : current_combo_size_;
   last_index += 1;
   values[last_index] = last_played_relative == 0 ? -1 : top_rank_;
+
+  // Karten aus alten Stichen
+  for (int r = 0; r < game->kNumRanks; r++) {
+    int count = game->num_suits_;
+    for (int p = 0; p < game->num_players_; p++) {
+      count -= hands_[p][r];
+    }
+    if (last_played_relative != 0 && top_rank_ == r) {
+      count -= current_combo_size_;
+    }
+    last_index += 1;
+    values[last_index] = static_cast<float>(count);
+  }
 }
 
 std::string PresidentGameState::ObservationString(Player player) const {

@@ -1,0 +1,40 @@
+[2025-08-24 13:53:55] New Training (k1a1)
+[2025-08-24 13:53:55] Deck_Size: 16
+[2025-08-24 13:53:55] Episodes: 2000
+[2025-08-24 13:53:55] Path: /home/wasterix/Multiagent/OpenSpiel_neu/open_spiel/President/models/k1a1/model_81
+[2025-08-24 13:54:03] 
+[2025-08-24 13:54:03] Benchmark @train_ep     500 (bench_eps: 500)
+[2025-08-24 13:54:03] Macro Winrate          :  31.1%
+[2025-08-24 13:54:03] Macro Ø-Reward         :  1.542
+[2025-08-24 13:54:03] Winrate vs max_combo   :  23.6% | Σ-Reward:  671.0 | Ø-Reward:  1.342 | Places: [118 (0.24), 101 (0.20), 115 (0.23), 166 (0.33)]
+[2025-08-24 13:54:03] Winrate vs random2     :  27.0% | Σ-Reward:  747.0 | Ø-Reward:  1.494 | Places: [135 (0.27), 107 (0.21), 128 (0.26), 130 (0.26)]
+[2025-08-24 13:54:03] Winrate vs single_only :  42.6% | Σ-Reward:  895.0 | Ø-Reward:  1.790 | Places: [213 (0.43), 70 (0.14), 116 (0.23), 101 (0.20)]
+[2025-08-24 13:54:06] Timing @ep 500: episode 5.6s | train 0.002s | eval 3.0s | plot 2.6s | save 0.010s | cum 0.00h
+[2025-08-24 13:54:12] 
+[2025-08-24 13:54:12] Benchmark @train_ep    1000 (bench_eps: 500)
+[2025-08-24 13:54:12] Macro Winrate          :  35.5%
+[2025-08-24 13:54:12] Macro Ø-Reward         :  1.687
+[2025-08-24 13:54:12] Winrate vs max_combo   :  26.2% | Σ-Reward:  712.0 | Ø-Reward:  1.424 | Places: [131 (0.26), 99 (0.20), 121 (0.24), 149 (0.30)]
+[2025-08-24 13:54:12] Winrate vs random2     :  32.2% | Σ-Reward:  840.0 | Ø-Reward:  1.680 | Places: [161 (0.32), 119 (0.24), 119 (0.24), 101 (0.20)]
+[2025-08-24 13:54:12] Winrate vs single_only :  48.0% | Σ-Reward:  978.0 | Ø-Reward:  1.956 | Places: [240 (0.48), 75 (0.15), 108 (0.22), 77 (0.15)]
+[2025-08-24 13:54:14] Timing @ep 1000: episode 5.7s | train 0.002s | eval 2.9s | plot 2.8s | save 0.002s | cum 0.00h
+[2025-08-24 13:54:20] 
+[2025-08-24 13:54:20] Benchmark @train_ep    1500 (bench_eps: 500)
+[2025-08-24 13:54:20] Macro Winrate          :  38.0%
+[2025-08-24 13:54:20] Macro Ø-Reward         :  1.768
+[2025-08-24 13:54:20] Winrate vs max_combo   :  29.8% | Σ-Reward:  762.0 | Ø-Reward:  1.524 | Places: [149 (0.30), 107 (0.21), 101 (0.20), 143 (0.29)]
+[2025-08-24 13:54:20] Winrate vs random2     :  30.0% | Σ-Reward:  834.0 | Ø-Reward:  1.668 | Places: [150 (0.30), 137 (0.27), 110 (0.22), 103 (0.21)]
+[2025-08-24 13:54:20] Winrate vs single_only :  54.2% | Σ-Reward:  1056.0 | Ø-Reward:  2.112 | Places: [271 (0.54), 74 (0.15), 95 (0.19), 60 (0.12)]
+[2025-08-24 13:54:23] Timing @ep 1500: episode 5.5s | train 0.002s | eval 2.7s | plot 2.8s | save 0.002s | cum 0.01h
+[2025-08-24 13:54:29] 
+[2025-08-24 13:54:29] Benchmark @train_ep    2000 (bench_eps: 500)
+[2025-08-24 13:54:29] Macro Winrate          :  38.2%
+[2025-08-24 13:54:29] Macro Ø-Reward         :  1.739
+[2025-08-24 13:54:29] Winrate vs max_combo   :  26.2% | Σ-Reward:  736.0 | Ø-Reward:  1.472 | Places: [131 (0.26), 115 (0.23), 113 (0.23), 141 (0.28)]
+[2025-08-24 13:54:29] Winrate vs random2     :  30.8% | Σ-Reward:  811.0 | Ø-Reward:  1.622 | Places: [154 (0.31), 118 (0.24), 113 (0.23), 115 (0.23)]
+[2025-08-24 13:54:29] Winrate vs single_only :  57.6% | Σ-Reward:  1061.0 | Ø-Reward:  2.122 | Places: [288 (0.58), 54 (0.11), 89 (0.18), 69 (0.14)]
+[2025-08-24 13:54:32] Timing @ep 2000: episode 6.3s | train 0.004s | eval 3.0s | plot 3.3s | save 0.002s | cum 0.01h
+[2025-08-24 13:54:32] 
+[2025-08-24 13:54:32] Gesamtzeit: 0.01h (~ 55.59 eps/s)
+[2025-08-24 13:54:32] k1a1, Single Agent vs Heuristiken (max_combo). Training abgeschlossen.
+[2025-08-24 13:54:32] Path: /home/wasterix/Multiagent/OpenSpiel_neu/open_spiel/President/models/k1a1/model_81

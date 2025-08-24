@@ -37,7 +37,7 @@ def augment_observation(
     """
     x = np.asarray(base_obs, dtype=np.float32).copy()
     assert x.ndim == 1, "augment_observation erwartet einen 1D-Vektor"
-    expected_len = cfg.num_ranks + (cfg.num_players - 1) + 3
+    expected_len = cfg.num_ranks + (cfg.num_players - 1) + 3 + cfg.num_ranks
     if len(x) != expected_len:
         raise ValueError(
             f"Observation length mismatch: got {len(x)}, expected {expected_len} "

@@ -19,9 +19,9 @@ from utils.deck import ranks_for_deck
 
 # ============== CONFIG  ==============
 CONFIG = {
-    "EPISODES":         2000,
-    "BENCH_INTERVAL":   500,
-    "BENCH_EPISODES":   500,
+    "EPISODES":         50_000,
+    "BENCH_INTERVAL":   5000,
+    "BENCH_EPISODES":   200,
     "TIMING_INTERVAL":  500,
     "DECK_SIZE":        "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,

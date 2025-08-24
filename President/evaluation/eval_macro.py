@@ -12,6 +12,7 @@ import torch
 
 from agents import ppo_agent as ppo
 from agents import dqn_agent as dqn
+from agents import v_table_agent
 from collections import defaultdict
 from utils.strategies import STRATS  
 
@@ -19,15 +20,29 @@ from utils.load_save_a1_ppo import load_checkpoint_ppo
 from utils.load_save_a2_dqn import load_checkpoint_dqn
 
 # ===================== Konfiguration ===================== #
-NUM_EPISODES = 10_000
-DECK = "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+NUM_EPISODES = 100_000
+DECK = "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
 # Beispiel: PPO vs 3x Heuristik
-PLAYER_CONFIG = [
+""" PLAYER_CONFIG = [
     {"name": "P0", "type": "max_combo"},
     {"name": "P1", "type": "max_combo"},
     {"name": "P2", "type": "dqn", "family": "k1a2", "version": "38", "episode": 75_000, "from_pid": 0},
     {"name": "P3", "type": "max_combo"},
+] """
+
+PLAYER_CONFIG = [
+    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "46", "episode": 40_000, "from_pid": 0},
+    {"name": "P1", "type": "v_table"},
+    {"name": "P2", "type": "dqn", "family": "k1a2", "version": "46", "episode": 40_000, "from_pid": 0},
+    {"name": "P3", "type": "v_table"},
 ]
+
+""" PLAYER_CONFIG = [
+    {"name": "P0", "type": "v_table"},
+    {"name": "P1", "type": "max_combo"},
+    {"name": "P1", "type": "max_combo"},
+    {"name": "P3", "type": "max_combo"},
+] """
 
 """ PLAYER_CONFIG = [
     {"name": "P0", "type": "ppo", "family": "k3a1", "version": "05", "episode": 20_000, "from_pid": 0},
@@ -263,6 +278,11 @@ def load_agents(player_config, game):
             agents.append(ag)
             continue
 
+        if kind == "v_table":
+            ag = v_table_agent.ValueTableAgent("agents/tables/v_table_4_4_4")
+            agents.append(ag)
+            continue
+
         if kind in STRATS:
             agents.append(STRATS[kind])
             continue
@@ -362,7 +382,7 @@ def choose_policy_action(agent, state, player):
     if callable(agent):
         action = agent(state)
         if action not in legal:
-            action = np.random.choice(legal)
+            raise RuntimeError("illegal action:", action)
         return collections.namedtuple("AgentOutput", ["action"])(action=action)
 
     raise ValueError("Unbekannter Agententyp bei choose_policy_action.")
