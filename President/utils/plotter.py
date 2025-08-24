@@ -153,16 +153,39 @@ class MetricsPlotter:
 
 
     # ---------- Benchmark: plot ----------
-    def plot_benchmark(self, filename_prefix: str = "lernkurve", with_macro: bool = True):
-        """Winrate-Kurven (wie früher)."""
+# utils/plotter.py
+
+    # utils/plotter.py
+# utils/plotter.py
+
+# utils/plotter.py (nur die plot_benchmark-Methode ersetzen)
+
+    def plot_benchmark(
+        self,
+        filename_prefix: str = "lernkurve",
+        with_macro: bool = True,
+        family_title: str | None = None,   # z.B. "K1A1"
+        multi_title: str | None = None,    # kompletter Titel für Multi & Macro
+    ):
+        """Winrate-Kurven mit konsistenten Titeln."""
         if not self.bench_episodes:
             return
 
-        # Einzelplots pro Gegner (Winrate)
+        def _title_single(opp: str) -> str:
+            return f"Lernkurve - {family_title} vs {opp}" if family_title else f"{filename_prefix}"
+
+        def _title_multi() -> str:
+            if multi_title:
+                return multi_title
+            if family_title:
+                return f"Lernkurve - {family_title} vs feste Heuristiken"
+            return f"{filename_prefix}"
+
+        # Einzelplots pro Gegner
         for name in self.bench_names:
             plt.figure(figsize=(10, 6))
             plt.plot(self.bench_episodes, self.bench_hist_wr[name], marker="o")
-            plt.title(f"{filename_prefix} – Winrate vs {name}")
+            plt.title(_title_single(name))
             plt.xlabel("Episode")
             plt.ylabel("Winrate (%)")
             plt.ylim(0, 100)
@@ -172,11 +195,11 @@ class MetricsPlotter:
             plt.savefig(out)
             plt.close()
 
-        # Gemeinsamer Plot (alle Gegner, Winrate)
+        # Gemeinsamer Plot (alle Gegner)
         plt.figure(figsize=(12, 8))
         for name in self.bench_names:
             plt.plot(self.bench_episodes, self.bench_hist_wr[name], marker="o", label=name)
-        plt.title(f"{filename_prefix} – Winrate vs Gegner")
+        plt.title(_title_multi())
         plt.xlabel("Episode")
         plt.ylabel("Winrate (%)")
         plt.ylim(0, 100)
@@ -187,13 +210,13 @@ class MetricsPlotter:
         plt.savefig(out_all)
         plt.close()
 
-        # Gemeinsamer Plot + Macro Average (optional, Winrate)
+        # Gemeinsamer Plot + Macro Average (gleicher Titel)
         if with_macro:
             plt.figure(figsize=(12, 8))
             for name in self.bench_names:
                 plt.plot(self.bench_episodes, self.bench_hist_wr[name], marker="o", label=name)
             plt.plot(self.bench_episodes, self.bench_macro_wr, marker="o", linestyle="--", label="macro_wr")
-            plt.title(f"{filename_prefix} – Winrate (mit Macro Average)")
+            plt.title(_title_multi())
             plt.xlabel("Episode")
             plt.ylabel("Winrate (%)")
             plt.ylim(0, 100)
@@ -204,16 +227,19 @@ class MetricsPlotter:
             plt.savefig(out_macro)
             plt.close()
 
-    def plot_benchmark_rewards(self, filename_prefix: str = "benchmark_rewards", with_macro: bool = True):
+
+
+    def plot_benchmark_rewards(self, filename_prefix: str = "benchmark_rewards", with_macro: bool = True, title_prefix: str | None = None):
         """Ø-Reward-Kurven aus dem Benchmark."""
         if not self.bench_episodes:
             return
+        title = title_prefix or filename_prefix
 
         # Einzelplots pro Gegner (Reward)
         for name in self.bench_names:
             plt.figure(figsize=(10, 6))
             plt.plot(self.bench_episodes, self.bench_hist_reward[name], marker="o")
-            plt.title(f"{filename_prefix} – Ø-Reward vs {name}")
+            plt.title(f"{title} – Ø-Reward vs {name}")
             plt.xlabel("Episode")
             plt.ylabel("Ø-Reward (P0)")
             plt.grid(True)
@@ -228,7 +254,7 @@ class MetricsPlotter:
             plt.plot(self.bench_episodes, self.bench_hist_reward[name], marker="o", label=name)
         if with_macro:
             plt.plot(self.bench_episodes, self.bench_macro_reward, marker="o", linestyle="--", label="macro_reward")
-        plt.title(f"{filename_prefix} – Ø-Reward vs Gegner")
+        plt.title(f"{title} – Ø-Reward vs Gegner")
         plt.xlabel("Episode")
         plt.ylabel("Ø-Reward (P0)")
         plt.grid(True)
@@ -238,27 +264,43 @@ class MetricsPlotter:
         plt.savefig(out_all)
         plt.close()
 
+
     def plot_places_latest(self, filename_prefix: str = "places"):
         """
-        Zeichnet für jede Gegnerstrategie ein Balkendiagramm der Platzierungsverteilung
-        für die *letzte* Benchmark-Episode (praktisch als Snapshot).
+        Schreibt für jede Gegnerstrategie die Platzierungsverteilung (p1..p4)
+        der *letzten* Benchmark-Episode in eine CSV:
+            <out_dir>/<filename_prefix>_latest_ep<EPISODE>.csv
+
+        Spalten: opponent, episode, p1, p2, p3, p4  (Anteile, Summe ~ 1.0)
         """
         if not self.bench_episodes:
             return
+
         last_idx = len(self.bench_episodes) - 1
         ep = self.bench_episodes[last_idx]
 
-        labels = ["1st", "2nd", "3rd", "4th"]
+        rows = []
         for name in self.bench_names:
-            p1, p2, p3, p4 = self.bench_hist_places[name][last_idx] if self.bench_hist_places[name] else (np.nan, np.nan, np.nan, np.nan)
-            plt.figure(figsize=(6, 4))
-            plt.bar(labels, [p1, p2, p3, p4])
-            plt.title(f"Platzierungsverteilung vs {name} @Ep{ep}")
-            plt.ylabel("Anteil")
-            plt.ylim(0, 1)
-            out = os.path.join(self.out_dir, f"{filename_prefix}_{name}_ep{ep}.png")
-            plt.savefig(out)
-            plt.close()
+            if self.bench_hist_places[name]:
+                p1, p2, p3, p4 = self.bench_hist_places[name][last_idx]
+            else:
+                p1 = p2 = p3 = p4 = float("nan")
+            rows.append({
+                "opponent": name,
+                "episode": int(ep),
+                "p1": float(p1),
+                "p2": float(p2),
+                "p3": float(p3),
+                "p4": float(p4),
+            })
+
+        out_csv = os.path.join(self.out_dir, f"{filename_prefix}_latest_ep{ep}.csv")
+        import csv as _csv
+        with open(out_csv, "w", newline="") as f:
+            w = _csv.DictWriter(f, fieldnames=["opponent","episode","p1","p2","p3","p4"])
+            w.writeheader()
+            w.writerows(rows)
+
 
     # ---------- Train: add & plot ----------
     def add_train(self, episode: int, metrics: Dict[str, float]):
@@ -402,7 +444,7 @@ class EvalPlotter:
           lernkurve_alle_strategien_avg.png
     """
     def __init__(self, opponent_names, out_dir,
-                 filename_prefix="lernkurve",
+                 filename_prefix="Lernkurve",
                  csv_filename="eval_curves.csv",
                  save_csv=True):
         self.opps = list(opponent_names or [])

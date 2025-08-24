@@ -1,0 +1,2 @@
+episode,steps,ep_seconds,train_seconds,eval_seconds,plot_seconds,save_seconds,cum_seconds
+500,38,3.3239307350013405,0.0,1.827406212920323,1.4322700529592112,0.004401813028380275,29.332994195981883

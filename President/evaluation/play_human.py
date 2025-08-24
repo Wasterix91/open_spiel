@@ -32,10 +32,10 @@ GAME_SETTINGS = {
 # Gegner: Heuristiken oder Policies; für Policies sind family/version/episode Pflicht!
 # from_pid: von welchem Seat die Gewichte auf der Platte geladen werden (für shared policy etc.)
 OPPONENTS = [
-    {"type": "max_combo"},  # Player1
-    {"type": "max_combo"},  # Player2
+    {"name": "P1", "type": "dqn", "family": "k1a2", "version": "38", "episode": 75_000, "from_pid": 0},
+    {"name": "P2", "type": "dqn", "family": "k1a2", "version": "38", "episode": 75_000, "from_pid": 0},
     # Beispiel PPO:
-    {"name": "Opp3", "type": "ppo", "family": "k3a1", "version": "05", "episode": 20000, "from_pid": 0}, # Player3 für 64 Karten
+    {"name": "P3", "type": "dqn", "family": "k1a2", "version": "38", "episode": 75_000, "from_pid": 0},
     #{"name": "Opp3", "type": "ppo", "family": "k1a1", "version": "55", "episode": 80, "from_pid": 0},  # Player3 für 12 Karten
 ]
 
@@ -73,13 +73,20 @@ def _ppo_expected_stem(family: str, version: str, seat_on_disk: int, episode: in
 def _dqn_expected_stem(family: str, version: str, seat_on_disk: int, episode: int):
     base_dir = os.path.join(MODELS_ROOT, family, f"model_{version}", "models")
     stem = os.path.join(base_dir, f"{family}_model_{version}_agent_p{seat_on_disk}_ep{episode:07d}")
-    qpth = stem + "_q.pt"
-    if not os.path.exists(qpth):
+    # neue Trainings-Namen
+    qnet = stem + "_qnet.pt"
+    tgt  = stem + "_tgt.pt"
+    # legacy-Variante (falls vorhanden)
+    legacy_q = stem + "_q.pt"
+
+    # Mit neuem Loader reicht _qnet.pt (Target optional) ODER Legacy _q.pt
+    if not (os.path.exists(qnet) or os.path.exists(legacy_q)):
         _fatal(
             f"DQN-Checkpoint fehlt: family={family}, version={version}, seat={seat_on_disk}, episode={episode}",
-            tried=[qpth],
+            tried=[qnet, tgt, legacy_q],
         )
     return stem
+
 
 def _alias_dqn_attrs(agent):
     if not hasattr(agent, "q_net") and hasattr(agent, "q_network"):

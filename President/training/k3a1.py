@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# President/training/k3a1_rec.py — PPO (K3 Recommended): Snapshot-Selfplay, 1 Learner + 3 Sparring
+# President/training/k3a1.py — PPO (K3): Snapshot-Selfplay, 1 Learner + 3 Sparring
 # Hinweis: minimale Änderungen gegenüber k3a1_test.py
 #  - family-Name geändert (eigener Output-Ordner)
 #  - Konfig getuned, damit Snapshots bei kurzen Läufen sichtbar sind (kürzeres SNAPSHOT_INTERVAL)
@@ -23,11 +23,11 @@ from utils.deck import ranks_for_deck
 
 # ============== CONFIG ==============
 CONFIG = {
-    "EPISODES":         1_000_000,
-    "BENCH_INTERVAL":   5000,
-    "BENCH_EPISODES":   2_000,
+    "EPISODES":         2000,
+    "BENCH_INTERVAL":   500,
+    "BENCH_EPISODES":   500,
     "TIMING_INTERVAL":  500,
-    "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+    "DECK_SIZE":        "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
 
@@ -277,6 +277,8 @@ def main():
 
         # Benchmark & Save (nur Learner-Policy)
         eval_seconds = plot_seconds = save_seconds = 0.0
+        # Benchmark & Save (nur Learner-Policy)
+        eval_seconds = plot_seconds = save_seconds = 0.0
         if BINT > 0 and (ep % BINT == 0):
             ev_start = time.perf_counter()
             per_opponent = run_benchmark(
@@ -296,7 +298,18 @@ def main():
             plotter.add_benchmark(ep, per_opponent)
             plotter.plot_benchmark_rewards()
             plotter.plot_places_latest()
-            plotter.plot_benchmark(filename_prefix="lernkurve", with_macro=True)
+
+            # Einheitliche Titel für alle „lernkurve“-Plots:
+            # - Einzelplots:  "Lernkurve - KxAy vs <gegner>"
+            # - Multi/Macro:  "Lernkurve - KxAy vs feste Heuristiken"
+            title_multi = f"Lernkurve - {family.upper()} vs feste Heuristiken"
+            plotter.plot_benchmark(
+                filename_prefix="lernkurve",
+                with_macro=True,
+                family_title=family.upper(),   # für Einzelplots
+                multi_title=title_multi,       # für Multi- & Macro-Plot (identischer Titel)
+            )
+
             plotter.plot_train(filename_prefix="training_metrics", separate=True)
             plot_seconds = time.perf_counter() - plot_start
 
@@ -316,6 +329,7 @@ def main():
                 cum_seconds=cum_seconds,
             )
 
+
         # Timing CSV
         ep_seconds = time.perf_counter() - ep_start
         timer.maybe_log(ep, {
@@ -329,8 +343,9 @@ def main():
 
     total_seconds = time.perf_counter() - t0
     plotter.log("")
-    plotter.log(f"Gesamtzeit: {total_seconds/3600:0.2f}h (~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)")
-    plotter.log("K3 (Snapshot-Selfplay) Training abgeschlossen.")
+    plotter.log(f"Gesamtzeit: {total_seconds/3600:0.2f}h (~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)")  
+    plotter.log(f"{family}, Snapshot Selfplay (1 Learner, 3 Sparring). Training abgeschlossen.")
+    plotter.log(f"Path: {paths['run_dir']}")
 
 if __name__ == "__main__":
     main()

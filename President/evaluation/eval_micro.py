@@ -14,13 +14,25 @@ from utils.strategies import STRATS
 from utils.load_save_a1_ppo import load_checkpoint_ppo
 from utils.load_save_a2_dqn import load_checkpoint_dqn
 
+NUM_EPISODES = 10_000
+DECK = "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+
 # ====== Setup ======
 GAME_SETTINGS = {
     "num_players": 4,
-    "deck_size": "64",
+    "deck_size": DECK[0],
     "shuffle_cards": True,
     "single_card_mode": False,
 }
+
+
+# Beispiel: PPO vs 3x Heuristik
+PLAYER_CONFIG = [
+    {"name": "P0", "type": "max_combo"},
+    {"name": "P1", "type": "max_combo"},
+    {"name": "P2", "type": "dqn", "family": "k1a2", "version": "38", "episode": 75_000, "from_pid": 0},
+    {"name": "P3", "type": "max_combo"},
+]
 
 # Beispiel-Config (alle ppo/dqn-Spieler MÜSSEN family/version/episode haben)
 """ PLAYER_CONFIG = [
@@ -30,12 +42,12 @@ GAME_SETTINGS = {
     {"name":"P3","type":"max_combo"},
 ] """
 
-PLAYER_CONFIG = [
+""" PLAYER_CONFIG = [
     {"name": "P0", "type": "ppo", "family": "k3a1", "version": "05", "episode": 20_000, "from_pid": 0},
     {"name": "P1", "type": "ppo", "family": "k1a1", "version": "57", "episode": 200, "from_pid": 0},
     {"name": "P2", "type": "ppo", "family": "k3a1", "version": "05", "episode": 20_000, "from_pid": 0},
     {"name": "P3", "type": "ppo", "family": "k1a1", "version": "57", "episode": 200, "from_pid": 0},
-]
+] """
 
 # ====== Pfade & kleine Utils ======
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -71,13 +83,20 @@ def _ppo_expected_stem(family: str, version: str, seat_on_disk: int, episode: in
 def _dqn_expected_stem(family: str, version: str, seat_on_disk: int, episode: int):
     base_dir = os.path.join(MODELS_ROOT, family, f"model_{version}", "models")
     stem = os.path.join(base_dir, f"{family}_model_{version}_agent_p{seat_on_disk}_ep{episode:07d}")
-    qpth = stem + "_q.pt"
-    if not os.path.exists(qpth):
+    # neue Trainings-Namen
+    qnet = stem + "_qnet.pt"
+    tgt  = stem + "_tgt.pt"
+    # legacy-Variante (falls vorhanden)
+    legacy_q = stem + "_q.pt"
+
+    # Mit neuem Loader reicht _qnet.pt (Target optional) ODER Legacy _q.pt
+    if not (os.path.exists(qnet) or os.path.exists(legacy_q)):
         _fatal(
             f"DQN-Checkpoint fehlt: family={family}, version={version}, seat={seat_on_disk}, episode={episode}",
-            tried=[qpth],
+            tried=[qnet, tgt, legacy_q],
         )
     return stem
+
 
 def _alias_dqn_attrs(agent):
     # Adapter, damit Loader mit evtl. abweichenden Attributnamen klarkommen

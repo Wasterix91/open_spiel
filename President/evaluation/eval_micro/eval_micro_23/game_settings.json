@@ -1,0 +1,6 @@
+{
+  "num_players": 4,
+  "deck_size": "64",
+  "shuffle_cards": true,
+  "single_card_mode": false
+}

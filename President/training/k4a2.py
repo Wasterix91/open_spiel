@@ -1,6 +1,10 @@
-# President/training/k4a2_test.py
 # -*- coding: utf-8 -*-
-# DQN (K4): Shared Policy (1 Netz für alle Seats) + Benchmark vs Heuristiken
+# President/training/k4a2.py — DQN (K4): Shared Policy (1 Netz für alle Seats)
+# Fixes:
+# - Decision-to-Decision per Seat (pending-Pattern, wie PPO k4a1)
+# - next_legal_actions nur, wenn derselbe Spieler wieder am Zug ist
+# - robuster DQNConfig-Build aus DEFAULT_CONFIG
+# - Import auf agents/dqn_agent
 
 import os, time, datetime, numpy as np, torch
 import pyspiel
@@ -18,50 +22,45 @@ from utils.load_save_common import find_next_version, prepare_run_dirs, save_con
 
 # ============== CONFIG ==============
 CONFIG = {
-    "EPISODES":         1000,
-    "BENCH_INTERVAL":   200,
+    "EPISODES":         2000,
+    "BENCH_INTERVAL":   500,
     "BENCH_EPISODES":   500,
-    "TIMING_INTERVAL":  250,
-    # Erlaubt: "12" | "16" | "20" | "24" | "32" | "52" | "64"
-    "DECK_SIZE":        "16",
+    "TIMING_INTERVAL":  500,
+    "DECK_SIZE":        "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
-    # DQNConfig-kompatibel (siehe dqn_agent.py)
+    # DQNConfig-kompatibel (siehe agents/dqn_agent.py)
     "DQN": {
-        "learning_rate": 3e-4,
-        "batch_size": 128,
-        "gamma": 0.995,
-        "buffer_size": 200_000,
-        "target_update_freq": 5000,
-        "soft_target_tau": 0.0,
-        "max_grad_norm": 1.0,
-        "n_step": 3,
-        "per_alpha": 0.6,
-        "per_beta_start": 0.4,
-        "per_beta_frames": 1_000_000,
-        "eps_start": 1.0,
-        "eps_end": 0.05,
-        "eps_decay_frames": 500_000,
-        "loss_huber_delta": 1.0,
-        "dueling": True,
-        "device": "cpu",
+        "learning_rate":     3e-4,
+        "batch_size":        128,
+        "gamma":             0.995,
+        "epsilon_start":     1.0,
+        "epsilon_end":       0.05,
+        "epsilon_decay":     0.9997,        # multiplikativ pro train_step
+        "buffer_size":       200_000,
+        "target_update_freq": 5000,         # oder soft_target_tau > 0 für Polyak
+        "soft_target_tau":   0.0,
+        "max_grad_norm":     1.0,
+        "use_double_dqn":    True,
+        "loss_huber_delta":  1.0,
     },
 
-    # ======= Rewards (neues System wie k1a1/k3a1/k4a1) =======
+    # ======= Rewards (NEUES System) =======
+    # STEP_MODE : "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
+    # FINAL_MODE: "none" | "env_only" | "rank_bonus" | "both"
     "REWARD": {
-        "STEP_MODE": "delta_weight_only",
-        "DELTA_WEIGHT": 1.0,
+        "STEP_MODE": "none",
+        "DELTA_WEIGHT": 0.0,
         "HAND_PENALTY_COEFF": 0.0,
 
         "FINAL_MODE": "env_only",
         "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
     },
 
-    # Features (Shared Policy: Seat-OneHot sinnvoll → True)
+    # Shared Policy: Seat-OneHot sinnvoll → True
     "FEATURES": { "NORMALIZE": False, "SEAT_ONEHOT": True },
 
-    # Gegner: Selfplay im Training (ein Netz), Benchmark separat
-    "OPPONENTS": ["max_combo", "max_combo", "max_combo"],
+    # Gegner/Benchmark
     "BENCH_OPPONENTS": ["single_only", "max_combo", "random2"],
 }
 
@@ -71,13 +70,13 @@ def main():
     ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     MODELS_ROOT = os.path.join(ROOT, "models")
 
-    # ---- Verzeichnisse (k1-Stil) ----
+    # ---- Verzeichnisse ----
     family = "k4a2"
     family_dir = os.path.join(MODELS_ROOT, family)
     version = find_next_version(family_dir, prefix="model")
     paths = prepare_run_dirs(MODELS_ROOT, family, version, prefix="model")
 
-    # ---- Plotter / Logger ----
+    # ---- Plotter ----
     plotter = MetricsPlotter(
         out_dir=paths["plots_dir"],
         benchmark_opponents=list(CONFIG["BENCH_OPPONENTS"]),
@@ -113,8 +112,11 @@ def main():
     state_size = info_dim + (num_players if CONFIG["FEATURES"]["SEAT_ONEHOT"] else 0)
 
     # ---- Agent / Shaper ----
-    dqn_cfg = dqn.DQNConfig(**CONFIG["DQN"])
-    agent = dqn.DQNAgent(state_size=state_size, num_actions=A, cfg=dqn_cfg)
+    base_cfg = dqn.DEFAULT_CONFIG
+    overrides = {k: CONFIG["DQN"][k] for k in CONFIG["DQN"] if k in base_cfg._fields}
+    dqn_cfg = base_cfg._replace(**overrides)
+
+    agent = dqn.DQNAgent(state_size=state_size, num_actions=A, config=dqn_cfg, device="cpu")
     shaper = RewardShaper(CONFIG["REWARD"])
 
     # ---- Config & Meta speichern ----
@@ -126,10 +128,8 @@ def main():
         "deck_size": CONFIG["DECK_SIZE"], "num_ranks": num_ranks,
         "observation_dim": state_size, "num_actions": A,
         "normalize": CONFIG["FEATURES"]["NORMALIZE"], "seat_onehot": CONFIG["FEATURES"]["SEAT_ONEHOT"],
-        "opponents": ",".join(CONFIG["OPPONENTS"]),
-        "models_dir": paths["weights_dir"], "plots_dir": paths["plots_dir"],
-
-        # Reward-Setup (neues System)
+         "models_dir": paths["weights_dir"], "plots_dir": paths["plots_dir"],
+        # Reward-Setup
         "step_mode": shaper.step_mode,
         "delta_weight": shaper.dw,
         "hand_penalty_coeff": shaper.hp,
@@ -154,53 +154,60 @@ def main():
         ep_shaping_returns = [0.0 for _ in range(num_players)]
 
         ts = env.reset()
-        last_idx = {p: None for p in range(num_players)}  # Index der letzten Transition je Sitz
+        # Pending-Transitions pro Sitz
+        pending = {p: None for p in range(num_players)}   # {"s":..., "a":..., "r":...}
+        last_idx = {p: None for p in range(num_players)}  # Index der letzten gespeicherten Transition je Sitz
 
         while not ts.last():
             p = ts.observations["current_player"]
             legal = ts.observations["legal_actions"][p]
 
-            # Info-State + ggf. Seat-OneHot (passt zu state_size)
-            base_obs = ts.observations["info_state"][p]
+            # (A) Falls p wieder dran ist, offene Transition von p schließen (decision-to-decision)
+            if pending[p] is not None:
+                base_now = np.array(ts.observations["info_state"][p], dtype=np.float32)
+                s_now = augment_observation(base_now, player_id=p, cfg=feat_cfg)
+                rec = pending[p]; pending[p] = None
+
+                agent.buffer.add(rec["s"], rec["a"], rec["r"], s_now, False,
+                                 next_legal_actions=legal)  # Legal-Maske gehört JETZT p
+                last_idx[p] = len(agent.buffer.buffer) - 1
+                agent.train_step()
+
+            # (B) aktuelle Beobachtung für p
+            base_obs = np.array(ts.observations["info_state"][p], dtype=np.float32)
             obs = augment_observation(base_obs, player_id=p, cfg=feat_cfg)
 
-            # Step-Shaping vorbereiten
+            # (C) optionaler Step-Reward
+            r_step = 0.0
             if shaper.step_active():
                 hand_before = shaper.hand_size(ts, p, deck_int)
 
-            # Shared Policy spielt auf allen Seats (ε-greedy bei select_action)
+            # (D) Aktion wählen & ausführen
             a = int(agent.select_action(obs, legal))
-            ts_next = env.step([a])
-            ep_len += 1
+            ts_next = env.step([a]); ep_len += 1
 
-            # Next-Obs & Legal-Maske für den *nächsten* aktuellen Spieler (npid)
-            if not ts_next.last():
-                npid = ts_next.observations["current_player"]
-                base_next = ts_next.observations["info_state"][npid]
-                obs_next = augment_observation(base_next, player_id=npid, cfg=feat_cfg)
-                next_legals = ts_next.observations["legal_actions"][npid]
-            else:
-                # Terminal: Dummy-Next-State + volle Maske
-                obs_next = obs
-                next_legals = list(range(A))
-
-            # Step-Reward
-            r = 0.0
             if shaper.step_active():
                 hand_after = shaper.hand_size(ts_next, p, deck_int)
-                r = float(shaper.step_reward(hand_before=hand_before, hand_after=hand_after))
-                ep_shaping_returns[p] += r
+                r_step = float(shaper.step_reward(hand_before=hand_before, hand_after=hand_after))
+                ep_shaping_returns[p] += r_step
 
-            # Replay speichern + Online-Train
-            agent.store(state=obs, action=int(a), reward=float(r),
-                        next_state=obs_next, done=bool(ts_next.last()),
-                        next_legal_actions=next_legals)
-            last_idx[p] = len(agent.buffer.buffer) - 1
-            agent.train_step()
+            # (E) Pending für p anlegen (wird geschlossen, wenn p wieder dran ist oder am Ende)
+            assert pending[p] is None
+            pending[p] = {"s": obs, "a": a, "r": r_step}
 
             ts = ts_next
 
-        # ===== Episodenende: Final-Rewards/Bonis auf letzte Transition je Sitz =====
+        # ---- Episodenende: alle offenen Transitions finalisieren (done=True) ----
+        for p in range(num_players):
+            if pending[p] is not None:
+                rec = pending[p]; pending[p] = None
+                s_next = rec["s"]  # Dummy-Next-State ist ok
+                agent.buffer.add(rec["s"], rec["a"], rec["r"], s_next, True,
+                                 next_legal_actions=list(range(A)))  # nie leere Maske
+                last_idx[p] = len(agent.buffer.buffer) - 1
+                agent.train_step()
+
+        # ===== Finals/Bonis auf jeweils letzte Transition buchen =====
         finals = [float(ts.rewards[i]) for i in range(num_players)]
         for p in range(num_players):
             li = last_idx[p]
@@ -210,9 +217,12 @@ def main():
             if abs(bonus) > 1e-8:
                 buf = agent.buffer
                 old = buf.buffer[li]
-                buf.buffer[li] = buf.Exp(old.s, old.a, float(old.r + bonus), old.ns, old.done, old.next_mask)
+                buf.buffer[li] = buf.Experience(
+                    old.state, old.action, float(old.reward + bonus),
+                    old.next_state, old.done, old.next_legal_mask
+                )
 
-        # ===== Trainingsmetriken loggen =====
+        # ===== Trainingsmetriken =====
         avg_env_return   = float(np.mean(finals))
         avg_shape_return = float(np.mean(ep_shaping_returns))
         avg_final_bonus  = float(np.mean([shaper.final_bonus(finals, i) for i in range(num_players)]))
@@ -224,7 +234,7 @@ def main():
             "ep_env_return_avg":     avg_env_return,
             "ep_shaping_return_avg": avg_shape_return,
             "ep_final_bonus_avg":    avg_final_bonus,
-            "epsilon":               float(agent._epsilon()),
+            "epsilon":               float(agent.epsilon),
         })
 
         # ===== Benchmark & Save =====
@@ -233,7 +243,7 @@ def main():
             ev_start = time.perf_counter()
             per_opponent = run_benchmark(
                 game=game,
-                agent=agent,                      # Shared Policy (Seat 0 wird evaluiert)
+                agent=agent,                      # Shared Policy; eval auf Seat 0
                 opponents_dict=STRATS,
                 opponent_names=CONFIG["BENCH_OPPONENTS"],
                 episodes=BEPS,
@@ -247,7 +257,16 @@ def main():
             plotter.add_benchmark(ep, per_opponent)
             plotter.plot_benchmark_rewards()
             plotter.plot_places_latest()
-            plotter.plot_benchmark(filename_prefix="lernkurve", with_macro=True)
+
+            # Einheitliche Titel
+            title_multi = f"Lernkurve - {family.upper()} vs feste Heuristiken"
+            plotter.plot_benchmark(
+                filename_prefix="lernkurve",
+                with_macro=True,
+                family_title=family.upper(),   # Einzelplots: „Lernkurve - KxAy vs <gegner>“
+                multi_title=title_multi,       # Multi & Macro: „Lernkurve - KxAy vs feste Heuristiken“
+            )
+
             plotter.plot_train(filename_prefix="training_metrics", separate=True)
             plot_seconds = time.perf_counter() - plot_start
 
@@ -263,14 +282,15 @@ def main():
             plotter.log_timing(
                 ep,
                 ep_seconds=(time.perf_counter() - ep_start),
-                train_seconds=0.0,               # Online-Train oben
+                train_seconds=0.0,               # on-the-fly Training
                 eval_seconds=eval_seconds,
                 plot_seconds=plot_seconds,
                 save_seconds=save_seconds,
                 cum_seconds=cum_seconds,
             )
 
-        # ===== Timing CSV (streaming) =====
+
+        # ---- Timing CSV ----
         ep_seconds = time.perf_counter() - ep_start
         timer.maybe_log(ep, {
             "steps": ep_len,
@@ -284,8 +304,9 @@ def main():
     # Ende
     total_seconds = time.perf_counter() - t0
     plotter.log("")
-    plotter.log(f"Gesamtzeit: {total_seconds/3600:0.2f}h (~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)")
-    plotter.log("K4 (Shared-Policy DQN) Training abgeschlossen.")
+    plotter.log(f"Gesamtzeit: {total_seconds/3600:0.2f}h (~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)")  
+    plotter.log(f"{family}, Shared Policy Selfplay (4 Rollout, external Training). Training abgeschlossen.")
+    plotter.log(f"Path: {paths['run_dir']}")
 
 if __name__ == "__main__":
     main()

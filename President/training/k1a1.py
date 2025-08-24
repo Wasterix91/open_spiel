@@ -19,11 +19,11 @@ from utils.deck import ranks_for_deck
 
 # ============== CONFIG  ==============
 CONFIG = {
-    "EPISODES":         1_000_000,
-    "BENCH_INTERVAL":   5000,
-    "BENCH_EPISODES":   2_000,
+    "EPISODES":         2000,
+    "BENCH_INTERVAL":   500,
+    "BENCH_EPISODES":   500,
     "TIMING_INTERVAL":  500,
-    "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+    "DECK_SIZE":        "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
     # Training-Gegner (Heuristiken) für Seats 1..3
@@ -47,11 +47,11 @@ CONFIG = {
     # FINAL_MODE: "none" | "env_only" | "rank_bonus" | "both"
     "REWARD": {
         "STEP_MODE": "none",
-        "DELTA_WEIGHT": 0.0,
+        "DELTA_WEIGHT": 0.5,
         "HAND_PENALTY_COEFF": 0.0,
 
         "FINAL_MODE": "env_only",
-        "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
+        "BONUS_WIN": 10.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
     },
 
     # Feature-Toggles
@@ -248,9 +248,19 @@ def main():
             plotter.add_benchmark(ep, per_opponent)
             plotter.plot_benchmark_rewards()
             plotter.plot_places_latest()
-            plotter.plot_benchmark(filename_prefix="lernkurve", with_macro=True)
+
+            title_multi = f"Lernkurve - {family.upper()} vs feste Heuristiken"
+            plotter.plot_benchmark(
+                filename_prefix="lernkurve",
+                with_macro=True,
+                family_title=family.upper(),   # für Einzelplots: „Lernkurve - K1A1 vs {gegner}“
+                multi_title=title_multi,       # für Multi- & Macro-Plot: gleicher Titel
+            )
+
+
             plotter.plot_train(filename_prefix="training_metrics", separate=True)
             plot_seconds = time.perf_counter() - plot_start
+
 
             # Save weights (PPO)
             save_start = time.perf_counter()
@@ -284,11 +294,9 @@ def main():
     # Ende
     total_seconds = time.perf_counter() - t0
     plotter.log("")
-    plotter.log(
-        f"Gesamtzeit: {total_seconds/3600:0.2f}h "
-        f"(~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)"
-    )
-    plotter.log("K1 Training abgeschlossen.")
+    plotter.log(f"Gesamtzeit: {total_seconds/3600:0.2f}h (~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)")  
+    plotter.log(f"{family}, Single Agent vs Heuristiken (max_combo). Training abgeschlossen.")
+    plotter.log(f"Path: {paths['run_dir']}")
 
 
 if __name__ == "__main__":

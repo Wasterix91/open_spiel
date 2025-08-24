@@ -22,11 +22,11 @@ from utils.deck import ranks_for_deck
 
 # ============== CONFIG  ==============
 CONFIG = {
-    "EPISODES":         10_000,
+    "EPISODES":         2000,
     "BENCH_INTERVAL":   500,
-    "BENCH_EPISODES":   2_000,
+    "BENCH_EPISODES":   500,
     "TIMING_INTERVAL":  500,
-    "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+    "DECK_SIZE":        "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
     # PPO-Hyperparameter (für alle vier Agents identisch)
@@ -266,7 +266,18 @@ def main():
             plotter.add_benchmark(ep, per_opponent)
             plotter.plot_benchmark_rewards()
             plotter.plot_places_latest()
-            plotter.plot_benchmark(filename_prefix="lernkurve", with_macro=True)
+
+            # Einheitliche Titel:
+            # - Einzelplots:  "Lernkurve - K1A1 vs <gegner>"
+            # - Multi/Macro:  "Lernkurve - K1A1 vs feste Heuristiken"
+            title_multi = f"Lernkurve - {family.upper()} vs feste Heuristiken"
+            plotter.plot_benchmark(
+                filename_prefix="lernkurve",
+                with_macro=True,
+                family_title=family.upper(),   # für Einzelplots
+                multi_title=title_multi,       # für Multi- & Macro-Plot (gleicher Titel)
+            )
+
             plotter.plot_train(filename_prefix="training_metrics", separate=True)
             plot_seconds = time.perf_counter() - plot_start
 
@@ -300,14 +311,11 @@ def main():
             "save_seconds": save_seconds,
         })
 
-    # Ende
     total_seconds = time.perf_counter() - t0
     plotter.log("")
-    plotter.log(
-        f"Gesamtzeit: {total_seconds/3600:0.2f}h "
-        f"(~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)"
-    )
-    plotter.log("K2 (4 Agents simultan) Training abgeschlossen.")
+    plotter.log(f"Gesamtzeit: {total_seconds/3600:0.2f}h (~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)")  
+    plotter.log(f"{family}, Multi Agent RL (IQL). Training abgeschlossen.")
+    plotter.log(f"Path: {paths['run_dir']}")
 
 
 if __name__ == "__main__":

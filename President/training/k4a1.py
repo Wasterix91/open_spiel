@@ -1,4 +1,4 @@
-# President/training/k4a1_rec.py
+# President/training/k4a1.py
 # -*- coding: utf-8 -*-
 # PPO (K4 Recommended): Shared Policy (4 Sammler) + In-Proc "External" Trainer (Bundle-Updates)
 
@@ -22,17 +22,17 @@ from utils.deck import ranks_for_deck
 
 # ============== CONFIG ==============
 CONFIG = {
-    "EPISODES":         10_000,
+    "EPISODES":         2000,
     "BENCH_INTERVAL":   500,
-    "BENCH_EPISODES":   2_000,
+    "BENCH_EPISODES":   500,
     "TIMING_INTERVAL":  500,
-    "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+    "DECK_SIZE":        "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
     # PPO
     "PPO": {
         "learning_rate": 3e-4,
-        "num_epochs": 1,
+        "num_epochs": 4,
         "batch_size": 256,
         "entropy_cost": 0.01,
         "gamma": 0.99,
@@ -46,7 +46,7 @@ CONFIG = {
     # ===== In-Proc „External“ Trainer =====
     # Sammle N Episoden → mache K PPO-Updates → Buffer clear → weiter sammeln
     "INPROC_TRAINER": {
-        "EPISODES_PER_UPDATE": 50,  # Bundle-Größe
+        "EPISODES_PER_UPDATE": 20,  # Bundle-Größe
         "UPDATES_PER_CALL":     1,    # wie oft agent.train() pro Bundle
     },
 
@@ -63,7 +63,7 @@ CONFIG = {
     },
 
     # Features (Shared Policy: Seat-OneHot optional)
-    "FEATURES": { "NORMALIZE": False, "SEAT_ONEHOT": False },
+    "FEATURES": { "NORMALIZE": False, "SEAT_ONEHOT": True },
 
     # Benchmark-Gegner
     "BENCH_OPPONENTS": ["single_only", "max_combo", "random2"],
@@ -111,10 +111,10 @@ def main():
     num_ranks = ranks_for_deck(deck_int)
     feat_cfg = FeatureConfig(
         num_players=num_players, num_ranks=num_ranks,
-        add_seat_onehot=CONFIG["FEATURES"]["SEAT_ONEHOT"],
+        add_seat_onehot=False,                             
         normalize=CONFIG["FEATURES"]["NORMALIZE"],
     )
-    seat_id_dim = (num_players if CONFIG["FEATURES"]["SEAT_ONEHOT"] else 0)
+    seat_id_dim = num_players if CONFIG["FEATURES"]["SEAT_ONEHOT"] else 0
 
     # ---- Agent / Shaper ----
     ppo_cfg = ppo.PPOConfig(**CONFIG["PPO"])
@@ -240,7 +240,16 @@ def main():
             plotter.add_benchmark(ep, per_opponent)
             plotter.plot_benchmark_rewards()
             plotter.plot_places_latest()
-            plotter.plot_benchmark(filename_prefix="lernkurve", with_macro=True)
+
+            # Einheitliche Titel für alle "lernkurve"-Plots
+            title_multi = f"Lernkurve - {family.upper()} vs feste Heuristiken"
+            plotter.plot_benchmark(
+                filename_prefix="lernkurve",
+                with_macro=True,
+                family_title=family.upper(),  # Einzelplots: „Lernkurve - KxAy vs <gegner>“
+                multi_title=title_multi,      # Multi & Macro: „Lernkurve - KxAy vs feste Heuristiken“
+            )
+
             plotter.plot_train(filename_prefix="training_metrics", separate=True)
             plot_seconds = time.perf_counter() - plot_start
 
@@ -260,6 +269,7 @@ def main():
                 cum_seconds=cum_seconds,
             )
 
+
         # Timing CSV
         ep_seconds = time.perf_counter() - ep_start
         timer.maybe_log(ep, {
@@ -273,8 +283,9 @@ def main():
 
     total_seconds = time.perf_counter() - t0
     plotter.log("")
-    plotter.log(f"Gesamtzeit: {total_seconds/3600:0.2f}h (~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)")
-    plotter.log("K4 (Shared-Policy PPO, In-Proc External Trainer) abgeschlossen.")
+    plotter.log(f"Gesamtzeit: {total_seconds/3600:0.2f}h (~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)")  
+    plotter.log(f"{family}, Shared Policy Selfplay (4 Rollout, external Training). Training abgeschlossen.")
+    plotter.log(f"Path: {paths['run_dir']}")
 
 if __name__ == "__main__":
     main()

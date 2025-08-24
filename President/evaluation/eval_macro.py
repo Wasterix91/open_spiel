@@ -20,21 +20,21 @@ from utils.load_save_a2_dqn import load_checkpoint_dqn
 
 # ===================== Konfiguration ===================== #
 NUM_EPISODES = 10_000
-
+DECK = "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
 # Beispiel: PPO vs 3x Heuristik
-""" PLAYER_CONFIG = [
-    {"name": "P0", "type": "ppo", "family": "k3a1", "version": "05", "episode": 20_000, "from_pid": 0},
-    {"name": "Player1", "type": "max_combo"},
-    {"name": "Player2", "type": "max_combo"},
-    {"name": "Player3", "type": "max_combo"},
-] """
-
 PLAYER_CONFIG = [
+    {"name": "P0", "type": "max_combo"},
+    {"name": "P1", "type": "max_combo"},
+    {"name": "P2", "type": "dqn", "family": "k1a2", "version": "38", "episode": 75_000, "from_pid": 0},
+    {"name": "P3", "type": "max_combo"},
+]
+
+""" PLAYER_CONFIG = [
     {"name": "P0", "type": "ppo", "family": "k3a1", "version": "05", "episode": 20_000, "from_pid": 0},
     {"name": "P1", "type": "ppo", "family": "k1a1", "version": "57", "episode": 200, "from_pid": 0},
     {"name": "P2", "type": "ppo", "family": "k3a1", "version": "05", "episode": 20_000, "from_pid": 0},
     {"name": "P3", "type": "ppo", "family": "k1a1", "version": "57", "episode": 200, "from_pid": 0},
-]
+] """
 
 """
 Weitere Beispiele:
@@ -75,7 +75,7 @@ MAX_ACTION_ID_TO_SHOW = 32       # None = alle; sonst max. Action-ID auf der X-A
 
 # ===================== Spielinitialisierung ===================== #
 GAME_PARAMS = {
-    "deck_size": "64",
+    "deck_size": DECK[0],
     "shuffle_cards": True,
     "single_card_mode": False,
     "num_players": 4
@@ -163,14 +163,21 @@ def _ppo_expected_stem(family: str, version: str, seat_on_disk: int, episode: in
 def _dqn_expected_stem(family: str, version: str, seat_on_disk: int, episode: int):
     base_dir = os.path.join(MODELS_ROOT, family, f"model_{version}", "models")
     stem = os.path.join(base_dir, f"{family}_model_{version}_agent_p{seat_on_disk}_ep{episode:07d}")
-    qpth = stem + "_q.pt"
-    # falls du _qnet.pt/_tgt.pt gespeichert hast, ergänze hier weitere Checks.
-    if not os.path.exists(qpth):
+    # neue Trainings-Namen
+    qnet = stem + "_qnet.pt"
+    tgt  = stem + "_tgt.pt"
+    # legacy-Variante (falls vorhanden)
+    legacy_q = stem + "_q.pt"
+
+    # Mit neuem Loader reicht _qnet.pt (Target optional) ODER Legacy _q.pt
+    if not (os.path.exists(qnet) or os.path.exists(legacy_q)):
         _fatal(
             f"DQN-Checkpoint fehlt: family={family}, version={version}, seat={seat_on_disk}, episode={episode}",
-            tried=[qpth],
+            tried=[qnet, tgt, legacy_q],
         )
     return stem
+
+
 
 def _alias_dqn_attrs(agent):
     # Adapter: Richte Aliase ein, damit die Loader (q_net/target_net) mit deinem Agent (q_network/target_network) sprechen.
@@ -199,20 +206,25 @@ def _load_dqn_agent(obs_dim, num_actions, *, family, version, episode, from_pid,
     stem = _dqn_expected_stem(family, version, from_pid, ep)
 
     tried = []
-    # erst ohne, dann mit Seat-One-Hot probieren (robust ggü. verschiedenen Train-Konfigurationen)
+    weights_dir = os.path.dirname(stem)
+    tag = os.path.basename(stem)
+
     for state_size in (obs_dim, obs_dim + num_players):
         ag = dqn.DQNAgent(state_size=state_size, num_actions=num_actions, device=device)
         _alias_dqn_attrs(ag)
-        weights_dir = os.path.dirname(stem)
-        tag = os.path.basename(stem)
+
         try:
-            load_checkpoint_dqn(ag, weights_dir, tag)  # nutzt deine Trainings-Loader
-            if hasattr(ag, "epsilon"): ag.epsilon = 0.0
+            # Neuer Loader kümmert sich um _qnet/_tgt sowie Legacy _q/_target
+            load_checkpoint_dqn(ag, weights_dir, tag)
+            if hasattr(ag, "epsilon"):
+                ag.epsilon = 0.0
             return ag
         except Exception as e:
             tried.append(f"{stem} (state_size={state_size}): {e}")
 
     _fatal("Fehler beim Laden von DQN-Gewichten.", tried=tried)
+
+
 
 def load_agents(player_config, game):
     agents = []

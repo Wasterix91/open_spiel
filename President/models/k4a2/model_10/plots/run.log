@@ -1,0 +1,23 @@
+[2025-08-23 21:47:27] New Training (k4a2): Shared-Policy DQN
+[2025-08-23 21:47:27] Deck_Size: 16
+[2025-08-23 21:47:27] Episodes: 4000
+[2025-08-23 21:47:27] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k4a2/model_10
+[2025-08-23 21:49:16] 
+[2025-08-23 21:49:16] Benchmark @train_ep    2000 (bench_eps: 200)
+[2025-08-23 21:49:16] Macro Winrate          :  44.8%
+[2025-08-23 21:49:16] Macro Ø-Reward         :  2.007
+[2025-08-23 21:49:16] Winrate vs max_combo   :  32.5% | Σ-Reward:  342.0 | Ø-Reward:  1.710 | Places: [65 (0.33), 51 (0.26), 45 (0.23), 39 (0.20)]
+[2025-08-23 21:49:16] Winrate vs random2     :  43.0% | Σ-Reward:  406.0 | Ø-Reward:  2.030 | Places: [86 (0.43), 56 (0.28), 36 (0.18), 22 (0.11)]
+[2025-08-23 21:49:16] Winrate vs single_only :  59.0% | Σ-Reward:  456.0 | Ø-Reward:  2.280 | Places: [118 (0.59), 34 (0.17), 34 (0.17), 14 (0.07)]
+[2025-08-23 21:49:18] Timing @ep 2000: episode 2.7s | train 0.000s | eval 0.6s | plot 2.0s | save 0.004s | cum 0.03h
+[2025-08-23 21:51:18] 
+[2025-08-23 21:51:18] Benchmark @train_ep    4000 (bench_eps: 200)
+[2025-08-23 21:51:18] Macro Winrate          :  49.2%
+[2025-08-23 21:51:18] Macro Ø-Reward         :  2.068
+[2025-08-23 21:51:18] Winrate vs max_combo   :  42.5% | Σ-Reward:  383.0 | Ø-Reward:  1.915 | Places: [85 (0.42), 42 (0.21), 44 (0.22), 29 (0.14)]
+[2025-08-23 21:51:18] Winrate vs random2     :  42.5% | Σ-Reward:  397.0 | Ø-Reward:  1.985 | Places: [85 (0.42), 57 (0.28), 28 (0.14), 30 (0.15)]
+[2025-08-23 21:51:18] Winrate vs single_only :  62.5% | Σ-Reward:  461.0 | Ø-Reward:  2.305 | Places: [125 (0.62), 23 (0.12), 40 (0.20), 12 (0.06)]
+[2025-08-23 21:51:20] Timing @ep 4000: episode 3.0s | train 0.000s | eval 0.7s | plot 2.2s | save 0.004s | cum 0.06h
+[2025-08-23 21:51:20] 
+[2025-08-23 21:51:20] Gesamtzeit: 0.06h (~ 17.27 eps/s)
+[2025-08-23 21:51:20] K4 (Shared-Policy DQN) Training abgeschlossen.

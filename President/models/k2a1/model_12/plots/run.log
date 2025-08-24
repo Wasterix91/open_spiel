@@ -1,0 +1,23 @@
+[2025-08-23 21:35:54] New Training (k2a1): 4 getrennte PPO-Agents — simultanes Lernen
+[2025-08-23 21:35:54] Deck_Size: 16
+[2025-08-23 21:35:54] Episodes: 4000
+[2025-08-23 21:35:54] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k2a1/model_12
+[2025-08-23 21:37:45] 
+[2025-08-23 21:37:45] Benchmark @train_ep    2000 (bench_eps: 200)
+[2025-08-23 21:37:45] Macro Winrate          :  42.3%
+[2025-08-23 21:37:45] Macro Ø-Reward         :  1.877
+[2025-08-23 21:37:45] Winrate vs max_combo   :  32.0% | Σ-Reward:  331.0 | Ø-Reward:  1.655 | Places: [64 (0.32), 46 (0.23), 47 (0.23), 43 (0.21)]
+[2025-08-23 21:37:45] Winrate vs random2     :  39.0% | Σ-Reward:  378.0 | Ø-Reward:  1.890 | Places: [78 (0.39), 50 (0.25), 44 (0.22), 28 (0.14)]
+[2025-08-23 21:37:45] Winrate vs single_only :  56.0% | Σ-Reward:  417.0 | Ø-Reward:  2.085 | Places: [112 (0.56), 22 (0.11), 37 (0.18), 29 (0.14)]
+[2025-08-23 21:37:47] Timing @ep 2000: episode 3.3s | train 0.013s | eval 1.2s | plot 2.0s | save 0.005s | cum 0.03h
+[2025-08-23 21:39:32] 
+[2025-08-23 21:39:32] Benchmark @train_ep    4000 (bench_eps: 200)
+[2025-08-23 21:39:32] Macro Winrate          :  37.3%
+[2025-08-23 21:39:32] Macro Ø-Reward         :  1.767
+[2025-08-23 21:39:32] Winrate vs max_combo   :  27.5% | Σ-Reward:  305.0 | Ø-Reward:  1.525 | Places: [55 (0.28), 45 (0.23), 50 (0.25), 50 (0.25)]
+[2025-08-23 21:39:32] Winrate vs random2     :  31.5% | Σ-Reward:  351.0 | Ø-Reward:  1.755 | Places: [63 (0.32), 56 (0.28), 50 (0.25), 31 (0.15)]
+[2025-08-23 21:39:32] Winrate vs single_only :  53.0% | Σ-Reward:  404.0 | Ø-Reward:  2.020 | Places: [106 (0.53), 25 (0.12), 36 (0.18), 33 (0.17)]
+[2025-08-23 21:39:34] Timing @ep 4000: episode 3.6s | train 0.008s | eval 1.2s | plot 2.3s | save 0.005s | cum 0.06h
+[2025-08-23 21:39:34] 
+[2025-08-23 21:39:34] Gesamtzeit: 0.06h (~ 18.25 eps/s)
+[2025-08-23 21:39:34] K2 (4 Agents simultan) Training abgeschlossen.

@@ -19,21 +19,9 @@ def load_checkpoint_ppo(agent, weights_dir: str, tag: str):
     agent._policy.load_state_dict(torch.load(base + "_policy.pt", map_location="cpu"))
     agent._value.load_state_dict(torch.load(base + "_value.pt",  map_location="cpu"))
 
-def latest_checkpoint_tag(weights_dir: str, pattern_prefix: str) -> str | None:
-    """
-    Findet den höchsten ep im Schema:
-      '<pattern_prefix>_epXXXXXXX_policy.pt'
-    und gibt den Basistag ohne Suffix zurück (z.B. 'k1a1_model_01_agent_p0_ep0001000').
-    """
-    glob_pat = os.path.join(weights_dir, f"{pattern_prefix}_ep*_policy.pt")
-    files = glob.glob(glob_pat)
-    best = None; best_ep = -1
-    rx = re.compile(rf"{re.escape(pattern_prefix)}_ep(\d+)_policy\.pt$")
-    for f in files:
-        m = rx.search(os.path.basename(f))
-        if m:
-            ep = int(m.group(1))
-            if ep > best_ep:
-                best_ep = ep
-                best = os.path.splitext(f)[0][:-len("_policy")]  # Basistag ohne _policy
-    return best if best_ep >= 0 else None
+# utils/load_save_a2_dqn.py
+def latest_checkpoint_tag(*args, **kwargs):
+    raise RuntimeError(
+        "latest_checkpoint_tag ist deaktiviert: Episoden müssen explizit angegeben werden."
+    )
+

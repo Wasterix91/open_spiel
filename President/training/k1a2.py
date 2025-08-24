@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
-# k1a2.py — K1: Single-Agent DQN vs 3 Heuristiken (k1a1-Stil, neues Reward-System)
+# k1a2.py — K1: Single-Agent DQN vs Heuristiken
+# Training: P0→P0-Transitions (aus erstem Skript)
+# Rest: Dirs/Plotter/Benchmark/Reward-System (aus zweitem Skript)
 
-import os, time, datetime, numpy as np, torch
+import os, time, datetime
+import numpy as np, torch
 import pyspiel
 from open_spiel.python import rl_environment
 
@@ -16,26 +19,33 @@ from utils.strategies import STRATS
 from utils.reward_shaper import RewardShaper
 
 CONFIG = {
-    "EPISODES":         10_000,
+    "EPISODES":         2000,
     "BENCH_INTERVAL":   500,
-    "BENCH_EPISODES":   2000,
-    "TIMING_INTERVAL":  200,
-    "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+    "BENCH_EPISODES":   500,
+    "TIMING_INTERVAL":  500,
+    "DECK_SIZE":        "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
+    # Training-Gegner (Heuristiken)
     "OPPONENTS":        ["max_combo", "max_combo", "max_combo"],
 
-    # DQN (dqn_agent2)
+    # DQN (kompatibel zu agents/dqn_agent.DQNConfig)
     "DQN": {
-        "learning_rate": 3e-4, "batch_size": 128, "gamma": 0.995,
-        "buffer_size": 200_000, "target_update_freq": 5000, "soft_target_tau": 0.0,
-        "max_grad_norm": 1.0, "n_step": 3, "per_alpha": 0.6,
-        "per_beta_start": 0.4, "per_beta_frames": 1_000_000,
-        "eps_start": 1.0, "eps_end": 0.05, "eps_decay_frames": 500_000,
-        "loss_huber_delta": 1.0, "dueling": True, "device": "cpu",
+        "learning_rate":     3e-4,
+        "batch_size":        128,
+        "gamma":             0.995,
+        "epsilon_start":     1.0,
+        "epsilon_end":       0.05,
+        "epsilon_decay":     0.9997,   # langsameres Abklingen (multiplikativ pro train_step)
+        "buffer_size":       200_000,
+        "target_update_freq": 5000,
+        "soft_target_tau":   0.0,      # z.B. 0.005 für Polyak
+        "max_grad_norm":     1.0,
+        "use_double_dqn":    True,
+        "loss_huber_delta":  1.0,
     },
 
-    # ======= Rewards (NEUES System wie k1a1) =======
+    # ======= Rewards (neues System aus k1a1) =======
     # STEP_MODE : "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
     # FINAL_MODE: "none" | "env_only" | "rank_bonus" | "both"
     "REWARD": {
@@ -48,6 +58,8 @@ CONFIG = {
     },
 
     "FEATURES": { "NORMALIZE": False, "SEAT_ONEHOT": False },
+
+    # Benchmark-Gegner (für Plotter/Reports)
     "BENCH_OPPONENTS": ["single_only", "max_combo", "random2"],
 }
 
@@ -68,22 +80,26 @@ def main():
         train_csv="training_metrics.csv",
         save_csv=True, verbosity=1
     )
-    plotter.log("New Training (k1a2): DQN Single-Agent vs Heuristiken")
+    plotter.log("New Training (k1a2): DQN Single-Agent vs Heuristiken (P0→P0)")
     plotter.log(f"Deck_Size: {CONFIG['DECK_SIZE']}")
     plotter.log(f"Episodes: {CONFIG['EPISODES']}")
     plotter.log(f"Path: {paths['run_dir']}")
 
-    # Env
+    # ---- Env ----
     game = pyspiel.load_game("president", {
         "num_players": 4, "deck_size": CONFIG["DECK_SIZE"],
         "shuffle_cards": True, "single_card_mode": False
     })
     env = rl_environment.Environment(game)
-    info_dim = env.observation_spec()["info_state"][0]
     A = env.action_spec()["num_actions"]
     num_players = game.num_players()
 
-    # Features
+    # ---- Beobachtungsdimension: wie im ersten Skript (observation_tensor) ----
+    base_dim = game.observation_tensor_shape()[0]
+    extra_dim = num_players if CONFIG["FEATURES"]["SEAT_ONEHOT"] else 0
+    state_size = base_dim + extra_dim
+
+    # ---- Features ----
     deck_int = int(CONFIG["DECK_SIZE"])
     num_ranks = ranks_for_deck(deck_int)
     feat_cfg = FeatureConfig(
@@ -92,27 +108,27 @@ def main():
         normalize=CONFIG["FEATURES"]["NORMALIZE"],
     )
 
-    # Agent, Gegner, Reward-Shaper
-    agent = DQNAgent(info_dim, A, DQNConfig(**CONFIG["DQN"]))
+    # ---- Agent, Gegner, Reward-Shaper ----
+    agent = DQNAgent(state_size, A, DQNConfig(**CONFIG["DQN"]))
     opponents = [STRATS[name] for name in CONFIG["OPPONENTS"]]
     shaper = RewardShaper(CONFIG["REWARD"])
 
-    # Config/Meta
+    # ---- Config/Meta speichern ----
     save_config_csv({
         "script": family, "version": version,
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "agent_type": "DQN", "num_episodes": CONFIG["EPISODES"],
         "bench_interval": CONFIG["BENCH_INTERVAL"], "bench_episodes": CONFIG["BENCH_EPISODES"],
         "deck_size": CONFIG["DECK_SIZE"], "num_ranks": num_ranks,
-        "observation_dim": info_dim, "num_actions": A,
+        "observation_dim": state_size, "num_actions": A,
         "normalize": CONFIG["FEATURES"]["NORMALIZE"], "seat_onehot": CONFIG["FEATURES"]["SEAT_ONEHOT"],
         "opponents": ",".join(CONFIG["OPPONENTS"]),
         "models_dir": paths["weights_dir"], "plots_dir": paths["plots_dir"],
         # Reward-Setup (neues System)
-        "step_mode": shaper.step_mode,
-        "delta_weight": shaper.dw,
-        "hand_penalty_coeff": shaper.hp,
-        "final_mode": shaper.final_mode,
+        "step_mode": getattr(shaper, "step_mode", "n/a"),
+        "delta_weight": getattr(shaper, "dw", "n/a"),
+        "hand_penalty_coeff": getattr(shaper, "hp", "n/a"),
+        "final_mode": getattr(shaper, "final_mode", "n/a"),
         "bonus_win":   CONFIG["REWARD"]["BONUS_WIN"],
         "bonus_2nd":   CONFIG["REWARD"]["BONUS_2ND"],
         "bonus_3rd":   CONFIG["REWARD"]["BONUS_3RD"],
@@ -120,7 +136,7 @@ def main():
     }, paths["config_csv"])
     save_run_meta({"family": family, "version": version, "algo": "dqn", "deck": CONFIG["DECK_SIZE"]}, paths["run_meta_json"])
 
-    # Timing
+    # ---- Timing ----
     timer = TimingMeter(csv_path=paths["timings_csv"], interval=CONFIG["TIMING_INTERVAL"])
     t0 = time.perf_counter()
     BINT, BEPS = CONFIG["BENCH_INTERVAL"], CONFIG["BENCH_EPISODES"]
@@ -130,77 +146,96 @@ def main():
         ep_len = 0
         ep_shaping_return = 0.0
         ep_final_bonus = 0.0
+        train_seconds_accum = 0.0
 
         ts = env.reset()
+        last_p0_idx = None
 
         while not ts.last():
+
+            # 1) Vorspulen, bis P0 am Zug ist (Gegner spielen Heuristiken)
+            while not ts.last() and ts.observations["current_player"] != 0:
+                pid = ts.observations["current_player"]
+                a_opp = int(opponents[pid-1](env._state))
+                ts = env.step([a_opp])
+                ep_len += 1
+
+            if ts.last():
+                break  # Episode vorbei
+
+            # 2) P0-Zug: s, a, r_step (Reward nur für diesen P0-Schritt)
+            legal0 = ts.observations["legal_actions"][0]
+            s_base = np.array(env._state.observation_tensor(0), dtype=np.float32)
+            s = augment_observation(s_base, player_id=0, cfg=feat_cfg)
+
+            # Shaping-Step (falls aktiv)
+            if hasattr(shaper, "step_active") and shaper.step_active():
+                hand_before = shaper.hand_size(ts, 0, deck_int)
+
+            a0 = int(agent.select_action(s, legal0))
+            ts = env.step([a0])  # führt P0-Zug aus
             ep_len += 1
-            p = ts.observations["current_player"]
-            legal = ts.observations["legal_actions"][p]
 
-            if p == 0:
-                if shaper.step_active():
-                    hand_before = shaper.hand_size(ts, p, deck_int)
-
-                ob = augment_observation(ts.observations["info_state"][p], player_id=p, cfg=feat_cfg)
-                a = agent.select_action(ob, legal)
+            if hasattr(shaper, "step_active") and shaper.step_active():
+                hand_after = shaper.hand_size(ts, 0, deck_int)
+                r_step = float(shaper.step_reward(hand_before=hand_before, hand_after=hand_after))
+                ep_shaping_return += r_step
             else:
-                a = int(opponents[p-1](env._state))
+                r_step = 0.0
 
-            ts_next = env.step([int(a)])
+            # 3) Vorspulen bis P0 wieder am Zug ist oder Terminal
+            while not ts.last() and ts.observations["current_player"] != 0:
+                pid = ts.observations["current_player"]
+                a_opp = int(opponents[pid-1](env._state))
+                ts = env.step([a_opp])
+                ep_len += 1
 
-            # P0 speichert: Reward = nur Shaping-Teil (ENV erst am Ende auf letzte Transition)
-            if p == 0:
-                if shaper.step_active():
-                    hand_after = shaper.hand_size(ts_next, p, deck_int)
-                    r_shape = shaper.step_reward(hand_before=hand_before, hand_after=hand_after)
-                    ep_shaping_return += float(r_shape)
-                else:
-                    r_shape = 0.0
+            # 4) s' und next_legals für P0 definieren
+            if ts.last():
+                s_next = s
+                next_legals = list(range(A))  # nie None in Buffer
+                done = True
+            else:
+                next_legals = ts.observations["legal_actions"][0]
+                s_next_base = np.array(env._state.observation_tensor(0), dtype=np.float32)
+                s_next = augment_observation(s_next_base, player_id=0, cfg=feat_cfg)
+                done = False
 
-                ob_next = augment_observation(ts_next.observations["info_state"][p], player_id=p, cfg=feat_cfg)
-                next_legal = None if ts_next.last() else ts_next.observations["legal_actions"][ts_next.observations["current_player"]]
-                agent.store(ob, int(a), float(r_shape), ob_next, bool(ts_next.last()), next_legal)
+            # 5) Transition speichern & lernen
+            agent.buffer.add(s, a0, float(r_step), s_next, done, next_legal_actions=next_legals)
+            last_p0_idx = len(agent.buffer.buffer) - 1
 
-            ts = ts_next
+            tts = time.perf_counter()
+            agent.train_step()
+            train_seconds_accum += (time.perf_counter() - tts)
 
-        # final env score & platzierungsbonus (nur für Logging/letzte Transition)
+        # 6) Terminal: ENV-Reward + Finalbonus auf letzte P0-Transition addieren
         ep_env_score = float(ts.rewards[0])
-        ep_final_bonus = float(shaper.final_bonus(ts.rewards, 0))
+        ep_final_bonus = float(shaper.final_bonus(ts.rewards, 0)) if hasattr(shaper, "final_bonus") else 0.0
 
-        # Letzte Transition im Replay (der Episode) um ENV/Final-Bonus anreichern.
-        # Hinweis: DQNAgent2 nutzt N-step PER. Am Episodenende wird die Rest-N-Step Transition
-        # noch gepusht → wir können den letzten Eintrag modifizieren.
-        buf = agent.buffer
-        if len(buf.buffer) > 0:
-            li = len(buf.buffer) - 1
-            last = buf.buffer[li]
-            # addiere ENV (falls konfiguriert) + Platzierungsbonus
-            add_env = ep_env_score if shaper.include_env_reward() else 0.0
-            new_r = float(last.r + add_env + ep_final_bonus)
-            buf.buffer[li] = buf.Exp(last.s, last.a, new_r, last.ns, last.done, last.next_mask)
+        if last_p0_idx is not None:
+            add_env = ep_env_score if (hasattr(shaper, "include_env_reward") and shaper.include_env_reward()) else 0.0
+            bonus = add_env + ep_final_bonus
 
-        # Train
-        st = time.perf_counter()
-        train_out = agent.train_step() or {}
-        train_seconds = time.perf_counter() - st
+            if abs(bonus) > 1e-8:
+                buf = agent.buffer
+                old = buf.buffer[last_p0_idx]
+                new = buf.Experience(old.state, old.action, float(old.reward + bonus),
+                                     old.next_state, old.done, old.next_legal_mask)
+                buf.buffer[last_p0_idx] = new
 
-        # Log train metrics (P0)
+        # ---- Train-Metriken
         metrics = {
             "ep_length": ep_len,
-            "train_seconds": train_seconds,
+            "train_seconds": train_seconds_accum,
             "ep_env_score": ep_env_score,
             "ep_shaping_return": ep_shaping_return,
             "ep_final_bonus": ep_final_bonus,
+            "epsilon": float(getattr(agent, "epsilon", np.nan)),
         }
-        # optional aus dem Agenten übernehmen (loss/epsilon, falls vorhanden)
-        for k in ("loss", "epsilon", "beta"):
-            if k in train_out:
-                metrics[k] = float(train_out[k])
-
         plotter.add_train(ep, metrics)
 
-        # Benchmark+Save
+        # ---- Benchmark + Save in Intervallen
         eval_seconds = plot_seconds = save_seconds = 0.0
         if ep % BINT == 0:
             evs = time.perf_counter()
@@ -216,7 +251,16 @@ def main():
             plotter.add_benchmark(ep, per_opponent)
             plotter.plot_benchmark_rewards()
             plotter.plot_places_latest()
-            plotter.plot_benchmark(filename_prefix="lernkurve", with_macro=True)
+
+            # Einheitliche Titel: „Lernkurve - KxAy vs feste Heuristiken“
+            title_multi = f"Lernkurve - {family.upper()} vs feste Heuristiken"
+            plotter.plot_benchmark(
+                filename_prefix="lernkurve",
+                with_macro=True,
+                family_title=family.upper(),   # Einzelplots: „Lernkurve - KxAy vs {gegner}“
+                multi_title=title_multi,       # Multi- & Macro-Plot: gleicher Titel
+            )
+
             plotter.plot_train(filename_prefix="training_metrics", separate=True)
             plot_seconds = time.perf_counter() - ps
 
@@ -229,25 +273,27 @@ def main():
             plotter.log_timing(
                 ep,
                 ep_seconds=(time.perf_counter() - ep_start),
-                train_seconds=train_seconds,
+                train_seconds=train_seconds_accum,
                 eval_seconds=eval_seconds,
                 plot_seconds=plot_seconds,
                 save_seconds=save_seconds,
                 cum_seconds=cum_seconds,
             )
 
-        # timing csv
+
+        # ---- Timing CSV
         ep_seconds = time.perf_counter() - ep_start
         timer.maybe_log(ep, {
             "steps": ep_len, "ep_seconds": ep_seconds,
-            "train_seconds": train_seconds,
+            "train_seconds": train_seconds_accum,
             "eval_seconds": eval_seconds, "plot_seconds": plot_seconds, "save_seconds": save_seconds
         })
 
     total_seconds = time.perf_counter() - t0
     plotter.log("")
-    plotter.log(f"Gesamtzeit: {total_seconds/3600:0.2f}h (~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)")
-    plotter.log("K1 (DQN) Training abgeschlossen.")
+    plotter.log(f"Gesamtzeit: {total_seconds/3600:0.2f}h (~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)")  
+    plotter.log(f"{family}, Single Agent vs Heuristiken (max_combo). Training abgeschlossen.")
+    plotter.log(f"Path: {paths['run_dir']}")
 
 if __name__ == "__main__":
     main()

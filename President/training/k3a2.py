@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
-# President/training/k3a2_test.py
-# DQN (K3): Snapshot-Selfplay – 1 Learner + 3 Sparring (analog zu k3a1)
+# President/training/k3a2.py — DQN Snapshot-Selfplay (1 Learner + 3 Sparring)
+# Fixes:
+#  - Decision-to-Decision: Learner-Transitions werden erst geschlossen, wenn der Learner wieder am Zug ist
+#  - next_legal_actions nur dann setzen, wenn DERSELBE Spieler wieder zieht (sonst done/Terminal)
+#  - robuster DQNConfig-Build aus DEFAULT_CONFIG (kompatibel zu agents/dqn_agent.py)
 
 import os, datetime, time, copy, numpy as np, torch
 import pyspiel
@@ -12,69 +15,56 @@ from utils.fit_tensor import FeatureConfig, augment_observation
 from utils.plotter import MetricsPlotter
 from utils.timing import TimingMeter
 from utils.reward_shaper import RewardShaper
-
 from utils.load_save_common import find_next_version, prepare_run_dirs, save_config_csv, save_run_meta
 from utils.benchmark import run_benchmark
 from utils.deck import ranks_for_deck
 
 # ============== CONFIG ==============
 CONFIG = {
-    "EPISODES":         10_000,
+    "EPISODES":         2000,
     "BENCH_INTERVAL":   500,
-    "BENCH_EPISODES":   2000,
-    "TIMING_INTERVAL":  200,
-    "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+    "BENCH_EPISODES":   500,
+    "TIMING_INTERVAL":  500,
+    "DECK_SIZE":        "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
-    # DQN (Schlüssel passen zu DQNConfig in dqn_agent.py)
+    # DQN (exakt die Keys aus agents/dqn_agent.py::DQNConfig)
     "DQN": {
-        "learning_rate": 3e-4,
-        "batch_size": 128,
-        "gamma": 0.995,
-        "buffer_size": 200_000,
-        "target_update_freq": 5000,
-        "soft_target_tau": 0.0,
-        "max_grad_norm": 1.0,
-        "n_step": 3,
-        "per_alpha": 0.6,
-        "per_beta_start": 0.4,
-        "per_beta_frames": 1_000_000,
-        "eps_start": 1.0,
-        "eps_end": 0.05,
-        "eps_decay_frames": 500_000,
-        "loss_huber_delta": 1.0,
-        "dueling": True,
-        "device": "cpu",
+        "learning_rate":     3e-4,
+        "batch_size":        128,
+        "gamma":             0.995,
+        "epsilon_start":     1.0,
+        "epsilon_end":       0.05,
+        "epsilon_decay":     0.9997,        # multiplikativ pro train_step
+        "buffer_size":       200_000,
+        "target_update_freq": 5000,         # oder soft_target_tau > 0 für Polyak
+        "soft_target_tau":   0.0,
+        "max_grad_norm":     1.0,
+        "use_double_dqn":    True,
+        "loss_huber_delta":  1.0,
     },
 
-    # ======= Rewards (NEUES System, wie k3a1) =======
+    # ======= Rewards (NEUES System wie k1a1/k1a2) =======
     # STEP_MODE : "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
     # FINAL_MODE: "none" | "env_only" | "rank_bonus" | "both"
     "REWARD": {
         "STEP_MODE": "none",
-        "DELTA_WEIGHT": 1.0,
+        "DELTA_WEIGHT": 0.0,
         "HAND_PENALTY_COEFF": 0.0,
 
         "FINAL_MODE": "env_only",
         "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
     },
 
-    # Features (K3: OneHot oft AN; wird in die Observation augmentiert)
+    # Learner bekommt Seat-OneHot via augment_observation (hier True)
     "FEATURES": { "NORMALIZE": False, "SEAT_ONEHOT": True },
 
-    # Snapshot-Selfplay (wie k3a1)
-    "SNAPSHOT": {
-        "LEARNER_SEAT": 0,
-        "MIX_CURRENT": 0.8,           # Anteil „current“ vs. Snapshot bei Seats 1–3
-        "SNAPSHOT_INTERVAL": 200,     # bewusst kurz für sichtbare Pool-Entwicklung
-        "POOL_CAP": 20,
-    },
+    "SNAPSHOT": { "LEARNER_SEAT": 0, "MIX_CURRENT": 0.8, "SNAPSHOT_INTERVAL": 200, "POOL_CAP": 20 },
 
-    # Benchmark-Gegner
     "BENCH_OPPONENTS": ["single_only", "max_combo", "random2"],
 }
 
-# ===== Greedy-Aktion (ohne ε, mit Legal-Maske & Tie-Break) =====
+# ===== Greedy-Aktion (Q argmax über legal actions) =====
 @torch.no_grad()
 def greedy_action(q_module: torch.nn.Module, obs_vec: np.ndarray, legal_actions, device=None) -> int:
     if device is None:
@@ -84,26 +74,25 @@ def greedy_action(q_module: torch.nn.Module, obs_vec: np.ndarray, legal_actions,
             device = torch.device("cpu")
     s = torch.tensor(obs_vec, dtype=torch.float32, device=device).unsqueeze(0)
     qvals = q_module(s).squeeze(0).detach().cpu().numpy()
-    masked = np.full_like(qvals, -1e9, dtype=np.float32)
+    masked = np.full_like(qvals, -np.inf, dtype=np.float32)
     idx = list(legal_actions)
     masked[idx] = qvals[idx]
     maxv = masked.max()
     cands = np.flatnonzero(masked == maxv)
     return int(np.random.choice(cands))
 
-# ===== Eingefrorene Snapshot-Policy für DQN (immer greedy) =====
+# ===== Eingefrorene Snapshot-DQN (immer greedy) =====
 class SnapshotDQNA:
-    """Frozen DQN-Policy: lädt Q-Snapshot und agiert greedy (argmax) über legal actions."""
     def __init__(self, state_size, num_actions, dqn_cfg, q_state_dict):
-        self.agent = dqn.DQNAgent(state_size=state_size, num_actions=num_actions, cfg=dqn_cfg)
-        # WICHTIG: aktueller Code nutzt .q (nicht .q_network)
-        self.agent.q.load_state_dict(copy.deepcopy(q_state_dict))
-        self.agent.tgt.load_state_dict(self.agent.q.state_dict())
-        self.agent.tgt.eval()
+        self.agent = dqn.DQNAgent(state_size=state_size, num_actions=num_actions, config=dqn_cfg)
+        self.agent.target_network.eval()
+        self.agent.q_network.load_state_dict(copy.deepcopy(q_state_dict))
+        self.agent.target_network.load_state_dict(self.agent.q_network.state_dict())
+        self.agent.target_network.eval()
 
     @torch.no_grad()
     def act(self, obs_vec: np.ndarray, legal_actions):
-        return greedy_action(self.agent.q, obs_vec, legal_actions)
+        return greedy_action(self.agent.q_network, obs_vec, legal_actions)
 
 # =========================== Training ===========================
 def main():
@@ -111,13 +100,10 @@ def main():
     ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     MODELS_ROOT = os.path.join(ROOT, "models")
 
-    # ---- Verzeichnisse (k1-Stil) ----
     family = "k3a2"
-    family_dir = os.path.join(MODELS_ROOT, family)
-    version = find_next_version(family_dir, prefix="model")
+    version = find_next_version(os.path.join(MODELS_ROOT, family), prefix="model")
     paths = prepare_run_dirs(MODELS_ROOT, family, version, prefix="model")
 
-    # ---- Plotter / Logger ----
     plotter = MetricsPlotter(
         out_dir=paths["plots_dir"],
         benchmark_opponents=list(CONFIG["BENCH_OPPONENTS"]),
@@ -145,7 +131,7 @@ def main():
     deck_int = int(CONFIG["DECK_SIZE"])
     num_ranks = ranks_for_deck(deck_int)
     base_dim  = game.observation_tensor_shape()[0]
-    extra_dim = (num_players if CONFIG["FEATURES"]["SEAT_ONEHOT"] else 0)
+    extra_dim = num_players if CONFIG["FEATURES"]["SEAT_ONEHOT"] else 0
     state_size = base_dim + extra_dim
 
     feat_cfg = FeatureConfig(
@@ -154,9 +140,12 @@ def main():
         normalize=CONFIG["FEATURES"]["NORMALIZE"],
     )
 
-    # ---- Agent & Reward ----
-    dqn_cfg = dqn.DQNConfig(**CONFIG["DQN"])
-    learner = dqn.DQNAgent(state_size=state_size, num_actions=A, cfg=dqn_cfg)
+    # ---- Agent & Shaper ----
+    base_cfg = dqn.DEFAULT_CONFIG
+    overrides = {k: CONFIG["DQN"][k] for k in CONFIG["DQN"] if k in base_cfg._fields}
+    dqn_cfg = base_cfg._replace(**overrides)
+
+    learner = dqn.DQNAgent(state_size=state_size, num_actions=A, config=dqn_cfg, device="cpu")
     shaper  = RewardShaper(CONFIG["REWARD"])
 
     # ---- Config & Meta speichern ----
@@ -173,16 +162,10 @@ def main():
         "snapshot_interval": CONFIG["SNAPSHOT"]["SNAPSHOT_INTERVAL"],
         "pool_cap": CONFIG["SNAPSHOT"]["POOL_CAP"],
         "learner_seat": CONFIG["SNAPSHOT"]["LEARNER_SEAT"],
-
-        # Reward-Setup (neues System)
-        "step_mode": shaper.step_mode,
-        "delta_weight": shaper.dw,
-        "hand_penalty_coeff": shaper.hp,
-        "final_mode": shaper.final_mode,
-        "bonus_win":   CONFIG["REWARD"]["BONUS_WIN"],
-        "bonus_2nd":   CONFIG["REWARD"]["BONUS_2ND"],
-        "bonus_3rd":   CONFIG["REWARD"]["BONUS_3RD"],
-        "bonus_last":  CONFIG["REWARD"]["BONUS_LAST"],
+        "step_mode": shaper.step_mode, "delta_weight": shaper.dw,
+        "hand_penalty_coeff": shaper.hp, "final_mode": shaper.final_mode,
+        "bonus_win": CONFIG["REWARD"]["BONUS_WIN"], "bonus_2nd": CONFIG["REWARD"]["BONUS_2ND"],
+        "bonus_3rd": CONFIG["REWARD"]["BONUS_3RD"], "bonus_last": CONFIG["REWARD"]["BONUS_LAST"],
     }, paths["config_csv"])
     save_run_meta({"family": family, "version": version, "algo": "dqn_snapshot", "deck": CONFIG["DECK_SIZE"]},
                   paths["run_meta_json"])
@@ -192,7 +175,7 @@ def main():
     MIX       = float(CONFIG["SNAPSHOT"]["MIX_CURRENT"])
     SNAPINT   = int(CONFIG["SNAPSHOT"]["SNAPSHOT_INTERVAL"])
     POOL_CAP  = int(CONFIG["SNAPSHOT"]["POOL_CAP"])
-    LEARN_SEAT= int(CONFIG["SNAPSHOT"]["LEARNER_SEAT"])
+    LEARN     = int(CONFIG["SNAPSHOT"]["LEARNER_SEAT"])
 
     # ---- Timing ----
     timer = TimingMeter(csv_path=paths["timings_csv"], interval=CONFIG["TIMING_INTERVAL"])
@@ -206,13 +189,13 @@ def main():
         ep_shaping_return = 0.0
 
         ts = env.reset()
-        last_idx_learner = None  # Index der letzten Transition (für Terminal-Boni)
+        last_idx_learner = None
+        pending = None   # offene Transition des Learners: {"s":..., "a":..., "r":...}
 
-        # Seats != Learner: aktuelle Policy (greedy) oder Snapshot (greedy)
+        # Gegner Seats auswählen (current vs Snapshot)
         seat_actor = {}
-        for seat in [s for s in range(num_players) if s != LEARN_SEAT]:
-            use_current = (len(pool) == 0) or (np.random.rand() < MIX)
-            if use_current:
+        for seat in [s for s in range(num_players) if s != LEARN]:
+            if (len(pool) == 0) or (np.random.rand() < MIX):
                 seat_actor[seat] = "current"
             else:
                 sd = pool[np.random.randint(len(pool))]
@@ -222,128 +205,131 @@ def main():
             p = ts.observations["current_player"]
             legal = ts.observations["legal_actions"][p]
 
-            # C++-Observation (konsistent zu state_size)
+            # Wenn der Learner wieder dran ist, eine evtl. offene Transition schließen (decision-to-decision)
+            if (p == LEARN) and (pending is not None):
+                base_now = np.array(env._state.observation_tensor(LEARN), dtype=np.float32)
+                s_now = augment_observation(base_now, player_id=LEARN, cfg=feat_cfg)
+                learner.buffer.add(pending["s"], pending["a"], pending["r"], s_now, False,
+                                   next_legal_actions=legal)  # legal gehört jetzt dem Learner!
+                last_idx_learner = len(learner.buffer.buffer) - 1
+                learner.train_step()
+                pending = None
+
+            # aktuelle Beobachtung des aktiven Spielers
             base_obs = np.array(env._state.observation_tensor(p), dtype=np.float32)
             obs = augment_observation(base_obs, player_id=p, cfg=feat_cfg)
 
-            # Step-Reward-Prep (nur, wenn aktiv)
+            # Step-Shaping Vorbereitung
             if shaper.step_active():
                 hand_before = shaper.hand_size(ts, p, deck_int)
 
-            if p == LEARN_SEAT:
-                # Learner nutzt ε-greedy
+            # Aktion wählen
+            if p == LEARN:
                 a = int(learner.select_action(obs, legal))
             else:
-                # Sparring: immer greedy (kein ε)
-                if seat_actor[p] == "current":
-                    a = int(greedy_action(learner.q, obs, legal))
-                else:
-                    a = int(seat_actor[p].act(obs, legal))
+                a = int(greedy_action(learner.q_network, obs, legal)) if seat_actor[p] == "current" \
+                    else int(seat_actor[p].act(obs, legal))
 
-            ts_next = env.step([a])
-            ep_len += 1
+            # Schritt in der Env
+            ts_next = env.step([a]); ep_len += 1
 
-            if p == LEARN_SEAT:
-                # Next-Obs & optionale Legal-Maske (robust auch im Terminal)
-                if not ts_next.last():
-                    base_next = np.array(env._state.observation_tensor(p), dtype=np.float32)
-                    obs_next = augment_observation(base_next, player_id=p, cfg=feat_cfg)
-                    next_legals = ts_next.observations["legal_actions"][p]
-                else:
-                    obs_next = obs
-                    next_legals = None  # Maske optional
-
-                # Step-Reward anwenden (falls aktiv)
+            # Step-Shaping nur für den Learner speichern
+            if p == LEARN:
                 r = 0.0
                 if shaper.step_active():
                     hand_after = shaper.hand_size(ts_next, p, deck_int)
                     r = float(shaper.step_reward(hand_before=hand_before, hand_after=hand_after))
                     ep_shaping_return += r
 
-                # Transition speichern (inkl. optionaler Legal-Maske)
-                learner.store(
-                    state=obs, action=int(a), reward=float(r),
-                    next_state=obs_next, done=bool(ts_next.last()),
-                    next_legal_actions=next_legals
-                )
-                last_idx_learner = len(learner.buffer.buffer) - 1
-
-                # Online-Train auf Learner-Transitions
-                learner.train_step()
+                # Learner-Transition offen halten bis er wieder am Zug ist oder Terminal
+                assert pending is None
+                pending = {"s": obs, "a": a, "r": r}
 
             ts = ts_next
 
-        # ---- Episodenende: ENV/Bonus auf letzte Learner-Transition addieren ----
-        ep_env_return  = float(ts.rewards[LEARN_SEAT])
-        ep_final_bonus = float(shaper.final_bonus(ts.rewards, LEARN_SEAT))
+        # Episodenende: evtl. offene Learner-Transition finalisieren (done=True)
+        if pending is not None:
+            s_next = pending["s"]  # Dummy-Next-State ok; Maske „alle legal“ (oder None)
+            learner.buffer.add(pending["s"], pending["a"], pending["r"], s_next, True,
+                               next_legal_actions=list(range(A)))
+            last_idx_learner = len(learner.buffer.buffer) - 1
+            learner.train_step()
+            pending = None
+
+        # Finale Rewards / Bonus auf die letzte Learner-Transition addieren
+        ep_env = float(ts.rewards[LEARN])
+        ep_bonus = float(shaper.final_bonus(ts.rewards, LEARN))
         if last_idx_learner is not None:
-            bonus = 0.0
-            if shaper.include_env_reward():
-                bonus += ep_env_return
-            bonus += ep_final_bonus
-            if abs(bonus) > 1e-8:
+            add = (ep_env if shaper.include_env_reward() else 0.0) + ep_bonus
+            if abs(add) > 1e-8:
                 buf = learner.buffer
                 old = buf.buffer[last_idx_learner]
-                # PERBuffer.Exp Felder: ("s","a","r","ns","done","next_mask")
-                buf.buffer[last_idx_learner] = buf.Exp(
-                    old.s, old.a, float(old.r + bonus), old.ns, old.done, old.next_mask
+                buf.buffer[last_idx_learner] = buf.Experience(
+                    old.state, old.action, float(old.reward + add),
+                    old.next_state, old.done, old.next_legal_mask
                 )
 
-        # ---- Snapshot in Pool? ----
+        # Snapshot in Pool?
         if SNAPINT > 0 and (ep % SNAPINT == 0):
-            pool.append(copy.deepcopy(learner.q.state_dict()))
+            pool.append(copy.deepcopy(learner.q_network.state_dict()))
             if len(pool) > POOL_CAP:
                 pool.pop(0)
 
-        # ---- Training-Metriken loggen ----
+        # Training-Metriken
         plotter.add_train(ep, {
             "ep_length":         ep_len,
-            "ep_env_return":     ep_env_return,
+            "ep_env_return":     ep_env,
             "ep_shaping_return": ep_shaping_return,
-            "ep_final_bonus":    ep_final_bonus,
+            "ep_final_bonus":    ep_bonus,
         })
 
-        # ---- Benchmark & Save (nur Learner-Policy) ----
+        # Benchmark & Save (nur Learner-Policy)
         eval_seconds = plot_seconds = save_seconds = 0.0
         if BINT > 0 and (ep % BINT == 0):
-            ev_start = time.perf_counter()
+            evs = time.perf_counter()
             per_opponent = run_benchmark(
-                game=game,
-                agent=learner,
-                opponents_dict=STRATS,
-                opponent_names=CONFIG["BENCH_OPPONENTS"],
-                episodes=BEPS,
-                feat_cfg=feat_cfg,
-                num_actions=A,
+                game=game, agent=learner, opponents_dict=STRATS,
+                opponent_names=CONFIG["BENCH_OPPONENTS"], episodes=BEPS,
+                feat_cfg=feat_cfg, num_actions=A
             )
             plotter.log_bench_summary(ep, per_opponent)
-            eval_seconds = time.perf_counter() - ev_start
+            eval_seconds = time.perf_counter() - evs
 
-            plot_start = time.perf_counter()
+            ps = time.perf_counter()
             plotter.add_benchmark(ep, per_opponent)
             plotter.plot_benchmark_rewards()
             plotter.plot_places_latest()
-            plotter.plot_benchmark(filename_prefix="lernkurve", with_macro=True)
+
+            # Einheitliche Titel für alle "lernkurve"-Plots
+            title_multi = f"Lernkurve - {family.upper()} vs feste Heuristiken"
+            plotter.plot_benchmark(
+                filename_prefix="lernkurve",
+                with_macro=True,
+                family_title=family.upper(),   # Einzelplots: „Lernkurve - KxAy vs <gegner>“
+                multi_title=title_multi,       # Multi & Macro: „Lernkurve - KxAy vs feste Heuristiken“
+            )
+
             plotter.plot_train(filename_prefix="training_metrics", separate=True)
-            plot_seconds = time.perf_counter() - plot_start
+            plot_seconds = time.perf_counter() - ps
 
-            save_start = time.perf_counter()
-            tag = f"{family}_model_{version}_agent_p{LEARN_SEAT}_ep{ep:07d}"
+            ss = time.perf_counter()
+            tag = f"{family}_model_{version}_agent_p{LEARN}_ep{ep:07d}"
             learner.save(os.path.join(paths["weights_dir"], tag))
-            save_seconds = time.perf_counter() - save_start
+            save_seconds = time.perf_counter() - ss
 
-            cum_seconds = time.perf_counter() - t0
+            cum = time.perf_counter() - t0
             plotter.log_timing(
                 ep,
                 ep_seconds=(time.perf_counter() - ep_start),
-                train_seconds=0.0,  # Online-Train oben eingerechnet, hier optional separat loggen
+                train_seconds=0.0,
                 eval_seconds=eval_seconds,
                 plot_seconds=plot_seconds,
                 save_seconds=save_seconds,
-                cum_seconds=cum_seconds,
+                cum_seconds=cum,
             )
 
-        # ---- Timing CSV ----
+
+        # Timing CSV
         ep_seconds = time.perf_counter() - ep_start
         timer.maybe_log(ep, {
             "steps": ep_len,
@@ -354,11 +340,11 @@ def main():
             "save_seconds": save_seconds,
         })
 
-    # Ende
     total_seconds = time.perf_counter() - t0
     plotter.log("")
-    plotter.log(f"Gesamtzeit: {total_seconds/3600:0.2f}h (~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)")
-    plotter.log("K3 (Snapshot-Selfplay, DQN) Training abgeschlossen.")
+    plotter.log(f"Gesamtzeit: {total_seconds/3600:0.2f}h (~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)")  
+    plotter.log(f"{family}, Snapshot Selfplay (1 Learner, 3 Sparring). Training abgeschlossen.")
+    plotter.log(f"Path: {paths['run_dir']}")
 
 if __name__ == "__main__":
     main()
