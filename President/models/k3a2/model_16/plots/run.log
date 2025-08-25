@@ -1,0 +1,4 @@
+[2025-08-25 11:00:29] New Training (k3a2): Snapshot-Selfplay DQN
+[2025-08-25 11:00:29] Deck_Size: 64
+[2025-08-25 11:00:29] Episodes: 2000
+[2025-08-25 11:00:29] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k3a2/model_16

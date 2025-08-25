@@ -1,0 +1,12 @@
+[2025-08-25 14:42:55] New Training (k4a2): Shared-Policy DQN
+[2025-08-25 14:42:55] Deck_Size: 64
+[2025-08-25 14:42:55] Episodes: 2000
+[2025-08-25 14:42:55] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k4a2/model_15
+[2025-08-25 14:44:33] 
+[2025-08-25 14:44:33] Benchmark @train_ep     500 (bench_eps: 200)
+[2025-08-25 14:44:33] Macro Winrate          :  51.8%
+[2025-08-25 14:44:33] Macro Ø-Reward         :  2.120
+[2025-08-25 14:44:33] Winrate vs max_combo   :  26.0% | Σ-Reward:  280.0 | Ø-Reward:  1.400 | Places: [52 (0.26), 44 (0.22), 36 (0.18), 68 (0.34)]
+[2025-08-25 14:44:33] Winrate vs random2     :  59.0% | Σ-Reward:  480.0 | Ø-Reward:  2.400 | Places: [118 (0.59), 51 (0.26), 24 (0.12), 7 (0.04)]
+[2025-08-25 14:44:33] Winrate vs single_only :  70.5% | Σ-Reward:  512.0 | Ø-Reward:  2.560 | Places: [141 (0.70), 35 (0.17), 19 (0.10), 5 (0.03)]
+[2025-08-25 14:44:34] Timing @ep 500: episode 3.8s | train 0.000s | eval 2.4s | plot 1.2s | save 0.005s | cum 0.03h

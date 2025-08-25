@@ -1,0 +1,12 @@
+[2025-08-25 13:56:50] New Training (k1a2): DQN Single-Agent vs Heuristiken (P0→P0)
+[2025-08-25 13:56:50] Deck_Size: 64
+[2025-08-25 13:56:50] Episodes: 10000
+[2025-08-25 13:56:50] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k1a2/model_57
+[2025-08-25 13:58:22] 
+[2025-08-25 13:58:22] Benchmark @train_ep    2000 (bench_eps: 200)
+[2025-08-25 13:58:22] Macro Winrate          :  31.8%
+[2025-08-25 13:58:22] Macro Ø-Reward         :  1.863
+[2025-08-25 13:58:22] Winrate vs max_combo   :  20.5% | Σ-Reward:  288.0 | Ø-Reward:  1.440 | Places: [41 (0.20), 50 (0.25), 65 (0.33), 44 (0.22)]
+[2025-08-25 13:58:22] Winrate vs random2     :  51.0% | Σ-Reward:  457.0 | Ø-Reward:  2.285 | Places: [102 (0.51), 63 (0.32), 25 (0.12), 10 (0.05)]
+[2025-08-25 13:58:22] Winrate vs single_only :  24.0% | Σ-Reward:  373.0 | Ø-Reward:  1.865 | Places: [48 (0.24), 92 (0.46), 45 (0.23), 15 (0.07)]
+[2025-08-25 13:58:23] Timing @ep 2000: episode 4.2s | train 0.046s | eval 2.9s | plot 1.2s | save 0.002s | cum 0.03h

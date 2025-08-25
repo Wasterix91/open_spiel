@@ -5,25 +5,22 @@ from open_spiel.python import rl_environment
 
 from agents import ppo_agent as ppo
 from utils.strategies import STRATS
-from utils.fit_tensor import FeatureConfig, augment_observation
+from utils.fit_tensor import FeatureConfig, augment_observation, expected_feature_len, expected_input_dim
+from utils.deck import ranks_for_deck
 from utils.plotter import MetricsPlotter
-from utils.timing import TimingMeter
 from utils.reward_shaper import RewardShaper
 
 from utils.load_save_common import find_next_version, prepare_run_dirs, save_config_csv, save_run_meta
 from utils.load_save_a1_ppo import save_checkpoint_ppo
 
 from utils.benchmark import run_benchmark
-from utils.deck import ranks_for_deck
-
 
 # ============== CONFIG  ==============
 CONFIG = {
-    "EPISODES":         50_000,
+    "EPISODES":         100_000,
     "BENCH_INTERVAL":   5000,
-    "BENCH_EPISODES":   200,
-    "TIMING_INTERVAL":  500,
-    "DECK_SIZE":        "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+    "BENCH_EPISODES":   2000,
+    "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
     # Training-Gegner (Heuristiken) für Seats 1..3
@@ -56,8 +53,10 @@ CONFIG = {
 
     # Feature-Toggles
     "FEATURES": {
-        "NORMALIZE": False,
-        "SEAT_ONEHOT": False,
+        "USE_HISTORY": False,    # ✅ True = Variante 2 (mit Historie), False = Variante 1 (ohne)
+        "SEAT_ONEHOT": False,   # optional: Sitz-One-Hot im Agent verwenden
+        "PLOT_METRICS": False,
+        "SAVE_METRICS_TO_CSV": False,
     },
 
     # Benchmark-Gegner
@@ -99,39 +98,38 @@ def main():
         "shuffle_cards": True,
         "single_card_mode": False,
     })
+
     env = rl_environment.Environment(game)
-    info_dim = env.observation_spec()["info_state"][0]
     A = env.action_spec()["num_actions"]
     num_players = game.num_players()
 
     # ---- Features ----
-    deck_int = int(CONFIG["DECK_SIZE"])
+    deck_int  = int(CONFIG["DECK_SIZE"])
     num_ranks = ranks_for_deck(deck_int)
+
+    # Wichtig: Seat-One-Hot NICHT im augment_observation anhängen (damit kein doppeltes One-Hot)
     feat_cfg = FeatureConfig(
-        num_players=num_players, num_ranks=num_ranks,
-        add_seat_onehot=CONFIG["FEATURES"]["SEAT_ONEHOT"],
-        normalize=CONFIG["FEATURES"]["NORMALIZE"],
+        num_players=num_players,
+        num_ranks=num_ranks,
+        add_seat_onehot=False,                          # <- immer False lassen
+        include_history=CONFIG["FEATURES"]["USE_HISTORY"],
     )
     seat_id_dim = (num_players if CONFIG["FEATURES"]["SEAT_ONEHOT"] else 0)
 
-    # ---- Agent/opp/reward ----
+    # ✅ Agent-Inputgrößen sauber bestimmen
+    info_dim = expected_feature_len(feat_cfg)  # Basis-Features (ohne Seat-One-Hot)
+
+    # ---- Agent, Gegner, Reward-Shaper ----
     ppo_cfg = ppo.PPOConfig(**CONFIG["PPO"])
-    agent = ppo.PPOAgent(info_dim, A, seat_id_dim=seat_id_dim, config=ppo_cfg)
+    agent   = ppo.PPOAgent(info_dim, A, seat_id_dim=seat_id_dim, config=ppo_cfg)
     opponents = [STRATS[name] for name in CONFIG["OPPONENTS"]]
     shaper = RewardShaper(CONFIG["REWARD"])
 
     # ---- Run-Metadaten & config ----
     save_config_csv({
         "script": family, "version": version,
-        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "agent_type": "PPO", "num_episodes": CONFIG["EPISODES"],
-        "bench_interval": CONFIG["BENCH_INTERVAL"], "bench_episodes": CONFIG["BENCH_EPISODES"],
-        "deck_size": CONFIG["DECK_SIZE"], "num_ranks": num_ranks,
-        "observation_dim": info_dim + seat_id_dim, "num_actions": A,
-        "normalize": CONFIG["FEATURES"]["NORMALIZE"], "seat_onehot": CONFIG["FEATURES"]["SEAT_ONEHOT"],
-        "opponents": ",".join(CONFIG["OPPONENTS"]),
-        "models_dir": paths["weights_dir"], "plots_dir": paths["plots_dir"],
-
+        "deck_size": CONFIG["DECK_SIZE"], "num_ranks": num_ranks, 
+        "use_history": CONFIG["FEATURES"]["USE_HISTORY"],      
         # Reward-Setup (neues System)
         "step_mode": shaper.step_mode,
         "delta_weight": shaper.dw,
@@ -141,6 +139,17 @@ def main():
         "bonus_2nd":   CONFIG["REWARD"]["BONUS_2ND"],
         "bonus_3rd":   CONFIG["REWARD"]["BONUS_3RD"],
         "bonus_last":  CONFIG["REWARD"]["BONUS_LAST"],
+
+        "agent_type": "PPO", "num_episodes": CONFIG["EPISODES"],
+        "bench_interval": CONFIG["BENCH_INTERVAL"], "bench_episodes": CONFIG["BENCH_EPISODES"],
+        "observation_dim": expected_input_dim(feat_cfg),  # inkl. Seat-One-Hot, falls aktiv
+        "num_actions": A,
+        "seat_onehot": CONFIG["FEATURES"]["SEAT_ONEHOT"],
+
+        "opponents": ",".join(CONFIG["OPPONENTS"]),
+        "models_dir": paths["weights_dir"], "plots_dir": paths["plots_dir"],
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+
     }, paths["config_csv"])
 
     save_run_meta({
@@ -148,11 +157,13 @@ def main():
         "algo": "ppo", "deck": CONFIG["DECK_SIZE"]
     }, paths["run_meta_json"])
 
-    # ---- Timing (streaming) ----
-    timer = TimingMeter(csv_path=paths["timings_csv"], interval=CONFIG["TIMING_INTERVAL"])
-
     t0 = time.perf_counter()
     BINT, BEPS = CONFIG["BENCH_INTERVAL"], CONFIG["BENCH_EPISODES"]
+
+    collect_metrics = (
+        CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False)
+        or CONFIG["FEATURES"].get("PLOT_METRICS", False)
+    )
 
     # ---- Training loop ----
     for ep in range(1, CONFIG["EPISODES"] + 1):
@@ -162,6 +173,7 @@ def main():
 
         ts = env.reset()
         last_idx_p0 = None  # Index der letzten P0-Transition im Buffer
+
 
         while not ts.last():
             p = ts.observations["current_player"]
@@ -174,11 +186,12 @@ def main():
 
                 base_obs = ts.observations["info_state"][p]
                 obs = augment_observation(base_obs, player_id=p, cfg=feat_cfg)
+
                 seat_oh = None
                 if CONFIG["FEATURES"]["SEAT_ONEHOT"]:
                     seat_oh = np.zeros(num_players, dtype=np.float32); seat_oh[p] = 1.0
 
-                # wichtig: player_id=0 mitgeben
+                # wichtig: player_id=0 mitgeben (für GAE-Segmentierung im PPOAgent)
                 a = int(agent.step(obs, legal, seat_one_hot=seat_oh, player_id=0))
                 last_idx_p0 = len(agent._buffer.states) - 1
             else:
@@ -211,18 +224,25 @@ def main():
         train_start = time.perf_counter()
         train_metrics = agent.train()
         train_seconds = time.perf_counter() - train_start
-
+     
         # Trainingsmetriken
-        if train_metrics is None:
-            train_metrics = {}
-        train_metrics.update({
-            "train_seconds":      train_seconds,
-            "ep_env_score":       ep_env_score,       # ENV-Score als Metrik
-            "ep_shaping_return":  ep_shaping_return,  # Summe Step-Shaping P0
-            "ep_final_bonus":     ep_final_bonus,     # Bonus P0 (kann 0 sein)
-            "ep_length":          ep_len,
-        })
-        plotter.add_train(ep, train_metrics)
+        if collect_metrics:
+            metrics = train_metrics or {}
+            metrics.update({
+                "train_seconds":      train_seconds,
+                "ep_env_score":       ep_env_score,
+                "ep_shaping_return":  ep_shaping_return,
+                "ep_final_bonus":     ep_final_bonus,
+                "ep_length":          ep_len,
+            })
+            # Nur wenn in CSV gewünscht, wirklich persistieren
+            if CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False):
+                plotter.add_train(ep, metrics)
+            else:
+                # In-Memory sammeln, damit plot_train Daten hat
+                plotter.train_rows.append({"episode": int(ep), **metrics})
+                if plotter.train_keys is None:
+                    plotter.train_keys = ["episode"] + list(metrics.keys())
 
         # ---- Benchmark ----
         eval_seconds = 0.0
@@ -257,10 +277,10 @@ def main():
                 multi_title=title_multi,       # für Multi- & Macro-Plot: gleicher Titel
             )
 
+            if CONFIG["FEATURES"].get("PLOT_METRICS", False):
+                plotter.plot_train(filename_prefix="training_metrics", separate=True)
 
-            plotter.plot_train(filename_prefix="training_metrics", separate=True)
             plot_seconds = time.perf_counter() - plot_start
-
 
             # Save weights (PPO)
             save_start = time.perf_counter()
@@ -280,24 +300,12 @@ def main():
                 cum_seconds=cum_seconds,
             )
 
-        # ---- Episoden-Timing -> CSV ----
-        ep_seconds = time.perf_counter() - ep_start
-        timer.maybe_log(ep, {
-            "steps": ep_len,
-            "ep_seconds": ep_seconds,
-            "train_seconds": train_seconds,
-            "eval_seconds": eval_seconds,
-            "plot_seconds": plot_seconds,
-            "save_seconds": save_seconds,
-        })
-
     # Ende
     total_seconds = time.perf_counter() - t0
     plotter.log("")
     plotter.log(f"Gesamtzeit: {total_seconds/3600:0.2f}h (~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)")  
     plotter.log(f"{family}, Single Agent vs Heuristiken (max_combo). Training abgeschlossen.")
     plotter.log(f"Path: {paths['run_dir']}")
-
 
 if __name__ == "__main__":
     main()

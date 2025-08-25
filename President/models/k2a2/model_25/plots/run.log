@@ -1,0 +1,12 @@
+[2025-08-25 14:28:42] New Training (k2a2): 4 getrennte DQN-Agents — simultanes Lernen
+[2025-08-25 14:28:42] Deck_Size: 64
+[2025-08-25 14:28:42] Episodes: 4000
+[2025-08-25 14:28:42] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k2a2/model_25
+[2025-08-25 14:30:34] 
+[2025-08-25 14:30:34] Benchmark @train_ep     500 (bench_eps: 200)
+[2025-08-25 14:30:34] Macro Winrate          :  16.7%
+[2025-08-25 14:30:34] Macro Ø-Reward         :  1.287
+[2025-08-25 14:30:34] Winrate vs max_combo   :   7.5% | Σ-Reward:  143.0 | Ø-Reward:  0.715 | Places: [15 (0.07), 26 (0.13), 46 (0.23), 113 (0.56)]
+[2025-08-25 14:30:34] Winrate vs random2     :  26.5% | Σ-Reward:  333.0 | Ø-Reward:  1.665 | Places: [53 (0.27), 56 (0.28), 62 (0.31), 29 (0.14)]
+[2025-08-25 14:30:34] Winrate vs single_only :  16.0% | Σ-Reward:  296.0 | Ø-Reward:  1.480 | Places: [32 (0.16), 70 (0.35), 60 (0.30), 38 (0.19)]
+[2025-08-25 14:30:35] Timing @ep 500: episode 4.5s | train 0.000s | eval 3.1s | plot 1.1s | save 0.007s | cum 0.03h

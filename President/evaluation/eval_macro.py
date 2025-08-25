@@ -15,6 +15,7 @@ from agents import dqn_agent as dqn
 from agents import v_table_agent
 from collections import defaultdict
 from utils.strategies import STRATS  
+from utils.deck import ranks_for_deck
 
 from utils.load_save_a1_ppo import load_checkpoint_ppo
 from utils.load_save_a2_dqn import load_checkpoint_dqn
@@ -30,19 +31,20 @@ DECK = "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     {"name": "P3", "type": "max_combo"},
 ] """
 
-PLAYER_CONFIG = [
+""" PLAYER_CONFIG = [
     {"name": "P0", "type": "dqn", "family": "k1a2", "version": "46", "episode": 40_000, "from_pid": 0},
     {"name": "P1", "type": "v_table"},
     {"name": "P2", "type": "dqn", "family": "k1a2", "version": "46", "episode": 40_000, "from_pid": 0},
     {"name": "P3", "type": "v_table"},
 ]
+ """
 
-""" PLAYER_CONFIG = [
-    {"name": "P0", "type": "v_table"},
+PLAYER_CONFIG = [
+    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "46", "episode": 40_000, "from_pid": 0},
     {"name": "P1", "type": "max_combo"},
     {"name": "P1", "type": "max_combo"},
     {"name": "P3", "type": "max_combo"},
-] """
+] 
 
 """ PLAYER_CONFIG = [
     {"name": "P0", "type": "ppo", "family": "k3a1", "version": "05", "episode": 20_000, "from_pid": 0},
@@ -101,6 +103,11 @@ NUM_PLAYERS = game.num_players()
 INFO_DIM = game.information_state_tensor_shape()[0]
 OBS_DIM  = game.observation_tensor_shape()[0]
 NUM_ACTIONS = game.num_distinct_actions()
+DECK_INT = int(GAME_PARAMS["deck_size"])
+NUM_RANKS = ranks_for_deck(DECK_INT)
+BASE_INFO_DIM =  NUM_RANKS + (NUM_PLAYERS - 1) +3
+FULL_INFO_DIM = BASE_INFO_DIM + NUM_RANKS
+BASE_OBS_DIM = OBS_DIM - NUM_RANKS 
 
 # Speicher-Root
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

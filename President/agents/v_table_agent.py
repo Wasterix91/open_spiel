@@ -5,7 +5,7 @@ import json
 class ValueTableAgent:
     index_dt = np.dtype(np.uint64)
     data_dt = np.dtype([('next', index_dt), ('v', np.float32),
-        ('v_count', np.uint8), ('action', np.uint8)])
+        ('v_count', np.uint16), ('action', np.uint8), ('_dummy', np.uint8)])
     sentinel_addr = 0xFFFFFFFFFFFFFFFF
 
     def __init__(self, data_files_path_prefix):
@@ -47,7 +47,7 @@ class ValueTableAgent:
         other_hand_sums_shifted, last_played_shifted = self.remove_empty_players(other_hand_sums, last_played)
         state = [last_played_shifted, trick_rank, trick_count_minus_one] + list(own_hand) + \
             other_hand_sums_shifted + list(cards_gone)
-        print(state)
+        #print(state)
 
         address = 0
         for x in state:
@@ -59,7 +59,7 @@ class ValueTableAgent:
             elem = self.data[address]
             action_dict[int(elem['action'])] = float(elem['v'])
             address = elem['next']
-        print(action_dict)
+        #print(action_dict)
         return action_dict
 
     def table_code_to_openspiel_code(self, code):

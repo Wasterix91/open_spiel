@@ -22,11 +22,11 @@ from utils.deck import ranks_for_deck
 
 # ============== CONFIG ==============
 CONFIG = {
-    "EPISODES":         2000,
-    "BENCH_INTERVAL":   500,
-    "BENCH_EPISODES":   500,
+    "EPISODES":         10_000,
+    "BENCH_INTERVAL":   1000,
+    "BENCH_EPISODES":   1000,
     "TIMING_INTERVAL":  500,
-    "DECK_SIZE":        "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+    "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
     # PPO
@@ -110,15 +110,24 @@ def main():
     deck_int = int(CONFIG["DECK_SIZE"])
     num_ranks = ranks_for_deck(deck_int)
     feat_cfg = FeatureConfig(
-        num_players=num_players, num_ranks=num_ranks,
-        add_seat_onehot=False,                             
-        normalize=CONFIG["FEATURES"]["NORMALIZE"],
+        num_players=num_players,
+        num_ranks=num_ranks,
+        add_seat_onehot=False,   # Seat-1hot hängt der Agent optional an
+        # kein "normalize" hier
     )
     seat_id_dim = num_players if CONFIG["FEATURES"]["SEAT_ONEHOT"] else 0
 
+
     # ---- Agent / Shaper ----
-    ppo_cfg = ppo.PPOConfig(**CONFIG["PPO"])
-    agent = ppo.PPOAgent(info_dim, A, seat_id_dim=seat_id_dim, config=ppo_cfg)
+    ppo_cfg = ppo.DEFAULT_CONFIG._replace(**CONFIG["PPO"])
+
+    agent = ppo.PPOAgent(
+        info_dim, A,
+        seat_id_dim=seat_id_dim,
+        config=ppo_cfg,
+        segmented_gae_mode="jump"   # ← aktiviert Jump-GAE nur hier
+    )
+
     shaper = RewardShaper(CONFIG["REWARD"])
 
     # ---- Config & Meta ----

@@ -106,13 +106,14 @@ class ReplayBuffer:
 
 # =============== PPO Agent =============== #
 class PPOAgent:
-    def __init__(self, info_state_size, num_actions, seat_id_dim=0, config=None, device="cpu"):
+    def __init__(self, info_state_size, num_actions, seat_id_dim=0, config=None, device="cpu", segmented_gae_mode="adjacent"):
         self.device = torch.device(device)
         self._base_state_dim = info_state_size
         self._seat_id_dim = int(seat_id_dim)
         self._input_dim = self._base_state_dim + self._seat_id_dim
         self._num_actions = num_actions
         self._config = config or DEFAULT_CONFIG
+        self._segmented_gae_mode = segmented_gae_mode
 
         self._policy = PolicyNetwork(self._input_dim, num_actions).to(self.device)
         self._value = ValueNetwork(self._input_dim).to(self.device)
@@ -197,6 +198,35 @@ class PPOAgent:
             advantages[t] = lastgaelam
         returns = advantages + values
         return advantages, returns
+    
+    def _compute_gae_segmented_jump(self, rewards, values, dones, player_ids, gamma, lam):
+        """
+        Für k4a1
+        GAE pro Spieler über 'Sprünge' zum nächsten Übergang *des gleichen* player_id.
+        Kein Cross-Seat-Bootstrapping; Endzüge des Seats terminieren die Kette.
+        """
+        T = len(rewards)
+        advantages = np.zeros(T, dtype=np.float32)
+
+        # next_same[t] = Index des nächsten Eintrags mit gleicher player_id (oder -1)
+        last_idx_by_pid = {}
+        next_same = [-1] * T
+        for t in reversed(range(T)):
+            pid = player_ids[t]
+            next_same[t] = last_idx_by_pid.get(pid, -1)
+            last_idx_by_pid[pid] = t
+
+        # A_t = δ_t + γλ * A_{next_same[t]}   (falls es einen nächsten Zug desselben Seats gibt)
+        for t in reversed(range(T)):
+            j = next_same[t]
+            has_next_same = (j != -1) and (not dones[t])
+            next_value = values[j] if has_next_same else 0.0
+            delta = rewards[t] + gamma * next_value * (1.0 if has_next_same else 0.0) - values[t]
+            advantages[t] = delta + gamma * lam * (advantages[j] if has_next_same else 0.0)
+
+        returns = advantages + values
+        return advantages, returns
+
 
     def train(self):
         if len(self._buffer.states) == 0:
@@ -216,11 +246,18 @@ class PPOAgent:
         use_segmented = (len(pids) == len(rewards)) and all(pid is not None for pid in pids)
         if use_segmented:
             player_ids = np.array(pids, dtype=np.int64)
-            adv_np, ret_np = self._compute_gae_segmented(
-                rewards, values_np, dones, player_ids, cfg.gamma, cfg.gae_lambda
-            )
+            mode = getattr(self, "_segmented_gae_mode", "adjacent")
+            if mode == "jump":
+                adv_np, ret_np = self._compute_gae_segmented_jump(
+                    rewards, values_np, dones, player_ids, cfg.gamma, cfg.gae_lambda
+                )
+            else:  # Standard: dein bisheriges Verhalten
+                adv_np, ret_np = self._compute_gae_segmented(
+                    rewards, values_np, dones, player_ids, cfg.gamma, cfg.gae_lambda
+                )
         else:
             adv_np, ret_np = self._compute_gae(rewards, values_np, dones, cfg.gamma, cfg.gae_lambda)
+
 
         advantages = torch.tensor(adv_np, dtype=torch.float32, device=self.device)
         returns = torch.tensor(ret_np, dtype=torch.float32, device=self.device)
