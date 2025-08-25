@@ -14,7 +14,7 @@ from agents import ppo_agent as ppo
 from agents import dqn_agent as dqn
 from agents import v_table_agent
 from collections import defaultdict
-from utils.strategies import STRATS  
+from utils.strategies import STRATS
 from utils.deck import ranks_for_deck
 
 from utils.load_save_a1_ppo import load_checkpoint_ppo
@@ -23,7 +23,8 @@ from utils.load_save_a2_dqn import load_checkpoint_dqn
 # ===================== Konfiguration ===================== #
 NUM_EPISODES = 100_000
 DECK = "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
-# Beispiel: PPO vs 3x Heuristik
+
+# Beispiel-Setup (anpassen):
 """ PLAYER_CONFIG = [
     {"name": "P0", "type": "max_combo"},
     {"name": "P1", "type": "max_combo"},
@@ -36,15 +37,21 @@ DECK = "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     {"name": "P1", "type": "v_table"},
     {"name": "P2", "type": "dqn", "family": "k1a2", "version": "46", "episode": 40_000, "from_pid": 0},
     {"name": "P3", "type": "v_table"},
-]
- """
+] """
 
 PLAYER_CONFIG = [
+    {"name": "P0", "type": "v_table"},
+    {"name": "P1", "type": "max_combo"},
+    {"name": "P2", "type": "v_table"},
+    {"name": "P3", "type": "max_combo"},
+]
+
+""" PLAYER_CONFIG = [
     {"name": "P0", "type": "dqn", "family": "k1a2", "version": "46", "episode": 40_000, "from_pid": 0},
     {"name": "P1", "type": "max_combo"},
     {"name": "P1", "type": "max_combo"},
     {"name": "P3", "type": "max_combo"},
-] 
+]  """
 
 """ PLAYER_CONFIG = [
     {"name": "P0", "type": "ppo", "family": "k3a1", "version": "05", "episode": 20_000, "from_pid": 0},
@@ -105,9 +112,9 @@ OBS_DIM  = game.observation_tensor_shape()[0]
 NUM_ACTIONS = game.num_distinct_actions()
 DECK_INT = int(GAME_PARAMS["deck_size"])
 NUM_RANKS = ranks_for_deck(DECK_INT)
-BASE_INFO_DIM =  NUM_RANKS + (NUM_PLAYERS - 1) +3
+BASE_INFO_DIM = NUM_RANKS + (NUM_PLAYERS - 1) + 3
 FULL_INFO_DIM = BASE_INFO_DIM + NUM_RANKS
-BASE_OBS_DIM = OBS_DIM - NUM_RANKS 
+BASE_OBS_DIM  = OBS_DIM - NUM_RANKS  # identisch zu BASE_INFO_DIM
 
 # Speicher-Root
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -185,13 +192,9 @@ def _ppo_expected_stem(family: str, version: str, seat_on_disk: int, episode: in
 def _dqn_expected_stem(family: str, version: str, seat_on_disk: int, episode: int):
     base_dir = os.path.join(MODELS_ROOT, family, f"model_{version}", "models")
     stem = os.path.join(base_dir, f"{family}_model_{version}_agent_p{seat_on_disk}_ep{episode:07d}")
-    # neue Trainings-Namen
     qnet = stem + "_qnet.pt"
     tgt  = stem + "_tgt.pt"
-    # legacy-Variante (falls vorhanden)
     legacy_q = stem + "_q.pt"
-
-    # Mit neuem Loader reicht _qnet.pt (Target optional) ODER Legacy _q.pt
     if not (os.path.exists(qnet) or os.path.exists(legacy_q)):
         _fatal(
             f"DQN-Checkpoint fehlt: family={family}, version={version}, seat={seat_on_disk}, episode={episode}",
@@ -199,44 +202,46 @@ def _dqn_expected_stem(family: str, version: str, seat_on_disk: int, episode: in
         )
     return stem
 
-
-
 def _alias_dqn_attrs(agent):
-    # Adapter: Richte Aliase ein, damit die Loader (q_net/target_net) mit deinem Agent (q_network/target_network) sprechen.
     if not hasattr(agent, "q_net") and hasattr(agent, "q_network"):
         agent.q_net = agent.q_network
     if not hasattr(agent, "target_net") and hasattr(agent, "target_network"):
         agent.target_net = agent.target_network
     return agent
 
-def _load_ppo_agent(info_dim, num_actions, seat_id_dim, *, family, version, episode, from_pid, device="cpu"):
+def _load_ppo_agent_trydims(num_actions, *, family, version, episode, from_pid, device="cpu"):
+    """Versucht PPO-Checkpoints mit (full/base) x (mit/ohne Seat-One-Hot)."""
     ep = _norm_episode(episode)
     stem = _ppo_expected_stem(family, version, from_pid, ep)
+    weights_dir, tag = os.path.dirname(stem), os.path.basename(stem)
 
-    ag = ppo.PPOAgent(info_state_size=info_dim, num_actions=num_actions, seat_id_dim=seat_id_dim, device=device)
-    weights_dir = os.path.dirname(stem)
-    tag = os.path.basename(stem)
-    try:
-        load_checkpoint_ppo(ag, weights_dir, tag)  # nutzt deine Trainings-Loader
-        ag._policy.eval(); ag._value.eval()
-        return ag
-    except Exception as e:
-        _fatal("Fehler beim Laden via load_checkpoint_ppo(...).", tried=[f"{stem}: {e}"])
+    tried = []
+    for info_dim, seat_id_dim in [
+        (FULL_INFO_DIM, NUM_PLAYERS),
+        (FULL_INFO_DIM, 0),
+        (BASE_INFO_DIM, NUM_PLAYERS),
+        (BASE_INFO_DIM, 0),
+    ]:
+        try:
+            ag = ppo.PPOAgent(info_state_size=info_dim, num_actions=num_actions,
+                              seat_id_dim=seat_id_dim, device=device)
+            load_checkpoint_ppo(ag, weights_dir, tag)
+            ag._policy.eval(); ag._value.eval()
+            return ag
+        except Exception as e:
+            tried.append(f"info_dim={info_dim}, seat_id_dim={seat_id_dim}: {e}")
+    _fatal("Fehler beim Laden via load_checkpoint_ppo(...).", tried=[f"{stem}"] + tried)
 
-def _load_dqn_agent(obs_dim, num_actions, *, family, version, episode, from_pid, num_players, device="cpu"):
+def _load_dqn_agent(num_actions, *, family, version, episode, from_pid, num_players, device="cpu"):
     ep = _norm_episode(episode)
     stem = _dqn_expected_stem(family, version, from_pid, ep)
 
-    tried = []
-    weights_dir = os.path.dirname(stem)
-    tag = os.path.basename(stem)
-
-    for state_size in (obs_dim, obs_dim + num_players):
+    tried, weights_dir, tag = [], os.path.dirname(stem), os.path.basename(stem)
+    # Versuche: full, full+seat, base, base+seat
+    for state_size in (OBS_DIM, OBS_DIM + num_players, BASE_OBS_DIM, BASE_OBS_DIM + num_players):
         ag = dqn.DQNAgent(state_size=state_size, num_actions=num_actions, device=device)
         _alias_dqn_attrs(ag)
-
         try:
-            # Neuer Loader kümmert sich um _qnet/_tgt sowie Legacy _q/_target
             load_checkpoint_dqn(ag, weights_dir, tag)
             if hasattr(ag, "epsilon"):
                 ag.epsilon = 0.0
@@ -246,12 +251,8 @@ def _load_dqn_agent(obs_dim, num_actions, *, family, version, episode, from_pid,
 
     _fatal("Fehler beim Laden von DQN-Gewichten.", tried=tried)
 
-
-
 def load_agents(player_config, game):
     agents = []
-    info_dim    = game.information_state_tensor_shape()[0]
-    obs_dim     = game.observation_tensor_shape()[0]
     num_actions = game.num_distinct_actions()
     num_players = game.num_players()
 
@@ -259,27 +260,18 @@ def load_agents(player_config, game):
         kind = cfg["type"]
 
         if kind == "ppo":
-            # ZWINGEND: family, version, episode
             if not all(k in cfg for k in ("family", "version", "episode")):
                 _fatal(f"PPO-Spieler P{pid}: 'family', 'version' und 'episode' sind Pflicht. Erhalten: {cfg}")
-            ag = None
-            # 1) mit Seat-One-Hot laden
-            try:
-                ag = _load_ppo_agent(info_dim, num_actions, num_players,
-                                     family=cfg["family"], version=cfg["version"], episode=cfg["episode"],
-                                     from_pid=cfg.get("from_pid", pid))
-            except SystemExit:
-                # 2) ohne Seat-One-Hot
-                ag = _load_ppo_agent(info_dim, num_actions, 0,
-                                     family=cfg["family"], version=cfg["version"], episode=cfg["episode"],
-                                     from_pid=cfg.get("from_pid", pid))
+            ag = _load_ppo_agent_trydims(num_actions,
+                                         family=cfg["family"], version=cfg["version"],
+                                         episode=cfg["episode"], from_pid=cfg.get("from_pid", pid))
             agents.append(ag)
             continue
 
         if kind == "dqn":
             if not all(k in cfg for k in ("family", "version", "episode")):
                 _fatal(f"DQN-Spieler P{pid}: 'family', 'version' und 'episode' sind Pflicht. Erhalten: {cfg}")
-            ag = _load_dqn_agent(obs_dim, num_actions,
+            ag = _load_dqn_agent(num_actions,
                                  family=cfg["family"], version=cfg["version"], episode=cfg["episode"],
                                  from_pid=cfg.get("from_pid", pid), num_players=num_players)
             agents.append(ag)
@@ -301,7 +293,6 @@ def load_agents(player_config, game):
 def _masked_softmax_numpy(logits, legal):
     logits = np.asarray(logits, dtype=np.float32)
     if len(legal) == 0:
-        # rare: keine legalen Aktionen -> uniform über alle
         return np.ones_like(logits) / len(logits)
     mask = np.full_like(logits, -np.inf, dtype=np.float32)
     mask[list(legal)] = logits[list(legal)]
@@ -317,14 +308,15 @@ def _masked_softmax_numpy(logits, legal):
 
 def _forward_policy_with_make_input(agent: ppo.PPOAgent, info_state_1d: np.ndarray, seat_id: int, legal):
     seat_oh = np.zeros(NUM_PLAYERS, dtype=np.float32); seat_oh[seat_id] = 1.0
-    x = agent._make_input(info_state_1d, seat_one_hot=seat_oh)  
+    # Wichtig: auf die vom Modell erwartete Basislänge kürzen (Variante-agnostisch)
+    base = info_state_1d[:getattr(agent, "_base_state_dim", len(info_state_1d))]
+    x = agent._make_input(base, seat_one_hot=seat_oh)
     with torch.no_grad():
         logits = agent._policy(x).detach().cpu().numpy()
-    probs = _masked_softmax_numpy(logits, legal)    
+    probs = _masked_softmax_numpy(logits, legal)
     return int(np.argmax(probs))
 
 def _forward_policy_autopad(policy_net: torch.nn.Module, obs_1d: np.ndarray, device):
-    # robust gegen kleinere/größere Eingaben
     x = np.asarray(obs_1d, dtype=np.float32)
     try:
         in_features = policy_net.net[0].in_features
@@ -346,13 +338,11 @@ def choose_policy_action(agent, state, player):
     if isinstance(agent, ppo.PPOAgent):
         info_vec = np.array(state.information_state_tensor(player), dtype=np.float32)
 
-        # bevorzuge _make_input (Seat-OneHot korrekt)
         if hasattr(agent, "_make_input"):
             return collections.namedtuple("AgentOutput", ["action"])(action=_forward_policy_with_make_input(
                 agent, info_vec, seat_id=player, legal=legal
             ))
 
-        # Fallback: Autopad + masked softmax
         device = getattr(agent, "device", "cpu")
         logits = _forward_policy_autopad(agent._policy, info_vec, device)
         probs = _masked_softmax_numpy(logits, legal)
@@ -362,7 +352,6 @@ def choose_policy_action(agent, state, player):
     # DQN-Agent (greedy)
     if isinstance(agent, dqn.DQNAgent):
         obs_vec = np.array(state.observation_tensor(player), dtype=np.float32)
-        # optional: autopad auf q_network.in_features (inkl. Seat-OneHot, falls benötigt)
         try:
             in_features = agent.q_network.net[0].in_features
         except Exception:
@@ -633,7 +622,6 @@ def main():
     plt.savefig(os.path.join(PLOT_DIR, "04_pass_vs_play.jpg"))
 
     # 05 - Kombotyp-Anteile je Spieler
-    # (wir leiten die Kombos wie gehabt aus den Action-Strings ab)
     combo_labels = ["Single", "Pair", "Triple", "Quad", "5-of-a-kind", "6-of-a-kind", "7-of-a-kind", "8-of-a-kind"]
     action_types = {}
     for aid in range(NUM_ACTIONS):

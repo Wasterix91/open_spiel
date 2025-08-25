@@ -1,3 +1,4 @@
+# evaluation/eval_micro.py
 # -*- coding: utf-8 -*-
 # evaluation/eval_micro.py — Single-Game Debug/Eval (greedy, explizite Checkpoints)
 # - bricht ab, wenn Checkpoints fehlen (kein Random-Init)
@@ -14,49 +15,23 @@ from agents import v_table_agent
 from utils.strategies import STRATS
 from utils.load_save_a1_ppo import load_checkpoint_ppo
 from utils.load_save_a2_dqn import load_checkpoint_dqn
-
-
-#NUM_EPISODES = 10_000
-DECK = "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+from utils.deck import ranks_for_deck
 
 # ====== Setup ======
 GAME_SETTINGS = {
     "num_players": 4,
-    "deck_size": DECK[0],
+    "deck_size": "16",
     "shuffle_cards": True,
     "single_card_mode": False,
 }
 
-
-# Beispiel: PPO vs 3x Heuristik
-""" PLAYER_CONFIG = [
-    {"name": "P0", "type": "max_combo"},
-    {"name": "P1", "type": "max_combo"},
-    {"name": "P2", "type": "dqn", "family": "k1a2", "version": "38", "episode": 75_000, "from_pid": 0},
-    {"name": "P3", "type": "max_combo"},
-] """
-
+# Beispiel-Config
 PLAYER_CONFIG = [
     {"name": "P0", "type": "dqn", "family": "k1a2", "version": "46", "episode": 40_000, "from_pid": 0},
     {"name": "P1", "type": "v_table"},
     {"name": "P2", "type": "max_combo"},
     {"name": "P3", "type": "max_combo"},
 ]
-
-# Beispiel-Config (alle ppo/dqn-Spieler MÜSSEN family/version/episode haben)
-""" PLAYER_CONFIG = [
-    {"name":"P0","type":"ppo","family":"k3a1","version":"05","episode":"20_000","from_pid":0},
-    {"name":"P1","type":"max_combo"},
-    {"name":"P2","type":"max_combo"},
-    {"name":"P3","type":"max_combo"},
-] """
-
-""" PLAYER_CONFIG = [
-    {"name": "P0", "type": "ppo", "family": "k3a1", "version": "05", "episode": 20_000, "from_pid": 0},
-    {"name": "P1", "type": "ppo", "family": "k1a1", "version": "57", "episode": 200, "from_pid": 0},
-    {"name": "P2", "type": "ppo", "family": "k3a1", "version": "05", "episode": 20_000, "from_pid": 0},
-    {"name": "P3", "type": "ppo", "family": "k1a1", "version": "57", "episode": 200, "from_pid": 0},
-] """
 
 # ====== Pfade & kleine Utils ======
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -92,13 +67,9 @@ def _ppo_expected_stem(family: str, version: str, seat_on_disk: int, episode: in
 def _dqn_expected_stem(family: str, version: str, seat_on_disk: int, episode: int):
     base_dir = os.path.join(MODELS_ROOT, family, f"model_{version}", "models")
     stem = os.path.join(base_dir, f"{family}_model_{version}_agent_p{seat_on_disk}_ep{episode:07d}")
-    # neue Trainings-Namen
     qnet = stem + "_qnet.pt"
     tgt  = stem + "_tgt.pt"
-    # legacy-Variante (falls vorhanden)
     legacy_q = stem + "_q.pt"
-
-    # Mit neuem Loader reicht _qnet.pt (Target optional) ODER Legacy _q.pt
     if not (os.path.exists(qnet) or os.path.exists(legacy_q)):
         _fatal(
             f"DQN-Checkpoint fehlt: family={family}, version={version}, seat={seat_on_disk}, episode={episode}",
@@ -106,9 +77,7 @@ def _dqn_expected_stem(family: str, version: str, seat_on_disk: int, episode: in
         )
     return stem
 
-
 def _alias_dqn_attrs(agent):
-    # Adapter, damit Loader mit evtl. abweichenden Attributnamen klarkommen
     if not hasattr(agent, "q_net") and hasattr(agent, "q_network"):
         agent.q_net = agent.q_network
     if not hasattr(agent, "target_net") and hasattr(agent, "target_network"):
@@ -119,7 +88,6 @@ def _alias_dqn_attrs(agent):
 def _masked_softmax_numpy(logits, legal):
     logits = np.asarray(logits, dtype=np.float32)
     if len(legal) == 0:
-        # corner-case: keine legalen (sollte nicht passieren)
         return np.ones_like(logits) / len(logits)
     mask = np.full_like(logits, -np.inf, dtype=np.float32)
     mask[list(legal)] = logits[list(legal)]
@@ -152,7 +120,12 @@ def _load_dqn_agent(obs_dim, num_actions, *, family, version, episode, from_pid,
     ep = _norm_episode(episode)
     stem = _dqn_expected_stem(family, version, from_pid, ep)
     tried = []
-    for state_size in (obs_dim, obs_dim + num_players):  # ohne/mit Seat-One-Hot
+
+    # deck-aware: auch base obs (ohne Historie) versuchen
+    num_ranks = ranks_for_deck(int(GAME_SETTINGS["deck_size"]))
+    base_obs = obs_dim - num_ranks
+
+    for state_size in (obs_dim, obs_dim + num_players, base_obs, base_obs + num_players):
         ag = dqn.DQNAgent(state_size=state_size, num_actions=num_actions, device=device)
         _alias_dqn_attrs(ag)
         weights_dir, tag = os.path.dirname(stem), os.path.basename(stem)
@@ -170,6 +143,10 @@ def load_agents(cfgs, game):
     num_actions = game.num_distinct_actions()
     num_players = game.num_players()
 
+    num_ranks   = ranks_for_deck(int(GAME_SETTINGS["deck_size"]))
+    base_info   = num_ranks + (num_players - 1) + 3
+    full_info   = base_info + num_ranks
+
     agents = []
     for pid, cfg in enumerate(cfgs):
         kind = cfg["type"]
@@ -177,15 +154,19 @@ def load_agents(cfgs, game):
         if kind == "ppo":
             if not all(k in cfg for k in ("family","version","episode")):
                 _fatal(f"PPO-Spieler P{pid}: 'family', 'version' und 'episode' sind Pflicht. Erhalten: {cfg}")
-            # zuerst MIT, dann OHNE Seat-One-Hot versuchen
-            try:
-                ag = _load_ppo_agent(info_dim, num_actions, num_players,
-                                     family=cfg["family"], version=cfg["version"], episode=cfg["episode"],
-                                     from_pid=cfg.get("from_pid", pid))
-            except SystemExit:
-                ag = _load_ppo_agent(info_dim, num_actions, 0,
-                                     family=cfg["family"], version=cfg["version"], episode=cfg["episode"],
-                                     from_pid=cfg.get("from_pid", pid))
+            # Versuche (full/base) x (mit/ohne Seat-One-Hot)
+            tried = []
+            for idim, seatdim in [(full_info, num_players), (full_info, 0), (base_info, num_players), (base_info, 0)]:
+                try:
+                    ag = _load_ppo_agent(idim, num_actions, seatdim,
+                                         family=cfg["family"], version=cfg["version"], episode=cfg["episode"],
+                                         from_pid=cfg.get("from_pid", pid))
+                    break
+                except SystemExit as e:
+                    tried.append(str(e))
+                    ag = None
+            if ag is None:
+                _fatal("PPO-Checkpoint konnte mit keiner Dim geladen werden.", tried=tried)
             agents.append(ag); continue
 
         if kind == "dqn":
@@ -211,7 +192,9 @@ def load_agents(cfgs, game):
 def _ppo_logits(agent: ppo.PPOAgent, info_state_1d: np.ndarray, seat_id: int, num_players: int):
     # immer Seat-OneHot bauen; _make_input ignoriert sie, wenn _seat_id_dim==0
     seat_oh = np.zeros(num_players, dtype=np.float32); seat_oh[seat_id] = 1.0
-    x = agent._make_input(info_state_1d, seat_one_hot=seat_oh)
+    # Wichtig: auf die erwartete Basislänge kürzen (kompatibel V1/V2)
+    base = info_state_1d[:getattr(agent, "_base_state_dim", len(info_state_1d))]
+    x = agent._make_input(base, seat_one_hot=seat_oh)
     with torch.no_grad():
         return agent._policy(x).detach().cpu().numpy()
 
@@ -250,14 +233,13 @@ def choose_policy_action(agent, state, player, num_players, num_actions):
     if isinstance(agent, dqn.DQNAgent):
         obs_vec = np.array(state.observation_tensor(player), dtype=np.float32)
         qvals = _dqn_qvalues(agent, obs_vec, player, num_players)
-        probs = _masked_softmax_numpy(qvals, legal)  # Pseudo-Probabilitäten
+        probs = _masked_softmax_numpy(qvals, legal)
         return AgentOut(int(np.argmax(probs))), probs, qvals
 
     # Heuristik
     if callable(agent):
         a = int(agent(state))
         if a not in legal: a = int(np.random.choice(legal))
-        # Dummy-Probs: uniform über legal
         probs = np.zeros(num_actions, dtype=np.float32)
         probs[legal] = 1.0 / max(1, len(legal))
         scores = probs.copy()
@@ -270,19 +252,15 @@ def write_initial_ist_csv(game, state, csv_dir, filename="initial_info_state_ten
     info_dim = game.information_state_tensor_shape()[0]
     rows = []
     for pid in range(game.num_players()):
-        ist = state.information_state_tensor(pid)  # list[float]
-        # zur Sicherheit in float konvertieren und auf Länge trimmen
+        ist = state.information_state_tensor(pid)
         vec = list(map(float, ist))[:info_dim]
         row = {"player": pid}
-        # breite Spalten f0..f{info_dim-1}
         row.update({f"f{i}": vec[i] for i in range(info_dim)})
         rows.append(row)
     cols = ["player"] + [f"f{i}" for i in range(info_dim)]
     out = os.path.join(csv_dir, filename)
     pd.DataFrame(rows, columns=cols).to_csv(out, index=False)
     print(f"🧮 Initialer InformationStateTensor gespeichert: {out}")
-
-
 
 # ====== 1-Spiel-Debug ======
 def main():
@@ -301,9 +279,7 @@ def main():
 
     run_dir   = os.path.join(eval_root, f"eval_micro_{next_run_num:02d}")
     csv_dir   = os.path.join(run_dir, "csv")
-   
     os.makedirs(csv_dir, exist_ok=True)
-
 
     CONFIG_CSV = os.path.join(run_dir, "config.csv")
     LOG_CSV    = os.path.join(csv_dir, "game_log.csv")
@@ -314,7 +290,6 @@ def main():
     pd.DataFrame(PLAYER_CONFIG).to_csv(os.path.join(run_dir, "player_config.csv"), index=False)
     print(f"📁 Eval-Micro Run-Ordner: {run_dir}")
 
-    # Config schreiben (kompakt)
     pd.DataFrame([{
         "game_settings": json.dumps(GAME_SETTINGS),
         "players": json.dumps(PLAYER_CONFIG),
@@ -354,7 +329,6 @@ def main():
                 "action_id": a,
                 "action_text": txt,
                 "prob": float(probs[a]),
-                # Score: PPO⇒Logit, DQN⇒Q-Value, Heuristik⇒Prob
                 "score": float(scores[a]),
                 "chosen": int(a == action),
             })
@@ -385,6 +359,6 @@ def main():
 
     with open(os.path.join(run_dir, "summary.json"), "w") as f:
         json.dump(summary, f, indent=2)
-
+        
 if __name__ == "__main__":
     main()

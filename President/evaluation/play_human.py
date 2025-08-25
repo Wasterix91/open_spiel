@@ -1,10 +1,10 @@
+# play_human.py
 # -*- coding: utf-8 -*-
 # Interactive CLI: Du spielst Sitz 0 (Human). Gegner = Heuristiken oder geladene Policies.
-# Jetzt mit Logging wie eval_micro:
-#  - Run-Ordner nach erfolgreichem Laden
+# Logging wie eval_micro:
 #  - game_log.csv, action_probs.csv, initial_info_state_tensor.csv, player_config.csv, game_settings.json, summary.json
+#  - zusätzlich: history.json (+ optional history_text.json)
 #  - Greedy-Eval für Policies (PPO/DQN)
-#  - Abbruch, wenn explizite Checkpoints fehlen
 
 import os, json, numpy as np, pandas as pd, torch, pyspiel
 
@@ -16,11 +16,12 @@ from collections import namedtuple
 
 from utils.load_save_a1_ppo import load_checkpoint_ppo
 from utils.load_save_a2_dqn import load_checkpoint_dqn
+from utils.deck import ranks_for_deck
 
 # ===== Ausgabe für InfoState steuern =====
 SHOW_INFOSTATE = True     # auf False setzen, wenn du die Ausgabe mal nicht willst
-INFOSTATE_DECIMALS = 3    # Rundung der Werte
-INFOSTATE_PER_LINE = 16   # wie viele Werte pro Zeile drucken
+INFOSTATE_DECIMALS = 3    # Rundung der Werte (Reserve)
+INFOSTATE_PER_LINE = 16   # wie viele Werte pro Zeile drucken (Reserve)
 
 # ===== Spiel-Setup =====
 GAME_SETTINGS = {
@@ -31,17 +32,8 @@ GAME_SETTINGS = {
 }
 
 # Gegner: Heuristiken oder Policies; für Policies sind family/version/episode Pflicht!
-# from_pid: von welchem Seat die Gewichte auf der Platte geladen werden (für shared policy etc.)
-""" OPPONENTS = [
-    {"name": "P1", "type": "dqn", "family": "k1a2", "version": "38", "episode": 75_000, "from_pid": 0},
-    {"name": "P2", "type": "dqn", "family": "k1a2", "version": "38", "episode": 75_000, "from_pid": 0},
-    # Beispiel PPO:
-    {"name": "P3", "type": "dqn", "family": "k1a2", "version": "38", "episode": 75_000, "from_pid": 0},
-    #{"name": "Opp3", "type": "ppo", "family": "k1a1", "version": "55", "episode": 80, "from_pid": 0},  # Player3 für 12 Karten
-] """
-
 OPPONENTS = [
-    {"name": "dqn", "type": "dqn", "family": "k1a2", "version": "46", "episode": 40_000, "from_pid": 0},
+    {"name": "max_combo", "type": "max_combo"},
     {"name": "v_table", "type": "v_table"},
     {"name": "max_combo", "type": "max_combo"},
 ]
@@ -80,20 +72,15 @@ def _ppo_expected_stem(family: str, version: str, seat_on_disk: int, episode: in
 def _dqn_expected_stem(family: str, version: str, seat_on_disk: int, episode: int):
     base_dir = os.path.join(MODELS_ROOT, family, f"model_{version}", "models")
     stem = os.path.join(base_dir, f"{family}_model_{version}_agent_p{seat_on_disk}_ep{episode:07d}")
-    # neue Trainings-Namen
     qnet = stem + "_qnet.pt"
     tgt  = stem + "_tgt.pt"
-    # legacy-Variante (falls vorhanden)
     legacy_q = stem + "_q.pt"
-
-    # Mit neuem Loader reicht _qnet.pt (Target optional) ODER Legacy _q.pt
     if not (os.path.exists(qnet) or os.path.exists(legacy_q)):
         _fatal(
             f"DQN-Checkpoint fehlt: family={family}, version={version}, seat={seat_on_disk}, episode={episode}",
             tried=[qnet, tgt, legacy_q],
         )
     return stem
-
 
 def _alias_dqn_attrs(agent):
     if not hasattr(agent, "q_net") and hasattr(agent, "q_network"):
@@ -106,7 +93,6 @@ def _alias_dqn_attrs(agent):
 def _masked_softmax_numpy(scores, legal):
     scores = np.asarray(scores, dtype=np.float32)
     if len(legal) == 0:
-        # keine legalen Aktionen → gebe 0-Vector zurück (keine Verteilung)
         return np.zeros_like(scores, dtype=np.float32)
     mask = np.full_like(scores, -np.inf, dtype=np.float32)
     mask[list(legal)] = scores[list(legal)]
@@ -119,7 +105,6 @@ def _masked_softmax_numpy(scores, legal):
         p[list(legal)] = 1.0 / len(legal)
         return p
     return ex / s
-
 
 # ===== Loader =====
 def _load_ppo_agent(info_dim, num_actions, seat_id_dim, *, family, version, episode, from_pid, device="cpu"):
@@ -138,7 +123,12 @@ def _load_dqn_agent(obs_dim, num_actions, *, family, version, episode, from_pid,
     ep = _norm_episode(episode)
     stem = _dqn_expected_stem(family, version, from_pid, ep)
     tried = []
-    for state_size in (obs_dim, obs_dim + num_players):  # ohne/mit Seat-One-Hot
+
+    # base obs (ohne Historie) zusätzlich versuchen
+    num_ranks = ranks_for_deck(int(GAME_SETTINGS["deck_size"]))
+    base_obs = obs_dim - num_ranks
+
+    for state_size in (obs_dim, obs_dim + num_players, base_obs, base_obs + num_players):
         ag = dqn.DQNAgent(state_size=state_size, num_actions=num_actions, device=device)
         _alias_dqn_attrs(ag)
         weights_dir, tag = os.path.dirname(stem), os.path.basename(stem)
@@ -156,20 +146,26 @@ def load_opponent(cfg, pid, game):
     num_actions = game.num_distinct_actions()
     NUM_PLAYERS = game.num_players()
 
+    NUM_RANKS   = ranks_for_deck(int(GAME_SETTINGS["deck_size"]))
+    BASE_INFO   = NUM_RANKS + (NUM_PLAYERS - 1) + 3
+    FULL_INFO   = BASE_INFO + NUM_RANKS
+    BASE_OBS    = obs_dim - NUM_RANKS
+
     kind = cfg.get("type")
 
     if kind == "ppo":
         if not all(k in cfg for k in ("family","version","episode")):
             _fatal(f"PPO-Gegner P{pid}: 'family', 'version' und 'episode' sind Pflicht. Erhalten: {cfg}")
-        # zuerst MIT, dann OHNE Seat-One-Hot versuchen
-        try:
-            return _load_ppo_agent(info_dim, num_actions, NUM_PLAYERS,
-                                   family=cfg["family"], version=cfg["version"], episode=cfg["episode"],
-                                   from_pid=cfg.get("from_pid", pid))
-        except SystemExit:
-            return _load_ppo_agent(info_dim, num_actions, 0,
-                                   family=cfg["family"], version=cfg["version"], episode=cfg["episode"],
-                                   from_pid=cfg.get("from_pid", pid))
+        # (full/base) x (mit/ohne Seat-One-Hot)
+        tried = []
+        for idim, seatdim in [(FULL_INFO, NUM_PLAYERS), (FULL_INFO, 0), (BASE_INFO, NUM_PLAYERS), (BASE_INFO, 0)]:
+            try:
+                return _load_ppo_agent(idim, num_actions, seatdim,
+                                       family=cfg["family"], version=cfg["version"], episode=cfg["episode"],
+                                       from_pid=cfg.get("from_pid", pid))
+            except SystemExit as e:
+                tried.append(str(e))
+        _fatal("PPO-Checkpoint konnte mit keiner Dim geladen werden.", tried=tried)
 
     if kind == "dqn":
         if not all(k in cfg for k in ("family","version","episode")):
@@ -189,7 +185,9 @@ def load_opponent(cfg, pid, game):
 # ===== Vorwärtswege (Logits/Qs) =====
 def _ppo_logits(agent: ppo.PPOAgent, info_state_1d: np.ndarray, seat_id: int, num_players: int):
     seat_oh = np.zeros(num_players, dtype=np.float32); seat_oh[seat_id] = 1.0
-    x = agent._make_input(info_state_1d, seat_one_hot=seat_oh)
+    # Wichtig: auf die erwartete Basislänge kürzen (kompatibel V1/V2)
+    base = info_state_1d[:getattr(agent, "_base_state_dim", len(info_state_1d))]
+    x = agent._make_input(base, seat_one_hot=seat_oh)
     with torch.no_grad():
         return agent._policy(x).detach().cpu().numpy()
 
@@ -225,7 +223,6 @@ def choose_by_agent_with_probs(agent, state, pid, NUM_PLAYERS):
         probs = np.zeros(state.num_distinct_actions(), dtype=np.float32)
         probs[legal] = 1.0 / max(1, len(legal))
         scores = probs.copy()
-        # greedy (Uniform → egal, wir markieren chosen separat)
         return AgentOut(a), probs, scores
 
     # PPO: greedy über masked softmax(Logits)
@@ -265,8 +262,6 @@ _RANKS_BY_DECK = {
 }
 
 def _rank_headers_for_current_game(n_ranks: int) -> list[str]:
-    """Wähle die korrekten Rang-Labels basierend auf Deckgröße.
-    Index 0 ist die niedrigste Karte im verwendeten Deck."""
     ds = _int_deck_size()
     if ds in _RANKS_BY_DECK and len(_RANKS_BY_DECK[ds]) == n_ranks:
         return _RANKS_BY_DECK[ds]
@@ -274,11 +269,6 @@ def _rank_headers_for_current_game(n_ranks: int) -> list[str]:
     return base[:n_ranks]
 
 def print_info_state(state, pid, decimals=None, per_line=None):
-    """
-    Kompakte, deck-size-abhängige Ausgabe:
-    <R1 R2 ...> |  P1  P2  P3 | LastP nTop TopRank
-    Werte: counts, draw sizes, letzte(r) Spieler/Top-Stack/oberste Karte (als Rang).
-    """
     vec = np.asarray(state.information_state_tensor(pid), dtype=np.float32)
     L = vec.shape[0]
 
@@ -290,7 +280,6 @@ def print_info_state(state, pid, decimals=None, per_line=None):
             p1, p2, p3 = map(int, vec[n_ranks:n_ranks+3])
             lastp, ntop, topidx = map(int, vec[n_ranks+3:n_ranks+6])
         except Exception:
-            # Fallback auf Rohdump, falls das Layout abweicht
             print(f"[InfoState P{pid}] len={L}")
             print("  " + " ".join(str(int(x)) if float(x).is_integer() else f"{x:.3f}" for x in vec))
             return
@@ -309,11 +298,9 @@ def print_info_state(state, pid, decimals=None, per_line=None):
         print(f"{left} | {right} | {lastp:>5d} {ntop:>4d} {top_name:>7}")
         return
 
-    # Fallback für unbekanntes Layout
+    # Fallback
     print(f"[InfoState P{pid}] len={L}")
     print("  " + " ".join(str(int(x)) if float(x).is_integer() else f"{x:.3f}" for x in vec))
-
-
 
 # ===== Initialer InfoState-Tensor dump =====
 def write_initial_ist_csv(game, state, csv_dir, filename="initial_info_state_tensor.csv"):
@@ -338,7 +325,7 @@ def main():
     # Gegner laden (bricht ggf. mit FATAL ab)
     opponents = [load_opponent(OPPONENTS[i-1], i, game) for i in [1,2,3]]
 
-    # Run-Verzeichnisse (erst nach erfolgreichem Laden erstellen)
+    # Run-Verzeichnisse
     eval_root = os.path.join(BASE_DIR, "eval_micro")
     existing = sorted([d for d in os.listdir(eval_root)] if os.path.isdir(eval_root) else [])
     existing = [d for d in existing if d.startswith("eval_micro_")]
@@ -400,7 +387,6 @@ def main():
                     choice = None
             action = int(choice)
 
-            # Für PROBS-CSV füllen wir (wie eval_micro bei Heuristik) uniform über legal
             probs = np.zeros(game.num_distinct_actions(), dtype=np.float32)
             if len(legal) > 0:
                 probs[legal] = 1.0 / len(legal)
@@ -423,7 +409,7 @@ def main():
                 "player": pid,
                 "action_id": a,
                 "action_text": txt,
-                "prob": float(probs[a]),  # bei P0 ist probs bereits uniform über legal
+                "prob": float(probs[a]),
                 "score": float(scores[a]),
                 "chosen": int(a == action),
             })
@@ -443,7 +429,36 @@ def main():
     print(f"Game-Log gespeichert: {LOG_CSV}")
     print(f"Aktions-Wahrscheinlichkeiten gespeichert: {PROBS_CSV}")
 
-    summary = {"micro_id": next_run_num, "num_turns": turn, "returns": rets}
+    # --- History als JSON (für Replays / Debug) ---
+    hist_ids = [int(a) for a in state.history()]  # reine Action-IDs
+    with open(os.path.join(run_dir, "history.json"), "w") as f:
+        json.dump(hist_ids, f, indent=2)
+
+    # Optional: lesbare History mit Action-Texten
+    try:
+        st = game.new_initial_state()
+        hist_text = []
+        for a in hist_ids:
+            pid_now = st.current_player()
+            try:
+                a_txt = st.action_to_string(pid_now, a)
+            except Exception:
+                a_txt = str(a)
+            p = int(pid_now)
+            hist_text.append({
+                "player": p,                 # -1 bei Chance-Knoten
+                "chance": (p < 0),
+                "action_id": int(a),
+                "action_text": a_txt
+            })
+            st.apply_action(a)
+        with open(os.path.join(run_dir, "history_text.json"), "w") as f:
+            json.dump(hist_text, f, indent=2)
+    except Exception as e:
+        print(f"[WARN] history_text.json konnte nicht erstellt werden: {e}")
+
+    # Summary (JSON-serialisierbar machen)
+    summary = {"micro_id": int(next_run_num), "num_turns": int(turn), "returns": [float(x) for x in rets]}
     with open(os.path.join(run_dir, "summary.json"), "w") as f:
         json.dump(summary, f, indent=2)
 
