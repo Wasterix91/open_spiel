@@ -1,2 +1,0 @@
-version,timestamp,script,agent_type,num_episodes,eval_interval,eval_episodes,deck_size,observation_dim,num_actions,run_dir,normalize,seat_onehot,mix_current,snapshot_interval,pool_cap,learner_seat
-02,2025-08-17 04:08:38,k3a1,PPO-K3-SNAPSHOT,1000000,10000,2000,64,18,65,/home/wasterix/OpenSpiel/open_spiel/President/models/k3a1/model_02,False,True,0.8,10000,20,0
