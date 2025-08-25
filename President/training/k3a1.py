@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 # President/training/k3a1.py — PPO (K3): Snapshot-Selfplay, 1 Learner + 3 Sparring
-# Hinweis: minimale Änderungen gegenüber k3a1_test.py
-#  - family-Name geändert (eigener Output-Ordner)
-#  - Konfig getuned, damit Snapshots bei kurzen Läufen sichtbar sind (kürzeres SNAPSHOT_INTERVAL)
+# Hinweis: analog zu k1a1-Änderungen:
+#  - TimingMeter entfernt, Metrics/Plots optional per Flags
+#  - FeatureConfig mit include_history; Seat-One-Hot nicht in augment_observation
+#  - Dimensionsberechnung über expected_feature_len/expected_input_dim
+#  - umfangreicheres Config-Logging
+#  - größeres Standard-Setup (Episoden/Bench/Deck)
 
 import os, datetime, time, copy, numpy as np, torch
 import pyspiel
@@ -10,9 +13,8 @@ from open_spiel.python import rl_environment
 
 from agents import ppo_agent as ppo
 from utils.strategies import STRATS
-from utils.fit_tensor import FeatureConfig, augment_observation
+from utils.fit_tensor import FeatureConfig, augment_observation, expected_feature_len, expected_input_dim
 from utils.plotter import MetricsPlotter
-from utils.timing import TimingMeter
 from utils.reward_shaper import RewardShaper
 
 from utils.load_save_common import find_next_version, prepare_run_dirs, save_config_csv, save_run_meta
@@ -23,13 +25,11 @@ from utils.deck import ranks_for_deck
 
 # ============== CONFIG ==============
 CONFIG = {
-    "EPISODES":         2000,
-    "BENCH_INTERVAL":   500,
-    "BENCH_EPISODES":   500,
-    "TIMING_INTERVAL":  500,
-    "DECK_SIZE":        "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+    "EPISODES":         10000,
+    "BENCH_INTERVAL":   2000,
+    "BENCH_EPISODES":   2000,
+    "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
-
 
     # PPO
     "PPO": {
@@ -49,21 +49,26 @@ CONFIG = {
     # FINAL_MODE: "none" | "env_only" | "rank_bonus" | "both"
     "REWARD": {
         "STEP_MODE": "none",
-        "DELTA_WEIGHT": 0.0,
+        "DELTA_WEIGHT": 0.5,
         "HAND_PENALTY_COEFF": 0.0,
 
         "FINAL_MODE": "env_only",
-        "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
+        "BONUS_WIN": 10.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
     },
 
-    # Features
-    "FEATURES": { "NORMALIZE": False, "SEAT_ONEHOT": True },
+    # Features (analog k1a1)
+    "FEATURES": {
+        "USE_HISTORY": False,     # True = mit Historie
+        "SEAT_ONEHOT": False,     # optional: Sitz-One-Hot dem Agent geben
+        "PLOT_METRICS": False,    # Trainingsplots erzeugen?
+        "SAVE_METRICS_TO_CSV": False,  # Trainingsmetriken persistent speichern?
+    },
 
     # Snapshot-Selfplay
     "SNAPSHOT": {
         "LEARNER_SEAT": 0,
         "MIX_CURRENT": 0.8,            # Wahrscheinlichkeit, Seats 1–3 mit aktueller Policy spielen zu lassen
-        "SNAPSHOT_INTERVAL": 200,      # kürzer als in *_test, damit bei 5k Eps viele Snapshots anfallen
+        "SNAPSHOT_INTERVAL": 200,      # relativ kurz, damit viele Snapshots entstehen
         "POOL_CAP": 20,
     },
 
@@ -97,7 +102,7 @@ def main():
     MODELS_ROOT = os.path.join(ROOT, "models")
 
     # ---- Verzeichnisse (k1a1-Stil) ----
-    family = "k3a1"  # eigene Familie für recommended Variante
+    family = "k3a1"  # eigene Familie für Snapshot-Selfplay
     family_dir = os.path.join(MODELS_ROOT, family)
     version = find_next_version(family_dir, prefix="model")
     paths = prepare_run_dirs(MODELS_ROOT, family, version, prefix="model")
@@ -123,41 +128,35 @@ def main():
         "single_card_mode": False,
     })
     env = rl_environment.Environment(game)
-    info_dim = env.observation_spec()["info_state"][0]
     A = env.action_spec()["num_actions"]
     num_players = game.num_players()
 
     # ---- Features ----
-    deck_int = int(CONFIG["DECK_SIZE"])
+    deck_int  = int(CONFIG["DECK_SIZE"])
     num_ranks = ranks_for_deck(deck_int)
-    # Seat-OneHot wird über agent._make_input angehängt → hier False
+
+    # Seat-One-Hot NICHT in augment_observation anhängen; optional separat über seat_one_hot
     feat_cfg = FeatureConfig(
-        num_players=num_players, num_ranks=num_ranks,
-        add_seat_onehot=False,
-        normalize=CONFIG["FEATURES"]["NORMALIZE"],
+        num_players=num_players,
+        num_ranks=num_ranks,
+        add_seat_onehot=False,                          # <- immer False lassen
+        include_history=CONFIG["FEATURES"]["USE_HISTORY"],
     )
     seat_id_dim = (num_players if CONFIG["FEATURES"]["SEAT_ONEHOT"] else 0)
 
+    # ✅ Agent-Inputgrößen sauber bestimmen
+    info_dim = expected_feature_len(feat_cfg)  # Basis-Features (ohne Seat-One-Hot)
+
     # ---- Agent / Shaper ----
-    ppo_cfg = ppo.PPOConfig(**CONFIG["PPO"]) 
+    ppo_cfg = ppo.PPOConfig(**CONFIG["PPO"])
     agent = ppo.PPOAgent(info_dim, A, seat_id_dim=seat_id_dim, config=ppo_cfg)
     shaper = RewardShaper(CONFIG["REWARD"])
 
     # ---- Config & Meta speichern ----
     save_config_csv({
         "script": family, "version": version,
-        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "agent_type": "PPO_snapshot", "num_episodes": CONFIG["EPISODES"],
-        "bench_interval": CONFIG["BENCH_INTERVAL"], "bench_episodes": CONFIG["BENCH_EPISODES"],
         "deck_size": CONFIG["DECK_SIZE"], "num_ranks": num_ranks,
-        "observation_dim": info_dim + seat_id_dim, "num_actions": A,
-        "normalize": CONFIG["FEATURES"]["NORMALIZE"], "seat_onehot": CONFIG["FEATURES"]["SEAT_ONEHOT"],
-        "models_dir": paths["weights_dir"], "plots_dir": paths["plots_dir"],
-        "mix_current": CONFIG["SNAPSHOT"]["MIX_CURRENT"],
-        "snapshot_interval": CONFIG["SNAPSHOT"]["SNAPSHOT_INTERVAL"],
-        "pool_cap": CONFIG["SNAPSHOT"]["POOL_CAP"],
-        "learner_seat": CONFIG["SNAPSHOT"]["LEARNER_SEAT"],
-
+        "use_history": CONFIG["FEATURES"]["USE_HISTORY"],
         # Reward-Setup (neues System)
         "step_mode": shaper.step_mode,
         "delta_weight": shaper.dw,
@@ -167,20 +166,38 @@ def main():
         "bonus_2nd":   CONFIG["REWARD"]["BONUS_2ND"],
         "bonus_3rd":   CONFIG["REWARD"]["BONUS_3RD"],
         "bonus_last":  CONFIG["REWARD"]["BONUS_LAST"],
+
+        "agent_type": "PPO_snapshot", "num_episodes": CONFIG["EPISODES"],
+        "bench_interval": CONFIG["BENCH_INTERVAL"], "bench_episodes": CONFIG["BENCH_EPISODES"],
+        "observation_dim": expected_input_dim(feat_cfg),  # inkl. Seat-One-Hot, falls aktiv
+        "num_actions": A,
+        "seat_onehot": CONFIG["FEATURES"]["SEAT_ONEHOT"],
+
+        "models_dir": paths["weights_dir"], "plots_dir": paths["plots_dir"],
+        "mix_current": CONFIG["SNAPSHOT"]["MIX_CURRENT"],
+        "snapshot_interval": CONFIG["SNAPSHOT"]["SNAPSHOT_INTERVAL"],
+        "pool_cap": CONFIG["SNAPSHOT"]["POOL_CAP"],
+        "learner_seat": CONFIG["SNAPSHOT"]["LEARNER_SEAT"],
+        "benchmark_opponents": ",".join(CONFIG["BENCH_OPPONENTS"]),
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }, paths["config_csv"])
     save_run_meta({"family": family, "version": version, "algo": "ppo_snapshot", "deck": CONFIG["DECK_SIZE"]}, paths["run_meta_json"])
 
     # ---- Snapshot-Pool ----
     pool: list[dict] = []
-    MIX = float(CONFIG["SNAPSHOT"]["MIX_CURRENT"]) 
-    SNAPINT = int(CONFIG["SNAPSHOT"]["SNAPSHOT_INTERVAL"]) 
-    POOL_CAP = int(CONFIG["SNAPSHOT"]["POOL_CAP"]) 
-    LEARNER_SEAT = int(CONFIG["SNAPSHOT"]["LEARNER_SEAT"]) 
+    MIX = float(CONFIG["SNAPSHOT"]["MIX_CURRENT"])
+    SNAPINT = int(CONFIG["SNAPSHOT"]["SNAPSHOT_INTERVAL"])
+    POOL_CAP = int(CONFIG["SNAPSHOT"]["POOL_CAP"])
+    LEARNER_SEAT = int(CONFIG["SNAPSHOT"]["LEARNER_SEAT"])
 
-    # ---- Timing ----
-    timer = TimingMeter(csv_path=paths["timings_csv"], interval=CONFIG["TIMING_INTERVAL"])
     t0 = time.perf_counter()
     BINT, BEPS = CONFIG["BENCH_INTERVAL"], CONFIG["BENCH_EPISODES"]
+
+    # Optionales Sammeln von Metriken (analog k1a1)
+    collect_metrics = (
+        CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False)
+        or CONFIG["FEATURES"].get("PLOT_METRICS", False)
+    )
 
     # ---- Training ----
     for ep in range(1, CONFIG["EPISODES"] + 1):
@@ -199,7 +216,8 @@ def main():
                 seat_actor[seat] = "current"
             else:
                 sd = pool[np.random.randint(len(pool))]
-                seat_actor[seat] = SnapshotPolicy(info_dim + seat_id_dim, A, sd)
+                # Wichtig: Eingabedimension = expected_input_dim(feat_cfg)
+                seat_actor[seat] = SnapshotPolicy(expected_input_dim(feat_cfg), A, sd)
 
         while not ts.last():
             p = ts.observations["current_player"]
@@ -258,16 +276,22 @@ def main():
         train_metrics = agent.train()
         train_seconds = time.perf_counter() - train_start
 
-        if train_metrics is None:
-            train_metrics = {}
-        train_metrics.update({
+        # Trainingsmetriken sammeln / speichern analog k1a1
+        metrics = train_metrics or {}
+        metrics.update({
             "train_seconds":      train_seconds,
             "ep_env_return":      ep_env_return,
             "ep_shaping_return":  ep_shaping_return,
             "ep_final_bonus":     ep_final_bonus,
             "ep_length":          ep_len,
         })
-        plotter.add_train(ep, train_metrics)
+        if collect_metrics:
+            if CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False):
+                plotter.add_train(ep, metrics)
+            else:
+                plotter.train_rows.append({"episode": int(ep), **metrics})
+                if plotter.train_keys is None:
+                    plotter.train_keys = ["episode"] + list(metrics.keys())
 
         # Snapshot in Pool?
         if SNAPINT > 0 and (ep % SNAPINT == 0):
@@ -275,8 +299,6 @@ def main():
             if len(pool) > POOL_CAP:
                 pool.pop(0)
 
-        # Benchmark & Save (nur Learner-Policy)
-        eval_seconds = plot_seconds = save_seconds = 0.0
         # Benchmark & Save (nur Learner-Policy)
         eval_seconds = plot_seconds = save_seconds = 0.0
         if BINT > 0 and (ep % BINT == 0):
@@ -299,7 +321,7 @@ def main():
             plotter.plot_benchmark_rewards()
             plotter.plot_places_latest()
 
-            # Einheitliche Titel für alle „lernkurve“-Plots:
+            # Einheitliche Titel:
             # - Einzelplots:  "Lernkurve - KxAy vs <gegner>"
             # - Multi/Macro:  "Lernkurve - KxAy vs feste Heuristiken"
             title_multi = f"Lernkurve - {family.upper()} vs feste Heuristiken"
@@ -307,10 +329,12 @@ def main():
                 filename_prefix="lernkurve",
                 with_macro=True,
                 family_title=family.upper(),   # für Einzelplots
-                multi_title=title_multi,       # für Multi- & Macro-Plot (identischer Titel)
+                multi_title=title_multi,       # für Multi- & Macro-Plot
             )
 
-            plotter.plot_train(filename_prefix="training_metrics", separate=True)
+            if CONFIG["FEATURES"].get("PLOT_METRICS", False):
+                plotter.plot_train(filename_prefix="training_metrics", separate=True)
+
             plot_seconds = time.perf_counter() - plot_start
 
             save_start = time.perf_counter()
@@ -329,21 +353,9 @@ def main():
                 cum_seconds=cum_seconds,
             )
 
-
-        # Timing CSV
-        ep_seconds = time.perf_counter() - ep_start
-        timer.maybe_log(ep, {
-            "steps": ep_len,
-            "ep_seconds": ep_seconds,
-            "train_seconds": train_seconds,
-            "eval_seconds": eval_seconds,
-            "plot_seconds": plot_seconds,
-            "save_seconds": save_seconds,
-        })
-
     total_seconds = time.perf_counter() - t0
     plotter.log("")
-    plotter.log(f"Gesamtzeit: {total_seconds/3600:0.2f}h (~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)")  
+    plotter.log(f"Gesamtzeit: {total_seconds/3600:0.2f}h (~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)")
     plotter.log(f"{family}, Snapshot Selfplay (1 Learner, 3 Sparring). Training abgeschlossen.")
     plotter.log(f"Path: {paths['run_dir']}")
 

@@ -1,5 +1,0 @@
-name,type,family,version,episode,from_pid
-P0,ppo,k3a1,05,20000,0
-P1,ppo,k1a1,57,200,0
-P2,ppo,k3a1,05,20000,0
-P3,ppo,k1a1,57,200,0

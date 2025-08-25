@@ -1,2 +1,0 @@
-game_settings,players
-"{""num_players"": 4, ""deck_size"": ""64"", ""shuffle_cards"": true, ""single_card_mode"": false}","[{""name"": ""P0"", ""type"": ""human""}, {""type"": ""max_combo""}, {""type"": ""max_combo""}, {""name"": ""Opp3"", ""type"": ""ppo"", ""family"": ""k3a1"", ""version"": ""05"", ""episode"": 20000, ""from_pid"": 0}]"

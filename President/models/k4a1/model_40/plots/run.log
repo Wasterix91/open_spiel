@@ -1,4 +1,0 @@
-[2025-08-25 09:54:37] New Training (k4a1): Shared-Policy PPO — In-Proc External Trainer (Bundle-Updates)
-[2025-08-25 09:54:37] Deck_Size: 16
-[2025-08-25 09:54:37] Episodes: 2000
-[2025-08-25 09:54:37] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k4a1/model_40

@@ -1,5 +1,0 @@
-name,type,version,episode,from_pid
-Player0,ppo,03,10000,
-Player1,ppo,03,10000,0.0
-Player2,ppo,06,20_000,0.0
-Player3,max_combo,,,

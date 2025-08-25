@@ -1,2 +1,0 @@
-episode,steps,ep_seconds,train_seconds,eval_seconds,plot_seconds,save_seconds,cum_seconds,eps_per_sec_total,eps_per_sec_window
-0,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0

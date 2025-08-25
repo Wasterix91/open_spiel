@@ -1,5 +1,0 @@
-macro_id,player,strategy,type,family,version,episode,avg_return,win_rate_percent,num_wins,num_starts
-67,P0,dqn v46 ep40.000,dqn,k1a2,46,40000,1.89,39.17,3917,2455
-67,P1,max_combo v,max_combo,,,,1.37,19.36,1936,2525
-67,P2,max_combo v,max_combo,,,,1.37,19.86,1986,2503
-67,P3,max_combo v,max_combo,,,,1.37,21.61,2161,2517

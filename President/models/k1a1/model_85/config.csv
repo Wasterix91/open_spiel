@@ -1,2 +1,0 @@
-script,version,timestamp,agent_type,num_episodes,bench_interval,bench_episodes,deck_size,num_ranks,observation_dim,num_actions,seat_onehot,use_history,opponents,models_dir,plots_dir,step_mode,delta_weight,hand_penalty_coeff,final_mode,bonus_win,bonus_2nd,bonus_3rd,bonus_last
-k1a1,85,2025-08-24 20:01:37,PPO,2000,500,500,16,4,10,17,False,False,"max_combo,max_combo,max_combo",/home/wasterix/OpenSpiel/open_spiel/President/models/k1a1/model_85/models,/home/wasterix/OpenSpiel/open_spiel/President/models/k1a1/model_85/plots,none,0.5,0.0,env_only,10.0,0.0,0.0,0.0

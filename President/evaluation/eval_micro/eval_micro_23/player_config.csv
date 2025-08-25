@@ -1,5 +1,0 @@
-name,type,family,version,episode,from_pid
-P0,human,,,,
-P1,dqn,k1a2,38,75000.0,0.0
-P2,dqn,k1a2,38,75000.0,0.0
-P3,dqn,k1a2,38,75000.0,0.0

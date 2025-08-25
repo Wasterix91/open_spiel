@@ -1,70 +1,70 @@
 # -*- coding: utf-8 -*-
-# President/training/k3a2.py — DQN Snapshot-Selfplay (1 Learner + 3 Sparring)
-# Fixes:
-#  - Decision-to-Decision: Learner-Transitions werden erst geschlossen, wenn der Learner wieder am Zug ist
-#  - next_legal_actions nur dann setzen, wenn DERSELBE Spieler wieder zieht (sonst done/Terminal)
-#  - robuster DQNConfig-Build aus DEFAULT_CONFIG (kompatibel zu agents/dqn_agent.py)
+# k3a2.py — DQN Snapshot-Selfplay (1 Learner + 3 Sparring)
+#
+# Ausrichtung wie k1a2:
+# - augment_observation ohne Seat-1hot; optionaler Seat-1hot wird extern angehängt
+# - state_size = expected_feature_len(feat_cfg) + seat_id_dim
+# - Beobachtungen basieren auf env._state.observation_tensor(p)
+# - RewardShaper & Benchmark wie k1a2
 
 import os, datetime, time, copy, numpy as np, torch
 import pyspiel
 from open_spiel.python import rl_environment
 
-from agents import dqn_agent as dqn
+from agents.dqn_agent import DQNAgent, DQNConfig
 from utils.strategies import STRATS
-from utils.fit_tensor import FeatureConfig, augment_observation
+from utils.fit_tensor import FeatureConfig, augment_observation, expected_feature_len
 from utils.plotter import MetricsPlotter
-from utils.timing import TimingMeter
 from utils.reward_shaper import RewardShaper
 from utils.load_save_common import find_next_version, prepare_run_dirs, save_config_csv, save_run_meta
 from utils.benchmark import run_benchmark
 from utils.deck import ranks_for_deck
 
-# ============== CONFIG ==============
 CONFIG = {
     "EPISODES":         2000,
     "BENCH_INTERVAL":   500,
-    "BENCH_EPISODES":   500,
-    "TIMING_INTERVAL":  500,
-    "DECK_SIZE":        "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+    "BENCH_EPISODES":   200,
+    "DECK_SIZE":        "64",
     "SEED":             42,
 
-    # DQN (exakt die Keys aus agents/dqn_agent.py::DQNConfig)
+    # DQN
     "DQN": {
         "learning_rate":     3e-4,
         "batch_size":        128,
         "gamma":             0.995,
         "epsilon_start":     1.0,
         "epsilon_end":       0.05,
-        "epsilon_decay":     0.9997,        # multiplikativ pro train_step
+        "epsilon_decay":     0.9997,
         "buffer_size":       200_000,
-        "target_update_freq": 5000,         # oder soft_target_tau > 0 für Polyak
+        "target_update_freq": 5000,
         "soft_target_tau":   0.0,
         "max_grad_norm":     1.0,
         "use_double_dqn":    True,
         "loss_huber_delta":  1.0,
     },
 
-    # ======= Rewards (NEUES System wie k1a1/k1a2) =======
-    # STEP_MODE : "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
-    # FINAL_MODE: "none" | "env_only" | "rank_bonus" | "both"
+    # Rewards
     "REWARD": {
         "STEP_MODE": "none",
-        "DELTA_WEIGHT": 0.0,
+        "DELTA_WEIGHT": 0.5,
         "HAND_PENALTY_COEFF": 0.0,
-
         "FINAL_MODE": "env_only",
-        "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
+        "BONUS_WIN": 10.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
     },
 
-    # Learner bekommt Seat-OneHot via augment_observation (hier True)
-    "FEATURES": { "NORMALIZE": False, "SEAT_ONEHOT": True },
+    # Features (wie k1a2)
+    "FEATURES": {
+        "USE_HISTORY": False,
+        "SEAT_ONEHOT": False,
+        "PLOT_METRICS": False,
+        "SAVE_METRICS_TO_CSV": False,
+    },
 
     "SNAPSHOT": { "LEARNER_SEAT": 0, "MIX_CURRENT": 0.8, "SNAPSHOT_INTERVAL": 200, "POOL_CAP": 20 },
 
     "BENCH_OPPONENTS": ["single_only", "max_combo", "random2"],
 }
 
-# ===== Greedy-Aktion (Q argmax über legal actions) =====
 @torch.no_grad()
 def greedy_action(q_module: torch.nn.Module, obs_vec: np.ndarray, legal_actions, device=None) -> int:
     if device is None:
@@ -81,10 +81,18 @@ def greedy_action(q_module: torch.nn.Module, obs_vec: np.ndarray, legal_actions,
     cands = np.flatnonzero(masked == maxv)
     return int(np.random.choice(cands))
 
-# ===== Eingefrorene Snapshot-DQN (immer greedy) =====
+def _with_seat_onehot(vec: np.ndarray, p: int, num_players: int, enabled: bool) -> np.ndarray:
+    if not enabled:
+        return vec
+    seat_oh = np.zeros(num_players, dtype=np.float32); seat_oh[p] = 1.0
+    return np.concatenate([vec, seat_oh], axis=0)
+
 class SnapshotDQNA:
     def __init__(self, state_size, num_actions, dqn_cfg, q_state_dict):
-        self.agent = dqn.DQNAgent(state_size=state_size, num_actions=num_actions, config=dqn_cfg)
+        # ---- FIX: dqn_cfg ist bereits ein DQNConfig (namedtuple). Direkt durchreichen.
+        # Falls mal ein dict reinkommt, in DQNConfig umwandeln.
+        cfg = DQNConfig(**dqn_cfg) if isinstance(dqn_cfg, dict) else dqn_cfg
+        self.agent = DQNAgent(state_size, num_actions, cfg, device="cpu")
         self.agent.target_network.eval()
         self.agent.q_network.load_state_dict(copy.deepcopy(q_state_dict))
         self.agent.target_network.load_state_dict(self.agent.q_network.state_dict())
@@ -94,7 +102,6 @@ class SnapshotDQNA:
     def act(self, obs_vec: np.ndarray, legal_actions):
         return greedy_action(self.agent.q_network, obs_vec, legal_actions)
 
-# =========================== Training ===========================
 def main():
     np.random.seed(CONFIG["SEED"]); torch.manual_seed(CONFIG["SEED"])
     ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -128,35 +135,31 @@ def main():
     num_players = game.num_players()
 
     # ---- Features ----
-    deck_int = int(CONFIG["DECK_SIZE"])
+    deck_int  = int(CONFIG["DECK_SIZE"])
     num_ranks = ranks_for_deck(deck_int)
-    base_dim  = game.observation_tensor_shape()[0]
-    extra_dim = num_players if CONFIG["FEATURES"]["SEAT_ONEHOT"] else 0
-    state_size = base_dim + extra_dim
-
     feat_cfg = FeatureConfig(
-        num_players=num_players, num_ranks=num_ranks,
-        add_seat_onehot=CONFIG["FEATURES"]["SEAT_ONEHOT"],
-        normalize=CONFIG["FEATURES"]["NORMALIZE"],
+        num_players=num_players,
+        num_ranks=num_ranks,
+        add_seat_onehot=False,
+        include_history=CONFIG["FEATURES"]["USE_HISTORY"],
     )
+    seat_id_dim = (num_players if CONFIG["FEATURES"]["SEAT_ONEHOT"] else 0)
+    state_size = expected_feature_len(feat_cfg) + seat_id_dim
 
     # ---- Agent & Shaper ----
-    base_cfg = dqn.DEFAULT_CONFIG
-    overrides = {k: CONFIG["DQN"][k] for k in CONFIG["DQN"] if k in base_cfg._fields}
-    dqn_cfg = base_cfg._replace(**overrides)
-
-    learner = dqn.DQNAgent(state_size=state_size, num_actions=A, config=dqn_cfg, device="cpu")
+    dqn_cfg = DQNConfig(**CONFIG["DQN"])
+    learner = DQNAgent(state_size=state_size, num_actions=A, config=dqn_cfg, device="cpu")
     shaper  = RewardShaper(CONFIG["REWARD"])
 
-    # ---- Config & Meta speichern ----
+    # ---- Config & Meta ----
     save_config_csv({
         "script": family, "version": version,
-        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "deck_size": CONFIG["DECK_SIZE"], "num_ranks": num_ranks,
+        "use_history": CONFIG["FEATURES"]["USE_HISTORY"],
         "agent_type": "DQN_snapshot", "num_episodes": CONFIG["EPISODES"],
         "bench_interval": CONFIG["BENCH_INTERVAL"], "bench_episodes": CONFIG["BENCH_EPISODES"],
-        "deck_size": CONFIG["DECK_SIZE"], "num_ranks": num_ranks,
         "observation_dim": state_size, "num_actions": A,
-        "normalize": CONFIG["FEATURES"]["NORMALIZE"], "seat_onehot": CONFIG["FEATURES"]["SEAT_ONEHOT"],
+        "seat_onehot": CONFIG["FEATURES"]["SEAT_ONEHOT"],
         "models_dir": paths["weights_dir"], "plots_dir": paths["plots_dir"],
         "mix_current": CONFIG["SNAPSHOT"]["MIX_CURRENT"],
         "snapshot_interval": CONFIG["SNAPSHOT"]["SNAPSHOT_INTERVAL"],
@@ -166,6 +169,8 @@ def main():
         "hand_penalty_coeff": shaper.hp, "final_mode": shaper.final_mode,
         "bonus_win": CONFIG["REWARD"]["BONUS_WIN"], "bonus_2nd": CONFIG["REWARD"]["BONUS_2ND"],
         "bonus_3rd": CONFIG["REWARD"]["BONUS_3RD"], "bonus_last": CONFIG["REWARD"]["BONUS_LAST"],
+        "benchmark_opponents": ",".join(CONFIG["BENCH_OPPONENTS"]),
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }, paths["config_csv"])
     save_run_meta({"family": family, "version": version, "algo": "dqn_snapshot", "deck": CONFIG["DECK_SIZE"]},
                   paths["run_meta_json"])
@@ -177,12 +182,15 @@ def main():
     POOL_CAP  = int(CONFIG["SNAPSHOT"]["POOL_CAP"])
     LEARN     = int(CONFIG["SNAPSHOT"]["LEARNER_SEAT"])
 
-    # ---- Timing ----
-    timer = TimingMeter(csv_path=paths["timings_csv"], interval=CONFIG["TIMING_INTERVAL"])
     t0 = time.perf_counter()
     BINT, BEPS = CONFIG["BENCH_INTERVAL"], CONFIG["BENCH_EPISODES"]
 
-    # ================= Loop =================
+    # Optional: Sammeln wie k1a2
+    collect_metrics = (
+        CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False)
+        or CONFIG["FEATURES"].get("PLOT_METRICS", False)
+    )
+
     for ep in range(1, CONFIG["EPISODES"] + 1):
         ep_start = time.perf_counter()
         ep_len = 0
@@ -190,7 +198,7 @@ def main():
 
         ts = env.reset()
         last_idx_learner = None
-        pending = None   # offene Transition des Learners: {"s":..., "a":..., "r":...}
+        pending = None  # {"s":..., "a":..., "r":...}
 
         # Gegner Seats auswählen (current vs Snapshot)
         seat_actor = {}
@@ -205,19 +213,21 @@ def main():
             p = ts.observations["current_player"]
             legal = ts.observations["legal_actions"][p]
 
-            # Wenn der Learner wieder dran ist, eine evtl. offene Transition schließen (decision-to-decision)
+            # Learner wieder dran? offene Transition schließen (decision-to-decision)
             if (p == LEARN) and (pending is not None):
-                base_now = np.array(env._state.observation_tensor(LEARN), dtype=np.float32)
+                base_now = np.asarray(env._state.observation_tensor(LEARN), dtype=np.float32)
                 s_now = augment_observation(base_now, player_id=LEARN, cfg=feat_cfg)
+                s_now = _with_seat_onehot(s_now, LEARN, num_players, CONFIG["FEATURES"]["SEAT_ONEHOT"])
                 learner.buffer.add(pending["s"], pending["a"], pending["r"], s_now, False,
-                                   next_legal_actions=legal)  # legal gehört jetzt dem Learner!
+                                   next_legal_actions=legal)
                 last_idx_learner = len(learner.buffer.buffer) - 1
                 learner.train_step()
                 pending = None
 
-            # aktuelle Beobachtung des aktiven Spielers
-            base_obs = np.array(env._state.observation_tensor(p), dtype=np.float32)
+            # aktuelle Beobachtung
+            base_obs = np.asarray(env._state.observation_tensor(p), dtype=np.float32)
             obs = augment_observation(base_obs, player_id=p, cfg=feat_cfg)
+            obs = _with_seat_onehot(obs, p, num_players, CONFIG["FEATURES"]["SEAT_ONEHOT"])
 
             # Step-Shaping Vorbereitung
             if shaper.step_active():
@@ -230,10 +240,10 @@ def main():
                 a = int(greedy_action(learner.q_network, obs, legal)) if seat_actor[p] == "current" \
                     else int(seat_actor[p].act(obs, legal))
 
-            # Schritt in der Env
+            # Schritt in Env
             ts_next = env.step([a]); ep_len += 1
 
-            # Step-Shaping nur für den Learner speichern
+            # Step-Shaping nur für den Learner
             if p == LEARN:
                 r = 0.0
                 if shaper.step_active():
@@ -241,22 +251,21 @@ def main():
                     r = float(shaper.step_reward(hand_before=hand_before, hand_after=hand_after))
                     ep_shaping_return += r
 
-                # Learner-Transition offen halten bis er wieder am Zug ist oder Terminal
                 assert pending is None
                 pending = {"s": obs, "a": a, "r": r}
 
             ts = ts_next
 
-        # Episodenende: evtl. offene Learner-Transition finalisieren (done=True)
+        # Episodenende: offene Learner-Transition finalisieren
         if pending is not None:
-            s_next = pending["s"]  # Dummy-Next-State ok; Maske „alle legal“ (oder None)
+            s_next = pending["s"]
             learner.buffer.add(pending["s"], pending["a"], pending["r"], s_next, True,
                                next_legal_actions=list(range(A)))
             last_idx_learner = len(learner.buffer.buffer) - 1
             learner.train_step()
             pending = None
 
-        # Finale Rewards / Bonus auf die letzte Learner-Transition addieren
+        # Finale Rewards / Bonus
         ep_env = float(ts.rewards[LEARN])
         ep_bonus = float(shaper.final_bonus(ts.rewards, LEARN))
         if last_idx_learner is not None:
@@ -275,17 +284,17 @@ def main():
             if len(pool) > POOL_CAP:
                 pool.pop(0)
 
-        # Training-Metriken
-        plotter.add_train(ep, {
+        # Metriken
+        metrics = {
             "ep_length":         ep_len,
             "ep_env_return":     ep_env,
             "ep_shaping_return": ep_shaping_return,
             "ep_final_bonus":    ep_bonus,
-        })
+        }
+        plotter.add_train(ep, metrics)
 
-        # Benchmark & Save (nur Learner-Policy)
-        eval_seconds = plot_seconds = save_seconds = 0.0
-        if BINT > 0 and (ep % BINT == 0):
+        # Benchmark & Save
+        if CONFIG["BENCH_INTERVAL"] > 0 and (ep % BINT == 0):
             evs = time.perf_counter()
             per_opponent = run_benchmark(
                 game=game, agent=learner, opponents_dict=STRATS,
@@ -299,17 +308,11 @@ def main():
             plotter.add_benchmark(ep, per_opponent)
             plotter.plot_benchmark_rewards()
             plotter.plot_places_latest()
-
-            # Einheitliche Titel für alle "lernkurve"-Plots
             title_multi = f"Lernkurve - {family.upper()} vs feste Heuristiken"
-            plotter.plot_benchmark(
-                filename_prefix="lernkurve",
-                with_macro=True,
-                family_title=family.upper(),   # Einzelplots: „Lernkurve - KxAy vs <gegner>“
-                multi_title=title_multi,       # Multi & Macro: „Lernkurve - KxAy vs feste Heuristiken“
-            )
-
-            plotter.plot_train(filename_prefix="training_metrics", separate=True)
+            plotter.plot_benchmark("lernkurve", with_macro=True,
+                                   family_title=family.upper(), multi_title=title_multi)
+            if CONFIG["FEATURES"].get("PLOT_METRICS", False):
+                plotter.plot_train(filename_prefix="training_metrics", separate=True)
             plot_seconds = time.perf_counter() - ps
 
             ss = time.perf_counter()
@@ -317,7 +320,6 @@ def main():
             learner.save(os.path.join(paths["weights_dir"], tag))
             save_seconds = time.perf_counter() - ss
 
-            cum = time.perf_counter() - t0
             plotter.log_timing(
                 ep,
                 ep_seconds=(time.perf_counter() - ep_start),
@@ -325,24 +327,12 @@ def main():
                 eval_seconds=eval_seconds,
                 plot_seconds=plot_seconds,
                 save_seconds=save_seconds,
-                cum_seconds=cum,
+                cum_seconds=(time.perf_counter() - t0),
             )
-
-
-        # Timing CSV
-        ep_seconds = time.perf_counter() - ep_start
-        timer.maybe_log(ep, {
-            "steps": ep_len,
-            "ep_seconds": ep_seconds,
-            "train_seconds": 0.0,
-            "eval_seconds": eval_seconds,
-            "plot_seconds": plot_seconds,
-            "save_seconds": save_seconds,
-        })
 
     total_seconds = time.perf_counter() - t0
     plotter.log("")
-    plotter.log(f"Gesamtzeit: {total_seconds/3600:0.2f}h (~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)")  
+    plotter.log(f"Gesamtzeit: {total_seconds/3600:0.2f}h (~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)")
     plotter.log(f"{family}, Snapshot Selfplay (1 Learner, 3 Sparring). Training abgeschlossen.")
     plotter.log(f"Path: {paths['run_dir']}")
 

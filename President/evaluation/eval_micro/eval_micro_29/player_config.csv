@@ -1,5 +1,0 @@
-name,type,family,version,episode,from_pid
-P0,human,,,,
-dqn,dqn,k1a2,46,40000.0,0.0
-v_table,v_table,,,,
-max_combo,max_combo,,,,

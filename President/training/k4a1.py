@@ -7,9 +7,8 @@ import pyspiel
 from open_spiel.python import rl_environment
 
 from agents import ppo_agent as ppo
-from utils.fit_tensor import FeatureConfig, augment_observation
+from utils.fit_tensor import FeatureConfig, augment_observation, expected_feature_len, expected_input_dim
 from utils.plotter import MetricsPlotter
-from utils.timing import TimingMeter
 from utils.reward_shaper import RewardShaper
 from utils.strategies import STRATS
 
@@ -23,9 +22,8 @@ from utils.deck import ranks_for_deck
 # ============== CONFIG ==============
 CONFIG = {
     "EPISODES":         10_000,
-    "BENCH_INTERVAL":   1000,
-    "BENCH_EPISODES":   1000,
-    "TIMING_INTERVAL":  500,
+    "BENCH_INTERVAL":   2000,
+    "BENCH_EPISODES":   200,
     "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
@@ -42,12 +40,11 @@ CONFIG = {
         "max_grad_norm": 0.5,
     },
 
-
     # ===== In-Proc „External“ Trainer =====
     # Sammle N Episoden → mache K PPO-Updates → Buffer clear → weiter sammeln
     "INPROC_TRAINER": {
-        "EPISODES_PER_UPDATE": 20,  # Bundle-Größe
-        "UPDATES_PER_CALL":     1,    # wie oft agent.train() pro Bundle
+        "EPISODES_PER_UPDATE": 20,   # Bundle-Größe
+        "UPDATES_PER_CALL":     1,   # wie oft agent.train() pro Bundle
     },
 
     # ======= Rewards (NEUES System) =======
@@ -55,15 +52,20 @@ CONFIG = {
     # FINAL_MODE: "none" | "env_only" | "rank_bonus" | "both"
     "REWARD": {
         "STEP_MODE": "none",
-        "DELTA_WEIGHT": 0.0,
+        "DELTA_WEIGHT": 0.5,
         "HAND_PENALTY_COEFF": 0.0,
 
         "FINAL_MODE": "env_only",
-        "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
+        "BONUS_WIN": 10.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
     },
 
     # Features (Shared Policy: Seat-OneHot optional)
-    "FEATURES": { "NORMALIZE": False, "SEAT_ONEHOT": True },
+    "FEATURES": {
+        "USE_HISTORY": False,        # Historie in Features einbetten?
+        "SEAT_ONEHOT": True,         # Seat-One-Hot separat an Agent-Eingabe anhängen
+        "PLOT_METRICS": False,       # Trainingsplots erzeugen?
+        "SAVE_METRICS_TO_CSV": False # Trainingsmetriken persistent speichern?
+    },
 
     # Benchmark-Gegner
     "BENCH_OPPONENTS": ["single_only", "max_combo", "random2"],
@@ -102,45 +104,38 @@ def main():
         "single_card_mode": False,
     })
     env = rl_environment.Environment(game)
-    info_dim = env.observation_spec()["info_state"][0]
     A = env.action_spec()["num_actions"]
     num_players = game.num_players()
 
     # ---- Features ----
-    deck_int = int(CONFIG["DECK_SIZE"])
+    deck_int  = int(CONFIG["DECK_SIZE"])
     num_ranks = ranks_for_deck(deck_int)
     feat_cfg = FeatureConfig(
         num_players=num_players,
         num_ranks=num_ranks,
-        add_seat_onehot=False,   # Seat-1hot hängt der Agent optional an
-        # kein "normalize" hier
+        add_seat_onehot=False,  # Seat-1hot wird NICHT in augment_observation angehängt
+        include_history=CONFIG["FEATURES"]["USE_HISTORY"],
     )
     seat_id_dim = num_players if CONFIG["FEATURES"]["SEAT_ONEHOT"] else 0
 
+    # ✅ Agent-Inputgrößen sauber bestimmen
+    info_dim = expected_feature_len(feat_cfg)  # Basis-Features (ohne Seat-One-Hot)
 
     # ---- Agent / Shaper ----
-    ppo_cfg = ppo.DEFAULT_CONFIG._replace(**CONFIG["PPO"])
-
+    ppo_cfg = ppo.PPOConfig(**CONFIG["PPO"])
     agent = ppo.PPOAgent(
         info_dim, A,
         seat_id_dim=seat_id_dim,
         config=ppo_cfg,
         segmented_gae_mode="jump"   # ← aktiviert Jump-GAE nur hier
     )
-
     shaper = RewardShaper(CONFIG["REWARD"])
 
     # ---- Config & Meta ----
-    from utils.load_save_common import save_config_csv, save_run_meta
     save_config_csv({
         "script": family, "version": version,
-        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "agent_type": "PPO_shared_inproc", "num_episodes": CONFIG["EPISODES"],
-        "bench_interval": CONFIG["BENCH_INTERVAL"], "bench_episodes": CONFIG["BENCH_EPISODES"],
         "deck_size": CONFIG["DECK_SIZE"], "num_ranks": num_ranks,
-        "observation_dim": info_dim + seat_id_dim, "num_actions": A,
-        "normalize": CONFIG["FEATURES"]["NORMALIZE"], "seat_onehot": CONFIG["FEATURES"]["SEAT_ONEHOT"],
-        "models_dir": paths["weights_dir"], "plots_dir": paths["plots_dir"],
+        "use_history": CONFIG["FEATURES"]["USE_HISTORY"],
         # Reward-Setup
         "step_mode": shaper.step_mode,
         "delta_weight": shaper.dw,
@@ -150,17 +145,30 @@ def main():
         "bonus_2nd":   CONFIG["REWARD"]["BONUS_2ND"],
         "bonus_3rd":   CONFIG["REWARD"]["BONUS_3RD"],
         "bonus_last":  CONFIG["REWARD"]["BONUS_LAST"],
+
+        "agent_type": "PPO_shared_inproc", "num_episodes": CONFIG["EPISODES"],
+        "bench_interval": CONFIG["BENCH_INTERVAL"], "bench_episodes": CONFIG["BENCH_EPISODES"],
+        "observation_dim": expected_input_dim(feat_cfg),  # inkl. Seat-One-Hot, falls aktiv
+        "num_actions": A,
+        "seat_onehot": CONFIG["FEATURES"]["SEAT_ONEHOT"],
         # In-Proc Trainer
         "episodes_per_update": CONFIG["INPROC_TRAINER"]["EPISODES_PER_UPDATE"],
         "updates_per_call":    CONFIG["INPROC_TRAINER"]["UPDATES_PER_CALL"],
+        "models_dir": paths["weights_dir"], "plots_dir": paths["plots_dir"],
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "benchmark_opponents": ",".join(CONFIG["BENCH_OPPONENTS"]),
     }, paths["config_csv"])
     save_run_meta({"family": family, "version": version, "algo": "ppo_shared_inproc", "deck": CONFIG["DECK_SIZE"]},
                   paths["run_meta_json"])
 
-    # ---- Timing ----
-    timer = TimingMeter(csv_path=paths["timings_csv"], interval=CONFIG["TIMING_INTERVAL"])
     t0 = time.perf_counter()
     BINT, BEPS = CONFIG["BENCH_INTERVAL"], CONFIG["BENCH_EPISODES"]
+
+    # Optionales Sammeln von Metriken (analog k1a1)
+    collect_metrics = (
+        CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False)
+        or CONFIG["FEATURES"].get("PLOT_METRICS", False)
+    )
 
     # ---- In-Proc External Trainer Steuerung ----
     EPISODES_PER_UPDATE = int(CONFIG["INPROC_TRAINER"]["EPISODES_PER_UPDATE"])
@@ -213,25 +221,35 @@ def main():
         # Sammelzähler hoch
         ep_in_bundle += 1
 
-        # Logging (nur Sammelmetriken; Training erst beim Bundle-Update)
-        plotter.add_train(ep, {"ep_length": ep_len, "ep_env_return": float(finals[0])})
+        # Episoden-Metrik (nur P0 als Referenz, plus Länge)
+        ep_metrics = {"ep_length": ep_len, "ep_env_return_p0": float(finals[0])}
+        if collect_metrics:
+            if CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False):
+                plotter.add_train(ep, ep_metrics)
+            else:
+                plotter.train_rows.append({"episode": int(ep), **ep_metrics})
+                if plotter.train_keys is None:
+                    plotter.train_keys = ["episode"] + list(ep_metrics.keys())
 
         # ======= In-Proc „External“ Trainer: Update nach N Episoden =======
         train_seconds = 0.0
         if ep_in_bundle >= EPISODES_PER_UPDATE:
             t_train = time.perf_counter()
-
-            # Mehrfach-Update auf dem gesammelten Bundle
             for _ in range(UPDATES_PER_CALL):
                 agent.train()
-
             train_seconds = time.perf_counter() - t_train
             ep_in_bundle = 0
-            # Nach dem Update den Rollout-Buffer leeren (klassische Actor→Learner-Übergabe)
-            agent._buffer.clear()
+            agent._buffer.clear()  # Rollout-Buffer leeren
 
-            # Trainingszeit nachtragen
-            plotter.add_train(ep, {"train_seconds": train_seconds})
+            # Trainingszeit als Metrik nachtragen
+            if collect_metrics:
+                upd_metrics = {"train_seconds": train_seconds}
+                if CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False):
+                    plotter.add_train(ep, upd_metrics)
+                else:
+                    plotter.train_rows.append({"episode": int(ep), **upd_metrics})
+                    if plotter.train_keys is None:
+                        plotter.train_keys = ["episode"] + list(upd_metrics.keys())
 
         # ===== Benchmark & Save (Policy von Player 0) =====
         eval_seconds = plot_seconds = save_seconds = 0.0
@@ -259,7 +277,9 @@ def main():
                 multi_title=title_multi,      # Multi & Macro: „Lernkurve - KxAy vs feste Heuristiken“
             )
 
-            plotter.plot_train(filename_prefix="training_metrics", separate=True)
+            if CONFIG["FEATURES"].get("PLOT_METRICS", False):
+                plotter.plot_train(filename_prefix="training_metrics", separate=True)
+
             plot_seconds = time.perf_counter() - plot_start
 
             save_start = time.perf_counter()
@@ -278,21 +298,9 @@ def main():
                 cum_seconds=cum_seconds,
             )
 
-
-        # Timing CSV
-        ep_seconds = time.perf_counter() - ep_start
-        timer.maybe_log(ep, {
-            "steps": ep_len,
-            "ep_seconds": ep_seconds,
-            "train_seconds": train_seconds,
-            "eval_seconds": eval_seconds,
-            "plot_seconds": plot_seconds,
-            "save_seconds": save_seconds,
-        })
-
     total_seconds = time.perf_counter() - t0
     plotter.log("")
-    plotter.log(f"Gesamtzeit: {total_seconds/3600:0.2f}h (~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)")  
+    plotter.log(f"Gesamtzeit: {total_seconds/3600:0.2f}h (~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)")
     plotter.log(f"{family}, Shared Policy Selfplay (4 Rollout, external Training). Training abgeschlossen.")
     plotter.log(f"Path: {paths['run_dir']}")
 

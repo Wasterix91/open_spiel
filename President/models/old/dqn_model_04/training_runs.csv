@@ -1,2 +1,0 @@
-version,timestamp,agent_type,num_episodes,eval_interval,eval_episodes,num_players,deck_size,shuffle_cards,single_card_mode,observation_dim,num_actions,model_version_dir,step_reward,delta_weight,hand_penalty_coeff,final_reward,env_reward,opponents
-04,2025-08-14 15:53:18,DQN,10000,1000,2000,4,64,True,False,14,65,/home/wasterix/OpenSpiel/open_spiel/President/models/dqn_model_04/train,delta_hand,1.0,0.0,none,True,"max_combo,max_combo,max_combo"
