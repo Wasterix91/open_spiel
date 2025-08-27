@@ -17,9 +17,9 @@ from utils.benchmark import run_benchmark
 
 # ============== CONFIG  ==============
 CONFIG = {
-    "EPISODES":         100_000,
-    "BENCH_INTERVAL":   5000,
-    "BENCH_EPISODES":   2000,
+    "EPISODES":         4000,
+    "BENCH_INTERVAL":   2000,
+    "BENCH_EPISODES":   100,
     "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 

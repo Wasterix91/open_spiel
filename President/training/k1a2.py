@@ -21,9 +21,9 @@ from utils.strategies import STRATS
 from utils.reward_shaper import RewardShaper
 
 CONFIG = {
-    "EPISODES":         4000,
-    "BENCH_INTERVAL":   500,
-    "BENCH_EPISODES":   200,
+    "EPISODES":         500_000,
+    "BENCH_INTERVAL":   10_000,
+    "BENCH_EPISODES":   2000,
     "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
@@ -60,7 +60,7 @@ CONFIG = {
 
     # Feature-Toggles (analog "neu")
     "FEATURES": {
-        "USE_HISTORY": True,    # Historie in Features einbetten?
+        "USE_HISTORY": False,    # Historie in Features einbetten?
         "SEAT_ONEHOT": False,    # Sitz-One-Hot optional separat anhängen
         "PLOT_METRICS": False,   # Trainingsplots erzeugen?
         "SAVE_METRICS_TO_CSV": False,  # Trainingsmetriken persistent speichern?

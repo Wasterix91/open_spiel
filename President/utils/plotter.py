@@ -175,16 +175,6 @@ class MetricsPlotter:
             with open(self.bench_csv_path, "a", newline="", encoding="utf-8") as f:
                 csv.writer(f).writerow(row)
 
-
-
-        # ---------- Benchmark: plot ----------
-    # utils/plotter.py
-
-        # utils/plotter.py
-    # utils/plotter.py
-
-    # utils/plotter.py (nur die plot_benchmark-Methode ersetzen)
-
     def plot_benchmark(
         self,
         filename_prefix: str = "lernkurve",
@@ -196,9 +186,18 @@ class MetricsPlotter:
         if not self.bench_episodes:
             return
 
-        # ---- Titel-Helper (wie gehabt) ----
-        def _title_single(opp: str) -> str:
-            return f"Lernkurve - {family_title} vs {opp}" if family_title else f"{filename_prefix}"
+        # ---- Pretty-Namen für Gegner ----
+        def _pretty_opp(name: str) -> str:
+            mapping = {
+                "max_combo": "Max Combo",
+                "random2": "Random2",
+                "single_only": "Single Only",
+            }
+            return mapping.get(name, name)
+
+        # ---- Titel-Helper ----
+        def _title_single(opp_pretty: str) -> str:
+            return f"Lernkurve - {family_title} vs {opp_pretty}" if family_title else f"{filename_prefix}"
 
         def _title_multi() -> str:
             if multi_title:
@@ -207,7 +206,7 @@ class MetricsPlotter:
                 return f"Lernkurve - {family_title} vs feste Heuristiken"
             return f"{filename_prefix}"
 
-        # ---- Farbpalette aus aktuellem Prop-Cycle (entspricht deinem Gesamtplot) ----
+        # ---- Farbpalette aus aktuellem Prop-Cycle ----
         base_colors = plt.rcParams.get("axes.prop_cycle", None)
         if base_colors is not None:
             base_colors = base_colors.by_key().get("color", [])
@@ -215,10 +214,10 @@ class MetricsPlotter:
             base_colors = [plt.cm.tab10(i) for i in range(10)]
         colors = {name: base_colors[i % len(base_colors)] for i, name in enumerate(self.bench_names)}
 
-        # ---- Macro-Farbe fix: grau (anders als Gegnerfarben) ----
+        # ---- Macro-Farbe fix: grau ----
         macro_color = "#444444"
 
-        # ---- kleine Helper ----
+        # ---- gemeinsame Achsen + optionale 25%-Linie (mit Legendeneintrag) ----
         def _apply_common_axes(title: str, add_25: bool = False):
             plt.title(title)
             plt.xlabel("Episode")
@@ -226,26 +225,28 @@ class MetricsPlotter:
             plt.ylim(0, 100)
             plt.grid(True)
 
-            # X-Achse immer bei 0 starten
             ax = plt.gca()
             ax.set_xlim(left=0)
 
-            # Sicherstellen, dass ein Tick bei 0 angezeigt wird
             ticks = ax.get_xticks()
             if 0.0 not in ticks:
-                # 0 vorn anfügen, restliche Ticks beibehalten
                 ax.set_xticks(np.unique(np.concatenate(([0.0], ticks))))
 
             if add_25:
-                # dünne rote Referenzlinie bei 25 %
-                plt.axhline(25, color="r", linewidth=1)
+                # dünne rote Referenzlinie + Label für Legende
+                plt.axhline(25, color="r", linewidth=1, label="25% Linie")
 
-
-        def _plot_single(name: str, out_path: str, add_25: bool = False):
+        def _plot_single(name: str, out_path: str, add_25: bool = False, title_override: str | None = None):
             plt.figure(figsize=(10, 6))
-            plt.plot(self.bench_episodes, self.bench_hist_wr[name],
-                    marker="o", markersize=4, color=colors[name])
-            _apply_common_axes(_title_multi(), add_25=add_25)
+            plt.plot(
+                self.bench_episodes,
+                self.bench_hist_wr[name],
+                marker="o",
+                markersize=4,
+                color=colors[name],
+            )
+            title = title_override or _title_single(_pretty_opp(name))
+            _apply_common_axes(title, add_25=add_25)
             plt.tight_layout()
             plt.savefig(out_path)
             plt.close()
@@ -253,12 +254,24 @@ class MetricsPlotter:
         def _plot_multi(out_path: str, include_macro: bool, add_25: bool = False):
             plt.figure(figsize=(12, 8))
             for name in self.bench_names:
-                plt.plot(self.bench_episodes, self.bench_hist_wr[name],
-                        marker="o",markersize=4, label=name, color=colors[name])
+                plt.plot(
+                    self.bench_episodes,
+                    self.bench_hist_wr[name],
+                    marker="o",
+                    markersize=4,
+                    label=name,
+                    color=colors[name],
+                )
             if include_macro:
-                plt.plot(self.bench_episodes, self.bench_macro_wr,
-                        marker="o",markersize=4, linestyle="--", label="avg_macro",
-                        color=macro_color)
+                plt.plot(
+                    self.bench_episodes,
+                    self.bench_macro_wr,
+                    marker="o",
+                    markersize=4,
+                    linestyle="--",
+                    label="avg_macro",
+                    color=macro_color,
+                )
             _apply_common_axes(_title_multi(), add_25=add_25)
             plt.legend(loc="upper right")
             plt.tight_layout()
@@ -282,48 +295,47 @@ class MetricsPlotter:
             add_25=False,
         )
 
-        # 03: Heuristiken inkl. avg + 25%-Linie (rot, dünn)
+        # 03: Heuristiken inkl. avg + 25%-Linie (rot, dünn) — Linie in Legende
         _plot_multi(
             out_path=os.path.join(self.out_dir, "03_Lernkurve_Heuristiken_incl_avg_25.png"),
             include_macro=True,
             add_25=True,
         )
 
-        # 04: Heuristiken + 25%-Linie (ohne Macro)
+        # 04: Heuristiken + 25%-Linie (ohne Macro) — Linie in Legende
         _plot_multi(
             out_path=os.path.join(self.out_dir, "04_Lernkurve_Heuristiken_incl_25.png"),
             include_macro=False,
             add_25=True,
         )
 
-        # 05: Einzelplot max_combo (falls vorhanden, ohne 25%-Linie)
+        # 05: Einzelplot Max Combo (Titel fix)
         if "max_combo" in self.bench_names:
             _plot_single(
                 "max_combo",
                 os.path.join(self.out_dir, "05_Lernkurve_max_combo.png"),
                 add_25=False,
+                title_override=_title_single(_pretty_opp("max_combo")),
             )
 
-        # 06: Einzelplot random2 (falls vorhanden, ohne 25%-Linie)
+        # 06: Einzelplot Random2 (Titel fix)
         if "random2" in self.bench_names:
             _plot_single(
                 "random2",
                 os.path.join(self.out_dir, "06_Lernkurve_random2.png"),
                 add_25=False,
+                title_override=_title_single(_pretty_opp("random2")),
             )
 
-        # 07: Einzelplot "single_only" → erster Gegner (ohne 25%-Linie)
+        # 07: Einzelplot "single_only" → erster Gegner, Titel fix auf "Single Only"
         if self.bench_names:
             first_name = self.bench_names[0]
             _plot_single(
                 first_name,
                 os.path.join(self.out_dir, "07_Lernkurve_single_only.png"),
                 add_25=False,
+                title_override=_title_single(_pretty_opp("single_only")),
             )
-
-
-
-
 
     def plot_benchmark_rewards(self, filename_prefix: str = "benchmark_rewards", with_macro: bool = True, title_prefix: str | None = None):
         """Ø-Reward-Kurven aus dem Benchmark."""

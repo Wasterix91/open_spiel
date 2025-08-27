@@ -21,11 +21,12 @@ from utils.deck import ranks_for_deck
 
 # ============== CONFIG ==============
 CONFIG = {
-    "EPISODES":         10_000,
-    "BENCH_INTERVAL":   2000,
-    "BENCH_EPISODES":   200,
+    "EPISODES":         500_000,
+    "BENCH_INTERVAL":   10_000,
+    "BENCH_EPISODES":   2000,
     "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
+
 
     # PPO
     "PPO": {
@@ -56,7 +57,7 @@ CONFIG = {
         "HAND_PENALTY_COEFF": 0.0,
 
         "FINAL_MODE": "env_only",
-        "BONUS_WIN": 10.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
+        "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
     },
 
     # Features (Shared Policy: Seat-OneHot optional)

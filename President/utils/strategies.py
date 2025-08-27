@@ -60,14 +60,7 @@ def single_only(state) -> int:
     return int(singles[0][0]) if singles else 0
 
 def max_combo(state) -> int:
-    """Wählt die größtmögliche Gruppengröße (Tie-Break: höhere Action-ID)."""
-    dec = _decode_actions(state)
-    if not dec:
-        return 0
-    return int(max(dec, key=lambda x: (_combo_size_priority(x[1]), -x[0]))[0])
-
-def max_combo2(state) -> int:
-    """Wie max_combo, aber berücksichtigt 5..8-of-a-kind explizit (64er-Deck)."""
+    """Wählt die größtmögliche Gruppengröße (Tie-Break: niedrigere Action-ID)."""
     dec = _decode_actions(state)
     if not dec:
         return 0
@@ -80,31 +73,90 @@ def aggressive(state) -> int:
         return 0
     return int(max(dec, key=lambda x: _rank_priority(x[1]))[0])
 
-def smart(state) -> int:
-    """Erst größte Kombogröße, innerhalb dieser den niedrigsten Rang (sparsam)."""
-    dec = _decode_actions(state)
-    if not dec:
-        return 0
-    groups = {}
-    for a, s in dec:
-        groups.setdefault(_combo_size_priority(s), []).append((a, s))
-    for size in sorted(groups.keys(), reverse=True):
-        cand = groups[size]
-        a, _ = min(cand, key=lambda x: _rank_priority(x[1]))
-        return int(a)
-    return 0
+def chatgpt(state) -> int:
+    """
+    Starke, situationsabhängige Heuristik:
+    - Neuer Stich: größte Kombogröße, innerhalb dessen niedrigster Rang.
+    - Mitgehen: sparsamer Gewinn (niedrigster Rang), moderate Präferenz für größere Kombos.
+                Passt, wenn nur sehr hohe Ränge (K/A) nötig wären.
+    """
+    # Alle legalen Züge (inkl. Pass) dekodieren
+    pid = state.current_player()
+    legal = list(state.legal_actions())
+    include_pass = 0 in legal
+    decoded_all = [(a, state.action_to_string(pid, a)) for a in legal]
 
-# ---------- Export-Mapping ----------
+    # Für Bewertung: nur Nicht-Pass
+    decoded = [(a, s) for (a, s) in decoded_all if a != 0]
+    if not decoded:
+        # Entweder nur Pass oder gar nichts
+        return 0 if include_pass else int(np.random.choice(legal))
+
+    # Hilfsfunktionen nutzen
+    def combo_size(s: str) -> int:
+        c = _combo_size_priority(s)
+        return c if c > 0 else 1
+
+    def rank_prio(s: str) -> int:
+        return _rank_priority(s)
+
+    # Unterscheiden: Neuer Stich vs. Mitgehen
+    new_trick = not include_pass
+
+    # Basispunkte berechnen
+    scored = []
+    max_rank_val = 7  # bei 32er/64er Deck: A -> 7 (siehe _rank_priority)
+
+    if new_trick:
+        # Groß rauslegen, aber hohe Ränge sparen
+        for a, s in decoded:
+            cs = combo_size(s)
+            rp = rank_prio(s)
+            # Score: große Kombos stark bevorzugt, innerhalb dessen niedriger Rang
+            score = 1000 * cs - 10 * rp
+            # Kleine 'Sparprämie' für sehr niedrige Ränge
+            if rp <= 2:
+                score += 3
+            scored.append((score, -a, a))
+    else:
+        # Mitgehen: sparsam gewinnen, größere Kombos leicht bevorzugt
+        # Falls nur sehr hohe Ränge verfügbar wären, lieber passen
+        min_rp = min(rank_prio(s) for (_, s) in decoded)
+        max_rp = max(rank_prio(s) for (_, s) in decoded)
+        only_very_high = min_rp >= 6  # nur K/A schlagen den Stich
+
+        if include_pass and only_very_high:
+            return 0  # Highcards fürs Endgame aufsparen
+
+        for a, s in decoded:
+            cs = combo_size(s)
+            rp = rank_prio(s)
+            # Grundscore: größere Kombos nützen (Kartenabbau), aber sparsam (niedriger Rang besser)
+            score = 100 * cs - 2 * rp
+            # Bonus, wenn wir Top-Rang spielen (schließt oft den Stich)
+            if rp == max_rank_val:
+                score += 15
+            # Singles leicht benachteiligen, wenn auch Mehrlinge möglich sind
+            if cs == 1 and any(combo_size(s2) > 1 for (_, s2) in decoded):
+                score -= 8
+            scored.append((score, -a, a))
+
+    # Beste Aktion wählen (mit stabiler Tie-Breaker-Reihenfolge via -a)
+    scored.sort(reverse=True)
+    return int(scored[0][2])
+
+
+# ---------- Export-Mapping aktualisieren ----------
 
 STRATS = {
     "random":       random_action,
     "random2":      random2,
     "single_only":  single_only,
     "max_combo":    max_combo,
-    "max_combo2":   max_combo2,
     "aggressive":   aggressive,
-    "smart":        smart,
+    "smart":        chatgpt,      
 }
+
 
 def get_strategy(name_or_callable):
     """Gibt eine Strategie-Funktion zurück (oder validiert bereits übergebene Callables)."""
