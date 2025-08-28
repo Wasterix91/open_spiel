@@ -22,34 +22,38 @@ def _get_policy_module(agent):
                          "(erwartet _policy / q_network / q / q_net).")
 
 @torch.no_grad()
-def _policy_logits_for_benchmark(agent, obs_vec, *, seat_id: int, num_players: int):
+def _policy_logits_for_benchmark(agent, obs_vec, *, seat_id: int, num_players: int, feat_cfg=None):
     policy_mod = _get_policy_module(agent)
     try:
         device = next(policy_mod.parameters()).device
     except Exception:
         device = torch.device("cpu")
 
+    # PPO-Agent hat _make_input → dort Seat-One-Hot anhängen
     if hasattr(agent, "_make_input"):
         seat_oh = np.zeros(num_players, dtype=np.float32)
         seat_oh[seat_id] = 1.0
         x = agent._make_input(obs_vec, seat_one_hot=seat_oh)
-        if not isinstance(x, torch.Tensor):
-            x = torch.tensor(x, dtype=torch.float32)
-        x = x.to(device)
-    else:
+
+    # Wenn feat_cfg.add_seat_onehot schon True → Seat-OH steckt schon im obs_vec
+    elif feat_cfg is not None and getattr(feat_cfg, "add_seat_onehot", False):
         x = torch.tensor(obs_vec, dtype=torch.float32, device=device)
 
-    # >>> NEU: Batch-Dimension sicherstellen
+    # Sonst fallback → kein Seat-One-Hot drin, also manuell anhängen
+    else:
+        seat_oh = np.zeros(num_players, dtype=np.float32)
+        seat_oh[seat_id] = 1.0
+        obs = np.concatenate([obs_vec, seat_oh], axis=0)
+        x = torch.tensor(obs, dtype=torch.float32, device=device)
+
     if x.ndim == 1:
-        x = x.unsqueeze(0)   # [1, F]
+        x = x.unsqueeze(0)
 
     out = policy_mod(x)
-
-    # >>> NEU: wieder auf 1D zurück
     if out.ndim == 2 and out.size(0) == 1:
         out = out.squeeze(0)
+    return out
 
-    return out  # [A]
 
 
 def run_benchmark(game, agent, opponents_dict, opponent_names, episodes, feat_cfg, num_actions):

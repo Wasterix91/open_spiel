@@ -194,17 +194,47 @@ class MetricsPlotter:
                 "single_only": "Single Only",
             }
             return mapping.get(name, name)
+        
 
         # ---- Titel-Helper ----
         def _title_single(opp_pretty: str) -> str:
             return f"Lernkurve - {family_title} vs {opp_pretty}" if family_title else f"{filename_prefix}"
-
+        
         def _title_multi() -> str:
             if multi_title:
                 return multi_title
             if family_title:
                 return f"Lernkurve - {family_title} vs feste Heuristiken"
             return f"{filename_prefix}"
+
+
+        def _plot_multi(out_path: str, include_macro: bool, add_25: bool = False):
+            plt.figure(figsize=(12, 8))
+            for name in self.bench_names:
+                plt.plot(
+                    self.bench_episodes,
+                    self.bench_hist_wr[name],
+                    marker="o",
+                    markersize=4,
+                    label=_pretty_opp(name),   # statt label=name
+                    color=colors[name],
+                )
+            if include_macro:
+                plt.plot(
+                    self.bench_episodes,
+                    self.bench_macro_wr,
+                    marker="o",
+                    markersize=4,
+                    linestyle="--",
+                    label="Avg Macro",        # schöner Name
+                    color=macro_color,
+                )
+            _apply_common_axes(_title_multi(), add_25=add_25)
+            plt.legend(loc="upper right")
+            plt.tight_layout()
+            plt.savefig(out_path)
+            plt.close()
+
 
         # ---- Farbpalette aus aktuellem Prop-Cycle ----
         base_colors = plt.rcParams.get("axes.prop_cycle", None)
@@ -251,32 +281,6 @@ class MetricsPlotter:
             plt.savefig(out_path)
             plt.close()
 
-        def _plot_multi(out_path: str, include_macro: bool, add_25: bool = False):
-            plt.figure(figsize=(12, 8))
-            for name in self.bench_names:
-                plt.plot(
-                    self.bench_episodes,
-                    self.bench_hist_wr[name],
-                    marker="o",
-                    markersize=4,
-                    label=name,
-                    color=colors[name],
-                )
-            if include_macro:
-                plt.plot(
-                    self.bench_episodes,
-                    self.bench_macro_wr,
-                    marker="o",
-                    markersize=4,
-                    linestyle="--",
-                    label="avg_macro",
-                    color=macro_color,
-                )
-            _apply_common_axes(_title_multi(), add_25=add_25)
-            plt.legend(loc="upper right")
-            plt.tight_layout()
-            plt.savefig(out_path)
-            plt.close()
 
         # ---- Ausgaben gemäß Vorgaben ----
         os.makedirs(self.out_dir, exist_ok=True)

@@ -51,11 +51,11 @@ CONFIG = {
     # FINAL_MODE: "none" | "env_only" | "rank_bonus" | "both"
     "REWARD": {
         "STEP_MODE": "none",
-        "DELTA_WEIGHT": 0.5,
+        "DELTA_WEIGHT": 0.0,
         "HAND_PENALTY_COEFF": 0.0,
 
         "FINAL_MODE": "env_only",
-        "BONUS_WIN": 10.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
+        "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
     },
 
     # Feature-Toggles (analog "neu")

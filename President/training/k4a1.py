@@ -44,7 +44,7 @@ CONFIG = {
     # ===== In-Proc „External“ Trainer =====
     # Sammle N Episoden → mache K PPO-Updates → Buffer clear → weiter sammeln
     "INPROC_TRAINER": {
-        "EPISODES_PER_UPDATE": 20,   # Bundle-Größe
+        "EPISODES_PER_UPDATE": 50,   # Bundle-Größe
         "UPDATES_PER_CALL":     1,   # wie oft agent.train() pro Bundle
     },
 
