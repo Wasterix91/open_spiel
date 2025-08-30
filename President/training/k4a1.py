@@ -19,12 +19,11 @@ from utils.load_save_a1_ppo import save_checkpoint_ppo
 
 # ============== CONFIG ==============
 CONFIG = {
-    "EPISODES":         50_000,
-    "BENCH_INTERVAL":   2_000,
-    "BENCH_EPISODES":   2_000,
+    "EPISODES":         500_000,
+    "BENCH_INTERVAL":   10_000,
+    "BENCH_EPISODES":   2000,
     "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
-
     # PPO
     "PPO": {
         "learning_rate": 3e-4,
@@ -41,14 +40,14 @@ CONFIG = {
     # In-Proc „External“ Trainer (Bündel-Updates)
     "INPROC_TRAINER": {
         "EPISODES_PER_UPDATE": 50,   # Bundle-Größe
-        "UPDATES_PER_CALL":     1,   # wie oft agent.train() pro Bundle
+        "UPDATES_PER_CALL":     2,   # wie oft agent.train() pro Bundle
         "MIN_SAMPLES_TO_TRAIN": 1000 # Guard, um Mini-Bundles zu vermeiden
     },
 
     # Rewards
     "REWARD": {
         "STEP_MODE": "none",         # "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
-        "DELTA_WEIGHT": 0.5,
+        "DELTA_WEIGHT": 0.0,
         "HAND_PENALTY_COEFF": 0.0,
 
         "FINAL_MODE": "env_only",    # "none" | "env_only" | "rank_bonus" | "both"
@@ -57,10 +56,10 @@ CONFIG = {
 
     # Features
     "FEATURES": {
-        "USE_HISTORY": False,
+        "USE_HISTORY": True,
         "SEAT_ONEHOT": True,
         "PLOT_METRICS": False,
-        "SAVE_METRICS_TO_CSV": True,   # <- Flag ist nun maßgeblich für Plotter-CSV
+        "SAVE_METRICS_TO_CSV": False,   # <- Flag ist nun maßgeblich für Plotter-CSV
     },
 
     # Benchmark-Gegner

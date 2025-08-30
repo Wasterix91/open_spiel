@@ -58,7 +58,7 @@ CONFIG = {
 
     # Features
     "FEATURES": {
-        "USE_HISTORY": False,
+        "USE_HISTORY": True,
         "SEAT_ONEHOT": True,
         "PLOT_METRICS": False,
         "SAVE_METRICS_TO_CSV": False,  # Plotter-CSV steuern
