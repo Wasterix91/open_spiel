@@ -17,9 +17,9 @@ from utils.benchmark import run_benchmark
 
 # ============== CONFIG  ==============
 CONFIG = {
-    "EPISODES":         2000,
-    "BENCH_INTERVAL":   200,
-    "BENCH_EPISODES":   100,
+    "EPISODES":         500_000,
+    "BENCH_INTERVAL":   10_000,
+    "BENCH_EPISODES":   2000,
     "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
@@ -53,7 +53,7 @@ CONFIG = {
 
     # Feature-Toggles
     "FEATURES": {
-        "USE_HISTORY": False,    # ✅ True = Variante 2 (mit Historie), False = Variante 1 (ohne)
+        "USE_HISTORY": True,    # ✅ True = Variante 2 (mit Historie), False = Variante 1 (ohne)
         "SEAT_ONEHOT": False,   # optional: Sitz-One-Hot im Agent verwenden
         "PLOT_METRICS": False,
         "SAVE_METRICS_TO_CSV": False,

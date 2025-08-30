@@ -60,7 +60,7 @@ CONFIG = {
 
     # Feature-Toggles (analog "neu")
     "FEATURES": {
-        "USE_HISTORY": False,    # Historie in Features einbetten?
+        "USE_HISTORY": True,    # Historie in Features einbetten?
         "SEAT_ONEHOT": False,    # Sitz-One-Hot optional separat anhängen
         "PLOT_METRICS": False,   # Trainingsplots erzeugen?
         "SAVE_METRICS_TO_CSV": False,  # Trainingsmetriken persistent speichern?

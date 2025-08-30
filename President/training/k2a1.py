@@ -54,7 +54,7 @@ CONFIG = {
 
     # Feature-Toggles (analog k1a1)
     "FEATURES": {
-        "USE_HISTORY": False,    # ✅ True = Variante 2 (mit Historie), False = Variante 1 (ohne)
+        "USE_HISTORY": True,    # ✅ True = Variante 2 (mit Historie), False = Variante 1 (ohne)
         "SEAT_ONEHOT": False,    # optional: Sitz-One-Hot im Agent verwenden
         "PLOT_METRICS": False,   # Trainingsplots erzeugen?
         "SAVE_METRICS_TO_CSV": False,  # Trainingsmetriken persistent speichern?
