@@ -22,7 +22,7 @@ CONFIG = {
     "BENCH_EPISODES":   2000,
     "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
-
+    
     # DQN
     "DQN": {
         "learning_rate":     3e-4,

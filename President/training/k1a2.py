@@ -21,9 +21,9 @@ from utils.strategies import STRATS
 from utils.reward_shaper import RewardShaper
 
 CONFIG = {
-    "EPISODES":         2000,
-    "BENCH_INTERVAL":   500,
-    "BENCH_EPISODES":   200,
+    "EPISODES":         500_000,
+    "BENCH_INTERVAL":   10_000,
+    "BENCH_EPISODES":   2000,
     "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
