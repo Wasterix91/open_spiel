@@ -55,7 +55,7 @@ CONFIG = {
 
     # Feature-Toggles wie k1a2
     "FEATURES": {
-        "USE_HISTORY": False,
+        "USE_HISTORY": True,
         "SEAT_ONEHOT": False,
         "PLOT_METRICS": False,
         "SAVE_METRICS_TO_CSV": False,

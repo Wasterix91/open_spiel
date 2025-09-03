@@ -1,0 +1,186 @@
+.
+├── agents
+│   ├── __init__.py
+│   ├── dqn_agent.py
+│   ├── ppo_agent.py
+│   ├── tables
+│   │   ├── v_table_4_3_4_data.bin
+│   │   ├── v_table_4_3_4_index.bin
+│   │   ├── v_table_4_3_4_params.json
+│   │   ├── v_table_4_4_4_data.bin
+│   │   ├── v_table_4_4_4_data.bin:Zone.Identifier
+│   │   ├── v_table_4_4_4_index.bin
+│   │   └── v_table_4_4_4_params.json
+│   ├── v_table_agent.py
+│   └── v_table_agent.py:Zone.Identifier
+├── cfg
+│   └── reqirements.txt
+├── evaluation
+│   ├── __init__.py
+│   ├── eval_macro
+│   ├── eval_macro.py
+│   ├── eval_micro
+│   ├── eval_micro.py
+│   ├── eval_probe
+│   │   ├── probe_01
+│   │   │   ├── action_probs.csv
+│   │   │   ├── player_config.csv
+│   │   │   ├── probe_config.json
+│   │   │   └── probe_result.csv
+│   │   ├── probe_02
+│   │   │   ├── action_probs.csv
+│   │   │   ├── player_config.csv
+│   │   │   ├── probe_config.json
+│   │   │   └── probe_result.csv
+│   │   ├── probe_03
+│   │   │   ├── action_probs.csv
+│   │   │   ├── player_config.csv
+│   │   │   ├── probe_config.json
+│   │   │   └── probe_result.csv
+│   │   ├── probe_04
+│   │   │   ├── action_probs.csv
+│   │   │   ├── player_config.csv
+│   │   │   ├── probe_config.json
+│   │   │   └── probe_result.csv
+│   │   ├── probe_05
+│   │   │   ├── action_probs.csv
+│   │   │   ├── player_config.csv
+│   │   │   ├── probe_config.json
+│   │   │   └── probe_result.csv
+│   │   └── probe_06
+│   │       ├── action_probs.csv
+│   │       ├── player_config.csv
+│   │       ├── probe_config.json
+│   │       └── probe_result.csv
+│   ├── play_human.py
+│   ├── z_eval_probe_test.py
+│   └── z_resume_from_log_test.py
+├── models
+│   ├── k1a1
+│   │   ├── model_01
+│   │   │   ├── config.csv
+│   │   │   ├── models
+│   │   │   ├── plots
+│   │   │   └── run_meta.json
+│   │   ├── model_02
+│   │   │   ├── config.csv
+│   │   │   ├── models
+│   │   │   ├── plots
+│   │   │   └── run_meta.json
+│   │   └── model_03
+│   │       ├── config.csv
+│   │       ├── models
+│   │       ├── plots
+│   │       └── run_meta.json
+│   ├── k1a2
+│   │   ├── model_01
+│   │   │   ├── config.csv
+│   │   │   ├── models
+│   │   │   ├── plots
+│   │   │   └── run_meta.json
+│   │   └── model_02
+│   │       ├── config.csv
+│   │       ├── models
+│   │       ├── plots
+│   │       └── run_meta.json
+│   ├── k2a1
+│   │   ├── model_01
+│   │   │   ├── config.csv
+│   │   │   ├── models
+│   │   │   ├── plots
+│   │   │   └── run_meta.json
+│   │   ├── model_02
+│   │   │   ├── config.csv
+│   │   │   ├── models
+│   │   │   ├── plots
+│   │   │   └── run_meta.json
+│   │   └── model_03
+│   │       ├── config.csv
+│   │       ├── models
+│   │       ├── plots
+│   │       └── run_meta.json
+│   ├── k2a2
+│   │   ├── model_01
+│   │   │   ├── config.csv
+│   │   │   ├── models
+│   │   │   ├── plots
+│   │   │   └── run_meta.json
+│   │   └── model_02
+│   │       ├── config.csv
+│   │       ├── models
+│   │       ├── plots
+│   │       └── run_meta.json
+│   ├── k3a1
+│   │   ├── model_01
+│   │   │   ├── config.csv
+│   │   │   ├── models
+│   │   │   ├── plots
+│   │   │   └── run_meta.json
+│   │   └── model_02
+│   │       ├── config.csv
+│   │       ├── models
+│   │       ├── plots
+│   │       └── run_meta.json
+│   ├── k3a2
+│   │   ├── model_01
+│   │   │   ├── config.csv
+│   │   │   ├── models
+│   │   │   ├── plots
+│   │   │   └── run_meta.json
+│   │   └── model_02
+│   │       ├── config.csv
+│   │       ├── models
+│   │       ├── plots
+│   │       └── run_meta.json
+│   ├── k4a1
+│   │   ├── model_01
+│   │   │   ├── config.csv
+│   │   │   ├── models
+│   │   │   ├── plots
+│   │   │   └── run_meta.json
+│   │   └── model_02
+│   │       ├── config.csv
+│   │       ├── models
+│   │       ├── plots
+│   │       └── run_meta.json
+│   └── k4a2
+│       ├── model_01
+│       │   ├── config.csv
+│       │   ├── models
+│       │   ├── plots
+│       │   └── run_meta.json
+│       └── model_02
+│           ├── config.csv
+│           ├── models
+│           ├── plots
+│           └── run_meta.json
+├── repo_tree.txt
+├── training
+│   ├── k1a1.py
+│   ├── k1a2.py
+│   ├── k2a1.py
+│   ├── k2a2.py
+│   ├── k3a1.py
+│   ├── k3a2.py
+│   ├── k4a1.py
+│   └── k4a2.py
+└── utils
+    ├── __init__.py
+    ├── agent_info.py
+    ├── agent_plots
+    │   ├── policy_layers.png
+    │   └── value_layers.png
+    ├── benchmark.py
+    ├── check_tensor.py
+    ├── deck.py
+    ├── fit_tensor.py
+    ├── load_save_a1_ppo.py
+    ├── load_save_a2_dqn.py
+    ├── load_save_common.py
+    ├── plotter.py
+    ├── reward_shaper.py
+    ├── show_games.py
+    ├── strategies.py
+    └── timing.py
+
+80 directories, 104 files
