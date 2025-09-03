@@ -19,10 +19,10 @@ from utils.load_save_a1_ppo import save_checkpoint_ppo
 
 # ============== CONFIG ==============
 CONFIG = {
-    "EPISODES":         500_000,
-    "BENCH_INTERVAL":   10_000,
-    "BENCH_EPISODES":   2000,
-    "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+    "EPISODES":         100_000,
+    "BENCH_INTERVAL":   2_000,
+    "BENCH_EPISODES":   2_000,
+    "DECK_SIZE":        "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
     # PPO
     "PPO": {
