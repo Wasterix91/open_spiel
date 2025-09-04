@@ -17,9 +17,9 @@ from collections import defaultdict
 
 # ============================ CONFIG ============================
 CONFIG = {
-    "EPISODES":         50_000,
-    "BENCH_INTERVAL":   2_000,
-    "BENCH_EPISODES":   2_000,
+    "EPISODES":         1_000_000,
+    "BENCH_INTERVAL":   20_000,
+    "BENCH_EPISODES":   5_000,
     "DECK_SIZE":        "16",
     "SEED":             42,
 
