@@ -27,7 +27,7 @@ CONFIG = {
     # PPO
     "PPO": {
         "learning_rate": 3e-4,
-        "num_epochs": 4,
+        "num_epochs": 1,
         "batch_size": 256,
         "entropy_cost": 0.01,
         "gamma": 0.99,

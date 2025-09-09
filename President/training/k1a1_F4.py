@@ -17,10 +17,10 @@ from collections import defaultdict
 
 # ============================ CONFIG ============================
 CONFIG = {
-    "EPISODES":         1_000_000,
-    "BENCH_INTERVAL":   20_000,
-    "BENCH_EPISODES":   5_000,
-    "DECK_SIZE":        "16",
+    "EPISODES":         20_000,
+    "BENCH_INTERVAL":   500,
+    "BENCH_EPISODES":   2000,
+    "DECK_SIZE":        "64",
     "SEED":             42,
 
     # Pfadpräfix der Wertetabelle (ohne *_params.json/_index.bin/_data.bin)
@@ -28,15 +28,15 @@ CONFIG = {
 
     # --- Gegner ---
     # Fixed (Fallback, wenn POOL leer oder alle Gewichte 0)
-    "OPPONENTS": ["max_combo", "max_combo", "max_combo"],
+    "OPPONENTS": ["max_combo", "single_only", "random2"],
 
     # Population: aktiviert, sobald irgendein Gewicht > 0 ist
     # Tabellengegner einfach als "v_table" referenzieren
     "OPPONENT_POOL": {
-        "max_combo": 0.0,
+        "max_combo": 1.0,
         "single_only": 0.0,
         "random2": 0.0,
-        "v_table": 1.0
+        "v_table": 0.0
     },
 
     # >0: Wechsel alle n Episoden; 0/negativ: nie wechseln
@@ -66,14 +66,14 @@ CONFIG = {
 
     # Features
     "FEATURES": {
-        "USE_HISTORY": True,
+        "USE_HISTORY": False,
         "SEAT_ONEHOT": False,
         "PLOT_METRICS": False,
         "SAVE_METRICS_TO_CSV": False,
     },
 
     # Benchmark-Gegner (nur Labels/Namen; "v_table" erlaubt)
-    "BENCH_OPPONENTS": ["single_only", "max_combo", "random2", "v_table"],
+    "BENCH_OPPONENTS": ["single_only", "max_combo", "random2"],
 }
 
 # ===================== Helfer =====================
@@ -238,6 +238,11 @@ def main():
         ep_len = 0
         ep_shaping_return = 0.0
 
+        # Timing-Teilmessungen
+        eval_seconds = 0.0
+        plot_seconds = 0.0
+        save_seconds = 0.0
+
         # Gegnerwechsel (bei Population & Intervall>0)
         if use_population and (switch_interval is not None) and ((ep - 1) % switch_interval == 0):
             opponents_names_current = sample_lineup_from_pool(pool, n_seats=3, rng=rng)
@@ -325,21 +330,34 @@ def main():
                 feat_cfg=feat_cfg, num_actions=A,
             )
             per_opponent_labels = {_safe_name(k): v for k, v in per_opponent_tokens.items()}
-            plotter.log_bench_summary(ep, per_opponent_labels)
+            eval_seconds = time.perf_counter() - ev_start
 
+            plot_start = time.perf_counter()
+            plotter.log_bench_summary(ep, per_opponent_labels)
             plotter.add_benchmark(ep, per_opponent_labels)
             plotter.plot_benchmark_rewards()
             plotter.plot_places_latest()
             title_multi = f"Lernkurve - {family.upper()} vs feste Heuristiken"
             plotter.plot_benchmark(filename_prefix="lernkurve", with_macro=True,
                                    family_title=family.upper(), multi_title=title_multi)
+            plot_seconds = time.perf_counter() - plot_start
 
-            # Save weights
+            save_start = time.perf_counter()
             tag = f"{family}_model_{version}_agent_p0_ep{ep:07d}"
             save_checkpoint_ppo(agent, paths["weights_dir"], tag)
+            save_seconds = time.perf_counter() - save_start
+
+            plotter.log_timing(
+                ep,
+                ep_seconds=(time.perf_counter() - ep_start),
+                train_seconds=train_seconds,
+                eval_seconds=eval_seconds,
+                plot_seconds=plot_seconds,
+                save_seconds=save_seconds,
+                cum_seconds=(time.perf_counter() - t0),
+            )
 
     # Ende
-    # Opponent-Usage persistieren
     usage_csv = os.path.join(paths["plots_dir"], "opponent_usage.csv")
     _save_opponent_usage_csv(usage_csv, realized_counts, seat_samples_total)
     plotter.log(f"Opponent-Usage gespeichert: {usage_csv}")

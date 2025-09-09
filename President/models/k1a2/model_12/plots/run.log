@@ -1,0 +1,570 @@
+[2025-09-09 10:41:28] New Training (k1a2): DQN Single-Agent vs Heuristiken/Population (P0→P0)
+[2025-09-09 10:41:28] Deck_Size: 16
+[2025-09-09 10:41:28] Episodes: 20000
+[2025-09-09 10:41:28] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k1a2/model_12
+[2025-09-09 10:41:29] [Population] Initiales Lineup: ['random2', 'single_only', 'random2']
+[2025-09-09 10:41:29] [Population] Episode 1: Lineup -> ['random2', 'max_combo', 'random2']
+[2025-09-09 10:41:31] [Population] Episode 101: Lineup -> ['random2', 'random2', 'max_combo']
+[2025-09-09 10:41:33] [Population] Episode 201: Lineup -> ['single_only', 'single_only', 'random2']
+[2025-09-09 10:41:34] [Population] Episode 301: Lineup -> ['single_only', 'random2', 'single_only']
+[2025-09-09 10:41:36] [Population] Episode 401: Lineup -> ['max_combo', 'single_only', 'max_combo']
+[2025-09-09 10:41:55] 
+[2025-09-09 10:41:55] Benchmark @train_ep     500 (bench_eps: 2000)
+[2025-09-09 10:41:55] Macro Winrate          :  27.9%
+[2025-09-09 10:41:55] Macro Ø-Reward         :  1.431
+[2025-09-09 10:41:55] Winrate vs max_combo   :  23.8% | Σ-Reward:  2640.0 | Ø-Reward:  1.320 | Places: [476 (0.24), 383 (0.19), 446 (0.22), 695 (0.35)]
+[2025-09-09 10:41:55] Winrate vs random2     :  25.4% | Σ-Reward:  3094.0 | Ø-Reward:  1.547 | Places: [508 (0.25), 532 (0.27), 506 (0.25), 454 (0.23)]
+[2025-09-09 10:41:55] Winrate vs single_only :  47.0% | Σ-Reward:  3811.0 | Ø-Reward:  1.905 | Places: [941 (0.47), 298 (0.15), 392 (0.20), 369 (0.18)]
+[2025-09-09 10:41:55] Winrate vs v_table     :  15.2% | Σ-Reward:  1900.0 | Ø-Reward:  0.950 | Places: [303 (0.15), 317 (0.16), 357 (0.18), 1023 (0.51)]
+[2025-09-09 10:41:56] Timing @ep 500: episode 18.6s | train 0.014s | eval 17.2s | plot 1.3s | save 0.002s | cum 0.01h
+[2025-09-09 10:41:56] [Population] Episode 501: Lineup -> ['random2', 'single_only', 'random2']
+[2025-09-09 10:41:58] [Population] Episode 601: Lineup -> ['single_only', 'random2', 'random2']
+[2025-09-09 10:42:01] [Population] Episode 701: Lineup -> ['random2', 'max_combo', 'single_only']
+[2025-09-09 10:42:03] [Population] Episode 801: Lineup -> ['max_combo', 'max_combo', 'random2']
+[2025-09-09 10:42:05] [Population] Episode 901: Lineup -> ['random2', 'random2', 'max_combo']
+[2025-09-09 10:42:23] 
+[2025-09-09 10:42:23] Benchmark @train_ep    1000 (bench_eps: 2000)
+[2025-09-09 10:42:23] Macro Winrate          :  32.0%
+[2025-09-09 10:42:23] Macro Ø-Reward         :  1.571
+[2025-09-09 10:42:23] Winrate vs max_combo   :  27.6% | Σ-Reward:  2955.0 | Ø-Reward:  1.478 | Places: [553 (0.28), 416 (0.21), 464 (0.23), 567 (0.28)]
+[2025-09-09 10:42:23] Winrate vs random2     :  30.6% | Σ-Reward:  3413.0 | Ø-Reward:  1.706 | Places: [611 (0.31), 552 (0.28), 476 (0.24), 361 (0.18)]
+[2025-09-09 10:42:23] Winrate vs single_only :  48.1% | Σ-Reward:  3859.0 | Ø-Reward:  1.929 | Places: [962 (0.48), 275 (0.14), 423 (0.21), 340 (0.17)]
+[2025-09-09 10:42:23] Winrate vs v_table     :  21.7% | Σ-Reward:  2337.0 | Ø-Reward:  1.169 | Places: [434 (0.22), 332 (0.17), 371 (0.19), 863 (0.43)]
+[2025-09-09 10:42:25] Timing @ep 1000: episode 18.2s | train 0.019s | eval 16.5s | plot 1.6s | save 0.002s | cum 0.02h
+[2025-09-09 10:42:25] [Population] Episode 1001: Lineup -> ['single_only', 'single_only', 'max_combo']
+[2025-09-09 10:42:27] [Population] Episode 1101: Lineup -> ['max_combo', 'single_only', 'max_combo']
+[2025-09-09 10:42:30] [Population] Episode 1201: Lineup -> ['random2', 'single_only', 'random2']
+[2025-09-09 10:42:34] [Population] Episode 1301: Lineup -> ['random2', 'max_combo', 'random2']
+[2025-09-09 10:42:38] [Population] Episode 1401: Lineup -> ['random2', 'single_only', 'max_combo']
+[2025-09-09 10:43:04] 
+[2025-09-09 10:43:04] Benchmark @train_ep    1500 (bench_eps: 2000)
+[2025-09-09 10:43:04] Macro Winrate          :  36.5%
+[2025-09-09 10:43:04] Macro Ø-Reward         :  1.685
+[2025-09-09 10:43:04] Winrate vs max_combo   :  30.7% | Σ-Reward:  3157.0 | Ø-Reward:  1.579 | Places: [614 (0.31), 441 (0.22), 433 (0.22), 512 (0.26)]
+[2025-09-09 10:43:04] Winrate vs random2     :  35.0% | Σ-Reward:  3534.0 | Ø-Reward:  1.767 | Places: [699 (0.35), 489 (0.24), 459 (0.23), 353 (0.18)]
+[2025-09-09 10:43:04] Winrate vs single_only :  58.2% | Σ-Reward:  4338.0 | Ø-Reward:  2.169 | Places: [1164 (0.58), 239 (0.12), 368 (0.18), 229 (0.11)]
+[2025-09-09 10:43:04] Winrate vs v_table     :  22.1% | Σ-Reward:  2452.0 | Ø-Reward:  1.226 | Places: [443 (0.22), 374 (0.19), 375 (0.19), 808 (0.40)]
+[2025-09-09 10:43:05] Timing @ep 1500: episode 23.1s | train 0.044s | eval 21.6s | plot 1.5s | save 0.001s | cum 0.03h
+[2025-09-09 10:43:05] [Population] Episode 1501: Lineup -> ['random2', 'max_combo', 'max_combo']
+[2025-09-09 10:43:07] [Population] Episode 1601: Lineup -> ['max_combo', 'random2', 'single_only']
+[2025-09-09 10:43:09] [Population] Episode 1701: Lineup -> ['random2', 'random2', 'single_only']
+[2025-09-09 10:43:10] [Population] Episode 1801: Lineup -> ['single_only', 'max_combo', 'max_combo']
+[2025-09-09 10:43:12] [Population] Episode 1901: Lineup -> ['random2', 'single_only', 'single_only']
+[2025-09-09 10:43:35] 
+[2025-09-09 10:43:35] Benchmark @train_ep    2000 (bench_eps: 2000)
+[2025-09-09 10:43:35] Macro Winrate          :  36.6%
+[2025-09-09 10:43:35] Macro Ø-Reward         :  1.730
+[2025-09-09 10:43:35] Winrate vs max_combo   :  35.6% | Σ-Reward:  3486.0 | Ø-Reward:  1.743 | Places: [712 (0.36), 450 (0.23), 450 (0.23), 388 (0.19)]
+[2025-09-09 10:43:35] Winrate vs random2     :  37.0% | Σ-Reward:  3697.0 | Ø-Reward:  1.849 | Places: [740 (0.37), 504 (0.25), 469 (0.23), 287 (0.14)]
+[2025-09-09 10:43:35] Winrate vs single_only :  52.3% | Σ-Reward:  4140.0 | Ø-Reward:  2.070 | Places: [1046 (0.52), 299 (0.15), 404 (0.20), 251 (0.13)]
+[2025-09-09 10:43:35] Winrate vs v_table     :  21.7% | Σ-Reward:  2515.0 | Ø-Reward:  1.258 | Places: [434 (0.22), 407 (0.20), 399 (0.20), 760 (0.38)]
+[2025-09-09 10:43:37] Timing @ep 2000: episode 21.7s | train 0.038s | eval 20.0s | plot 1.6s | save 0.001s | cum 0.04h
+[2025-09-09 10:43:37] [Population] Episode 2001: Lineup -> ['random2', 'single_only', 'single_only']
+[2025-09-09 10:43:39] [Population] Episode 2101: Lineup -> ['single_only', 'max_combo', 'max_combo']
+[2025-09-09 10:43:40] [Population] Episode 2201: Lineup -> ['single_only', 'max_combo', 'single_only']
+[2025-09-09 10:43:42] [Population] Episode 2301: Lineup -> ['random2', 'max_combo', 'max_combo']
+[2025-09-09 10:43:44] [Population] Episode 2401: Lineup -> ['max_combo', 'max_combo', 'single_only']
+[2025-09-09 10:44:03] 
+[2025-09-09 10:44:03] Benchmark @train_ep    2500 (bench_eps: 2000)
+[2025-09-09 10:44:03] Macro Winrate          :  39.4%
+[2025-09-09 10:44:03] Macro Ø-Reward         :  1.804
+[2025-09-09 10:44:03] Winrate vs max_combo   :  35.1% | Σ-Reward:  3486.0 | Ø-Reward:  1.743 | Places: [702 (0.35), 491 (0.25), 398 (0.20), 409 (0.20)]
+[2025-09-09 10:44:03] Winrate vs random2     :  37.6% | Σ-Reward:  3759.0 | Ø-Reward:  1.879 | Places: [752 (0.38), 528 (0.26), 447 (0.22), 273 (0.14)]
+[2025-09-09 10:44:03] Winrate vs single_only :  61.8% | Σ-Reward:  4465.0 | Ø-Reward:  2.232 | Places: [1236 (0.62), 221 (0.11), 315 (0.16), 228 (0.11)]
+[2025-09-09 10:44:03] Winrate vs v_table     :  23.2% | Σ-Reward:  2721.0 | Ø-Reward:  1.361 | Places: [465 (0.23), 462 (0.23), 402 (0.20), 671 (0.34)]
+[2025-09-09 10:44:04] Timing @ep 2500: episode 17.8s | train 0.022s | eval 16.3s | plot 1.5s | save 0.002s | cum 0.04h
+[2025-09-09 10:44:04] [Population] Episode 2501: Lineup -> ['single_only', 'random2', 'single_only']
+[2025-09-09 10:44:06] [Population] Episode 2601: Lineup -> ['single_only', 'random2', 'max_combo']
+[2025-09-09 10:44:08] [Population] Episode 2701: Lineup -> ['max_combo', 'max_combo', 'random2']
+[2025-09-09 10:44:10] [Population] Episode 2801: Lineup -> ['single_only', 'max_combo', 'single_only']
+[2025-09-09 10:44:12] [Population] Episode 2901: Lineup -> ['max_combo', 'random2', 'single_only']
+[2025-09-09 10:44:28] 
+[2025-09-09 10:44:28] Benchmark @train_ep    3000 (bench_eps: 2000)
+[2025-09-09 10:44:28] Macro Winrate          :  38.1%
+[2025-09-09 10:44:28] Macro Ø-Reward         :  1.810
+[2025-09-09 10:44:28] Winrate vs max_combo   :  33.8% | Σ-Reward:  3494.0 | Ø-Reward:  1.747 | Places: [676 (0.34), 504 (0.25), 458 (0.23), 362 (0.18)]
+[2025-09-09 10:44:28] Winrate vs random2     :  39.0% | Σ-Reward:  3880.0 | Ø-Reward:  1.940 | Places: [779 (0.39), 561 (0.28), 421 (0.21), 239 (0.12)]
+[2025-09-09 10:44:28] Winrate vs single_only :  60.5% | Σ-Reward:  4510.0 | Ø-Reward:  2.255 | Places: [1211 (0.61), 279 (0.14), 319 (0.16), 191 (0.10)]
+[2025-09-09 10:44:28] Winrate vs v_table     :  19.0% | Σ-Reward:  2595.0 | Ø-Reward:  1.298 | Places: [380 (0.19), 513 (0.26), 429 (0.21), 678 (0.34)]
+[2025-09-09 10:44:30] Timing @ep 3000: episode 15.9s | train 0.016s | eval 14.2s | plot 1.6s | save 0.001s | cum 0.05h
+[2025-09-09 10:44:30] [Population] Episode 3001: Lineup -> ['single_only', 'max_combo', 'single_only']
+[2025-09-09 10:44:32] [Population] Episode 3101: Lineup -> ['single_only', 'max_combo', 'max_combo']
+[2025-09-09 10:44:33] [Population] Episode 3201: Lineup -> ['random2', 'random2', 'random2']
+[2025-09-09 10:44:35] [Population] Episode 3301: Lineup -> ['max_combo', 'random2', 'random2']
+[2025-09-09 10:44:37] [Population] Episode 3401: Lineup -> ['random2', 'single_only', 'max_combo']
+[2025-09-09 10:44:54] 
+[2025-09-09 10:44:54] Benchmark @train_ep    3500 (bench_eps: 2000)
+[2025-09-09 10:44:54] Macro Winrate          :  40.7%
+[2025-09-09 10:44:54] Macro Ø-Reward         :  1.873
+[2025-09-09 10:44:54] Winrate vs max_combo   :  36.1% | Σ-Reward:  3576.0 | Ø-Reward:  1.788 | Places: [722 (0.36), 495 (0.25), 420 (0.21), 363 (0.18)]
+[2025-09-09 10:44:54] Winrate vs random2     :  39.0% | Σ-Reward:  3933.0 | Ø-Reward:  1.966 | Places: [780 (0.39), 603 (0.30), 387 (0.19), 230 (0.12)]
+[2025-09-09 10:44:54] Winrate vs single_only :  66.0% | Σ-Reward:  4761.0 | Ø-Reward:  2.381 | Places: [1321 (0.66), 250 (0.12), 298 (0.15), 131 (0.07)]
+[2025-09-09 10:44:54] Winrate vs v_table     :  21.7% | Σ-Reward:  2712.0 | Ø-Reward:  1.356 | Places: [434 (0.22), 495 (0.25), 420 (0.21), 651 (0.33)]
+[2025-09-09 10:44:56] Timing @ep 3500: episode 17.6s | train 0.006s | eval 15.9s | plot 1.7s | save 0.002s | cum 0.06h
+[2025-09-09 10:44:56] [Population] Episode 3501: Lineup -> ['max_combo', 'random2', 'single_only']
+[2025-09-09 10:44:58] [Population] Episode 3601: Lineup -> ['max_combo', 'max_combo', 'single_only']
+[2025-09-09 10:45:02] [Population] Episode 3701: Lineup -> ['max_combo', 'random2', 'random2']
+[2025-09-09 10:45:04] [Population] Episode 3801: Lineup -> ['random2', 'single_only', 'single_only']
+[2025-09-09 10:45:06] [Population] Episode 3901: Lineup -> ['single_only', 'single_only', 'max_combo']
+[2025-09-09 10:45:25] 
+[2025-09-09 10:45:25] Benchmark @train_ep    4000 (bench_eps: 2000)
+[2025-09-09 10:45:25] Macro Winrate          :  42.2%
+[2025-09-09 10:45:25] Macro Ø-Reward         :  1.891
+[2025-09-09 10:45:25] Winrate vs max_combo   :  36.5% | Σ-Reward:  3576.0 | Ø-Reward:  1.788 | Places: [731 (0.37), 481 (0.24), 421 (0.21), 367 (0.18)]
+[2025-09-09 10:45:25] Winrate vs random2     :  41.0% | Σ-Reward:  3935.0 | Ø-Reward:  1.968 | Places: [819 (0.41), 535 (0.27), 408 (0.20), 238 (0.12)]
+[2025-09-09 10:45:25] Winrate vs single_only :  66.5% | Σ-Reward:  4731.0 | Ø-Reward:  2.365 | Places: [1329 (0.66), 234 (0.12), 276 (0.14), 161 (0.08)]
+[2025-09-09 10:45:25] Winrate vs v_table     :  24.9% | Σ-Reward:  2887.0 | Ø-Reward:  1.444 | Places: [499 (0.25), 473 (0.24), 444 (0.22), 584 (0.29)]
+[2025-09-09 10:45:27] Timing @ep 4000: episode 18.7s | train 0.006s | eval 16.9s | plot 1.8s | save 0.002s | cum 0.07h
+[2025-09-09 10:45:27] [Population] Episode 4001: Lineup -> ['single_only', 'max_combo', 'single_only']
+[2025-09-09 10:45:29] [Population] Episode 4101: Lineup -> ['max_combo', 'max_combo', 'max_combo']
+[2025-09-09 10:45:30] [Population] Episode 4201: Lineup -> ['single_only', 'max_combo', 'random2']
+[2025-09-09 10:45:32] [Population] Episode 4301: Lineup -> ['single_only', 'single_only', 'single_only']
+[2025-09-09 10:45:33] [Population] Episode 4401: Lineup -> ['max_combo', 'random2', 'single_only']
+[2025-09-09 10:45:51] 
+[2025-09-09 10:45:51] Benchmark @train_ep    4500 (bench_eps: 2000)
+[2025-09-09 10:45:51] Macro Winrate          :  41.4%
+[2025-09-09 10:45:51] Macro Ø-Reward         :  1.887
+[2025-09-09 10:45:51] Winrate vs max_combo   :  37.3% | Σ-Reward:  3628.0 | Ø-Reward:  1.814 | Places: [746 (0.37), 487 (0.24), 416 (0.21), 351 (0.18)]
+[2025-09-09 10:45:51] Winrate vs random2     :  39.4% | Σ-Reward:  3980.0 | Ø-Reward:  1.990 | Places: [787 (0.39), 609 (0.30), 401 (0.20), 203 (0.10)]
+[2025-09-09 10:45:51] Winrate vs single_only :  65.7% | Σ-Reward:  4697.0 | Ø-Reward:  2.349 | Places: [1313 (0.66), 231 (0.12), 296 (0.15), 160 (0.08)]
+[2025-09-09 10:45:51] Winrate vs v_table     :  23.4% | Σ-Reward:  2791.0 | Ø-Reward:  1.395 | Places: [469 (0.23), 476 (0.24), 432 (0.22), 623 (0.31)]
+[2025-09-09 10:45:52] Timing @ep 4500: episode 17.0s | train 0.011s | eval 15.6s | plot 1.4s | save 0.001s | cum 0.07h
+[2025-09-09 10:45:52] [Population] Episode 4501: Lineup -> ['random2', 'max_combo', 'single_only']
+[2025-09-09 10:45:54] [Population] Episode 4601: Lineup -> ['single_only', 'random2', 'single_only']
+[2025-09-09 10:45:57] [Population] Episode 4701: Lineup -> ['single_only', 'max_combo', 'max_combo']
+[2025-09-09 10:45:59] [Population] Episode 4801: Lineup -> ['single_only', 'single_only', 'max_combo']
+[2025-09-09 10:46:01] [Population] Episode 4901: Lineup -> ['random2', 'random2', 'max_combo']
+[2025-09-09 10:46:19] 
+[2025-09-09 10:46:19] Benchmark @train_ep    5000 (bench_eps: 2000)
+[2025-09-09 10:46:19] Macro Winrate          :  41.8%
+[2025-09-09 10:46:19] Macro Ø-Reward         :  1.901
+[2025-09-09 10:46:19] Winrate vs max_combo   :  39.0% | Σ-Reward:  3693.0 | Ø-Reward:  1.847 | Places: [781 (0.39), 454 (0.23), 442 (0.22), 323 (0.16)]
+[2025-09-09 10:46:19] Winrate vs random2     :  41.2% | Σ-Reward:  3990.0 | Ø-Reward:  1.995 | Places: [824 (0.41), 570 (0.28), 378 (0.19), 228 (0.11)]
+[2025-09-09 10:46:19] Winrate vs single_only :  63.8% | Σ-Reward:  4682.0 | Ø-Reward:  2.341 | Places: [1275 (0.64), 276 (0.14), 305 (0.15), 144 (0.07)]
+[2025-09-09 10:46:19] Winrate vs v_table     :  23.1% | Σ-Reward:  2843.0 | Ø-Reward:  1.421 | Places: [463 (0.23), 517 (0.26), 420 (0.21), 600 (0.30)]
+[2025-09-09 10:46:21] Timing @ep 5000: episode 17.4s | train 0.012s | eval 15.7s | plot 1.7s | save 0.002s | cum 0.08h
+[2025-09-09 10:46:21] [Population] Episode 5001: Lineup -> ['single_only', 'max_combo', 'random2']
+[2025-09-09 10:46:22] [Population] Episode 5101: Lineup -> ['max_combo', 'single_only', 'random2']
+[2025-09-09 10:46:25] [Population] Episode 5201: Lineup -> ['random2', 'max_combo', 'random2']
+[2025-09-09 10:46:27] [Population] Episode 5301: Lineup -> ['max_combo', 'max_combo', 'single_only']
+[2025-09-09 10:46:28] [Population] Episode 5401: Lineup -> ['single_only', 'random2', 'random2']
+[2025-09-09 10:46:52] 
+[2025-09-09 10:46:52] Benchmark @train_ep    5500 (bench_eps: 2000)
+[2025-09-09 10:46:52] Macro Winrate          :  42.4%
+[2025-09-09 10:46:52] Macro Ø-Reward         :  1.902
+[2025-09-09 10:46:52] Winrate vs max_combo   :  38.5% | Σ-Reward:  3682.0 | Ø-Reward:  1.841 | Places: [771 (0.39), 472 (0.24), 425 (0.21), 332 (0.17)]
+[2025-09-09 10:46:52] Winrate vs random2     :  42.5% | Σ-Reward:  4063.0 | Ø-Reward:  2.031 | Places: [849 (0.42), 563 (0.28), 390 (0.20), 198 (0.10)]
+[2025-09-09 10:46:52] Winrate vs single_only :  64.8% | Σ-Reward:  4671.0 | Ø-Reward:  2.336 | Places: [1297 (0.65), 230 (0.12), 320 (0.16), 153 (0.08)]
+[2025-09-09 10:46:52] Winrate vs v_table     :  23.8% | Σ-Reward:  2803.0 | Ø-Reward:  1.401 | Places: [475 (0.24), 463 (0.23), 452 (0.23), 610 (0.30)]
+[2025-09-09 10:46:53] Timing @ep 5500: episode 22.4s | train 0.022s | eval 20.9s | plot 1.5s | save 0.003s | cum 0.09h
+[2025-09-09 10:46:53] [Population] Episode 5501: Lineup -> ['max_combo', 'random2', 'max_combo']
+[2025-09-09 10:46:55] [Population] Episode 5601: Lineup -> ['single_only', 'max_combo', 'random2']
+[2025-09-09 10:46:57] [Population] Episode 5701: Lineup -> ['max_combo', 'max_combo', 'single_only']
+[2025-09-09 10:46:59] [Population] Episode 5801: Lineup -> ['random2', 'random2', 'random2']
+[2025-09-09 10:47:02] [Population] Episode 5901: Lineup -> ['random2', 'random2', 'single_only']
+[2025-09-09 10:47:21] 
+[2025-09-09 10:47:21] Benchmark @train_ep    6000 (bench_eps: 2000)
+[2025-09-09 10:47:21] Macro Winrate          :  41.7%
+[2025-09-09 10:47:21] Macro Ø-Reward         :  1.887
+[2025-09-09 10:47:21] Winrate vs max_combo   :  36.1% | Σ-Reward:  3586.0 | Ø-Reward:  1.793 | Places: [722 (0.36), 495 (0.25), 430 (0.21), 353 (0.18)]
+[2025-09-09 10:47:21] Winrate vs random2     :  43.2% | Σ-Reward:  4056.0 | Ø-Reward:  2.028 | Places: [865 (0.43), 527 (0.26), 407 (0.20), 201 (0.10)]
+[2025-09-09 10:47:21] Winrate vs single_only :  62.6% | Σ-Reward:  4593.0 | Ø-Reward:  2.296 | Places: [1253 (0.63), 255 (0.13), 324 (0.16), 168 (0.08)]
+[2025-09-09 10:47:21] Winrate vs v_table     :  24.8% | Σ-Reward:  2862.0 | Ø-Reward:  1.431 | Places: [495 (0.25), 461 (0.23), 455 (0.23), 589 (0.29)]
+[2025-09-09 10:47:23] Timing @ep 6000: episode 18.9s | train 0.015s | eval 17.0s | plot 2.0s | save 0.002s | cum 0.10h
+[2025-09-09 10:47:23] [Population] Episode 6001: Lineup -> ['max_combo', 'random2', 'single_only']
+[2025-09-09 10:47:26] [Population] Episode 6101: Lineup -> ['single_only', 'max_combo', 'random2']
+[2025-09-09 10:47:28] [Population] Episode 6201: Lineup -> ['max_combo', 'random2', 'max_combo']
+[2025-09-09 10:47:30] [Population] Episode 6301: Lineup -> ['max_combo', 'random2', 'max_combo']
+[2025-09-09 10:47:33] [Population] Episode 6401: Lineup -> ['max_combo', 'single_only', 'random2']
+[2025-09-09 10:47:53] 
+[2025-09-09 10:47:53] Benchmark @train_ep    6500 (bench_eps: 2000)
+[2025-09-09 10:47:53] Macro Winrate          :  42.1%
+[2025-09-09 10:47:53] Macro Ø-Reward         :  1.904
+[2025-09-09 10:47:53] Winrate vs max_combo   :  38.6% | Σ-Reward:  3682.0 | Ø-Reward:  1.841 | Places: [772 (0.39), 458 (0.23), 450 (0.23), 320 (0.16)]
+[2025-09-09 10:47:53] Winrate vs random2     :  42.5% | Σ-Reward:  4091.0 | Ø-Reward:  2.046 | Places: [851 (0.43), 573 (0.29), 392 (0.20), 184 (0.09)]
+[2025-09-09 10:47:53] Winrate vs single_only :  64.5% | Σ-Reward:  4647.0 | Ø-Reward:  2.324 | Places: [1290 (0.65), 242 (0.12), 293 (0.15), 175 (0.09)]
+[2025-09-09 10:47:53] Winrate vs v_table     :  22.6% | Σ-Reward:  2815.0 | Ø-Reward:  1.407 | Places: [453 (0.23), 499 (0.25), 458 (0.23), 590 (0.29)]
+[2025-09-09 10:47:55] Timing @ep 6500: episode 19.3s | train 0.009s | eval 17.7s | plot 1.6s | save 0.002s | cum 0.11h
+[2025-09-09 10:47:55] [Population] Episode 6501: Lineup -> ['max_combo', 'max_combo', 'random2']
+[2025-09-09 10:47:56] [Population] Episode 6601: Lineup -> ['random2', 'single_only', 'max_combo']
+[2025-09-09 10:47:58] [Population] Episode 6701: Lineup -> ['max_combo', 'max_combo', 'max_combo']
+[2025-09-09 10:48:01] [Population] Episode 6801: Lineup -> ['random2', 'max_combo', 'single_only']
+[2025-09-09 10:48:03] [Population] Episode 6901: Lineup -> ['random2', 'single_only', 'max_combo']
+[2025-09-09 10:48:20] 
+[2025-09-09 10:48:20] Benchmark @train_ep    7000 (bench_eps: 2000)
+[2025-09-09 10:48:20] Macro Winrate          :  40.9%
+[2025-09-09 10:48:20] Macro Ø-Reward         :  1.893
+[2025-09-09 10:48:20] Winrate vs max_combo   :  37.8% | Σ-Reward:  3727.0 | Ø-Reward:  1.863 | Places: [756 (0.38), 516 (0.26), 427 (0.21), 301 (0.15)]
+[2025-09-09 10:48:20] Winrate vs random2     :  41.0% | Σ-Reward:  4038.0 | Ø-Reward:  2.019 | Places: [821 (0.41), 588 (0.29), 399 (0.20), 192 (0.10)]
+[2025-09-09 10:48:20] Winrate vs single_only :  63.0% | Σ-Reward:  4594.0 | Ø-Reward:  2.297 | Places: [1261 (0.63), 237 (0.12), 337 (0.17), 165 (0.08)]
+[2025-09-09 10:48:20] Winrate vs v_table     :  21.9% | Σ-Reward:  2787.0 | Ø-Reward:  1.393 | Places: [437 (0.22), 507 (0.25), 462 (0.23), 594 (0.30)]
+[2025-09-09 10:48:22] Timing @ep 7000: episode 16.9s | train 0.022s | eval 15.1s | plot 1.8s | save 0.002s | cum 0.11h
+[2025-09-09 10:48:22] [Population] Episode 7001: Lineup -> ['random2', 'random2', 'random2']
+[2025-09-09 10:48:24] [Population] Episode 7101: Lineup -> ['max_combo', 'max_combo', 'random2']
+[2025-09-09 10:48:26] [Population] Episode 7201: Lineup -> ['single_only', 'max_combo', 'single_only']
+[2025-09-09 10:48:27] [Population] Episode 7301: Lineup -> ['single_only', 'random2', 'max_combo']
+[2025-09-09 10:48:29] [Population] Episode 7401: Lineup -> ['random2', 'max_combo', 'single_only']
+[2025-09-09 10:48:48] 
+[2025-09-09 10:48:48] Benchmark @train_ep    7500 (bench_eps: 2000)
+[2025-09-09 10:48:48] Macro Winrate          :  40.9%
+[2025-09-09 10:48:48] Macro Ø-Reward         :  1.885
+[2025-09-09 10:48:48] Winrate vs max_combo   :  36.4% | Σ-Reward:  3590.0 | Ø-Reward:  1.795 | Places: [727 (0.36), 491 (0.25), 427 (0.21), 355 (0.18)]
+[2025-09-09 10:48:48] Winrate vs random2     :  43.4% | Σ-Reward:  4116.0 | Ø-Reward:  2.058 | Places: [868 (0.43), 568 (0.28), 376 (0.19), 188 (0.09)]
+[2025-09-09 10:48:48] Winrate vs single_only :  62.8% | Σ-Reward:  4648.0 | Ø-Reward:  2.324 | Places: [1256 (0.63), 286 (0.14), 308 (0.15), 150 (0.07)]
+[2025-09-09 10:48:48] Winrate vs v_table     :  21.1% | Σ-Reward:  2726.0 | Ø-Reward:  1.363 | Places: [423 (0.21), 500 (0.25), 457 (0.23), 620 (0.31)]
+[2025-09-09 10:48:50] Timing @ep 7500: episode 18.7s | train 0.004s | eval 17.0s | plot 1.6s | save 0.002s | cum 0.12h
+[2025-09-09 10:48:50] [Population] Episode 7501: Lineup -> ['single_only', 'max_combo', 'max_combo']
+[2025-09-09 10:48:52] [Population] Episode 7601: Lineup -> ['single_only', 'random2', 'single_only']
+[2025-09-09 10:48:55] [Population] Episode 7701: Lineup -> ['random2', 'random2', 'single_only']
+[2025-09-09 10:48:58] [Population] Episode 7801: Lineup -> ['random2', 'max_combo', 'max_combo']
+[2025-09-09 10:49:01] [Population] Episode 7901: Lineup -> ['random2', 'random2', 'max_combo']
+[2025-09-09 10:49:19] 
+[2025-09-09 10:49:19] Benchmark @train_ep    8000 (bench_eps: 2000)
+[2025-09-09 10:49:19] Macro Winrate          :  42.0%
+[2025-09-09 10:49:19] Macro Ø-Reward         :  1.908
+[2025-09-09 10:49:19] Winrate vs max_combo   :  36.3% | Σ-Reward:  3616.0 | Ø-Reward:  1.808 | Places: [726 (0.36), 493 (0.25), 452 (0.23), 329 (0.16)]
+[2025-09-09 10:49:19] Winrate vs random2     :  41.4% | Σ-Reward:  4062.0 | Ø-Reward:  2.031 | Places: [828 (0.41), 597 (0.30), 384 (0.19), 191 (0.10)]
+[2025-09-09 10:49:19] Winrate vs single_only :  65.8% | Σ-Reward:  4747.0 | Ø-Reward:  2.373 | Places: [1317 (0.66), 256 (0.13), 284 (0.14), 143 (0.07)]
+[2025-09-09 10:49:19] Winrate vs v_table     :  24.5% | Σ-Reward:  2837.0 | Ø-Reward:  1.419 | Places: [490 (0.24), 464 (0.23), 439 (0.22), 607 (0.30)]
+[2025-09-09 10:49:20] Timing @ep 8000: episode 17.1s | train 0.019s | eval 15.4s | plot 1.6s | save 0.002s | cum 0.13h
+[2025-09-09 10:49:20] [Population] Episode 8001: Lineup -> ['single_only', 'single_only', 'random2']
+[2025-09-09 10:49:22] [Population] Episode 8101: Lineup -> ['single_only', 'single_only', 'single_only']
+[2025-09-09 10:49:24] [Population] Episode 8201: Lineup -> ['single_only', 'single_only', 'random2']
+[2025-09-09 10:49:26] [Population] Episode 8301: Lineup -> ['single_only', 'max_combo', 'max_combo']
+[2025-09-09 10:49:29] [Population] Episode 8401: Lineup -> ['random2', 'random2', 'max_combo']
+[2025-09-09 10:49:46] 
+[2025-09-09 10:49:46] Benchmark @train_ep    8500 (bench_eps: 2000)
+[2025-09-09 10:49:46] Macro Winrate          :  42.3%
+[2025-09-09 10:49:46] Macro Ø-Reward         :  1.908
+[2025-09-09 10:49:46] Winrate vs max_combo   :  37.4% | Σ-Reward:  3628.0 | Ø-Reward:  1.814 | Places: [747 (0.37), 495 (0.25), 397 (0.20), 361 (0.18)]
+[2025-09-09 10:49:46] Winrate vs random2     :  44.0% | Σ-Reward:  4166.0 | Ø-Reward:  2.083 | Places: [879 (0.44), 568 (0.28), 393 (0.20), 160 (0.08)]
+[2025-09-09 10:49:46] Winrate vs single_only :  62.8% | Σ-Reward:  4623.0 | Ø-Reward:  2.312 | Places: [1255 (0.63), 268 (0.13), 322 (0.16), 155 (0.08)]
+[2025-09-09 10:49:46] Winrate vs v_table     :  25.0% | Σ-Reward:  2848.0 | Ø-Reward:  1.424 | Places: [500 (0.25), 437 (0.22), 474 (0.24), 589 (0.29)]
+[2025-09-09 10:49:48] Timing @ep 8500: episode 16.9s | train 0.005s | eval 15.0s | plot 1.8s | save 0.002s | cum 0.14h
+[2025-09-09 10:49:48] [Population] Episode 8501: Lineup -> ['max_combo', 'single_only', 'max_combo']
+[2025-09-09 10:49:50] [Population] Episode 8601: Lineup -> ['random2', 'max_combo', 'max_combo']
+[2025-09-09 10:49:52] [Population] Episode 8701: Lineup -> ['random2', 'max_combo', 'max_combo']
+[2025-09-09 10:49:54] [Population] Episode 8801: Lineup -> ['max_combo', 'max_combo', 'max_combo']
+[2025-09-09 10:49:56] [Population] Episode 8901: Lineup -> ['max_combo', 'max_combo', 'max_combo']
+[2025-09-09 10:50:13] 
+[2025-09-09 10:50:13] Benchmark @train_ep    9000 (bench_eps: 2000)
+[2025-09-09 10:50:13] Macro Winrate          :  42.5%
+[2025-09-09 10:50:13] Macro Ø-Reward         :  1.909
+[2025-09-09 10:50:13] Winrate vs max_combo   :  37.7% | Σ-Reward:  3658.0 | Ø-Reward:  1.829 | Places: [754 (0.38), 496 (0.25), 404 (0.20), 346 (0.17)]
+[2025-09-09 10:50:13] Winrate vs random2     :  42.8% | Σ-Reward:  4106.0 | Ø-Reward:  2.053 | Places: [856 (0.43), 593 (0.30), 352 (0.18), 199 (0.10)]
+[2025-09-09 10:50:13] Winrate vs single_only :  63.7% | Σ-Reward:  4634.0 | Ø-Reward:  2.317 | Places: [1274 (0.64), 245 (0.12), 322 (0.16), 159 (0.08)]
+[2025-09-09 10:50:13] Winrate vs v_table     :  25.9% | Σ-Reward:  2877.0 | Ø-Reward:  1.438 | Places: [518 (0.26), 440 (0.22), 443 (0.22), 599 (0.30)]
+[2025-09-09 10:50:15] Timing @ep 9000: episode 17.2s | train 0.010s | eval 15.8s | plot 1.4s | save 0.002s | cum 0.15h
+[2025-09-09 10:50:15] [Population] Episode 9001: Lineup -> ['single_only', 'random2', 'single_only']
+[2025-09-09 10:50:16] [Population] Episode 9101: Lineup -> ['max_combo', 'single_only', 'random2']
+[2025-09-09 10:50:18] [Population] Episode 9201: Lineup -> ['random2', 'max_combo', 'max_combo']
+[2025-09-09 10:50:21] [Population] Episode 9301: Lineup -> ['max_combo', 'max_combo', 'single_only']
+[2025-09-09 10:50:23] [Population] Episode 9401: Lineup -> ['single_only', 'max_combo', 'single_only']
+[2025-09-09 10:50:41] 
+[2025-09-09 10:50:41] Benchmark @train_ep    9500 (bench_eps: 2000)
+[2025-09-09 10:50:41] Macro Winrate          :  41.5%
+[2025-09-09 10:50:41] Macro Ø-Reward         :  1.905
+[2025-09-09 10:50:41] Winrate vs max_combo   :  35.9% | Σ-Reward:  3576.0 | Ø-Reward:  1.788 | Places: [718 (0.36), 487 (0.24), 448 (0.22), 347 (0.17)]
+[2025-09-09 10:50:41] Winrate vs random2     :  43.4% | Σ-Reward:  4168.0 | Ø-Reward:  2.084 | Places: [868 (0.43), 610 (0.30), 344 (0.17), 178 (0.09)]
+[2025-09-09 10:50:41] Winrate vs single_only :  62.4% | Σ-Reward:  4626.0 | Ø-Reward:  2.313 | Places: [1247 (0.62), 277 (0.14), 331 (0.17), 145 (0.07)]
+[2025-09-09 10:50:41] Winrate vs v_table     :  24.2% | Σ-Reward:  2871.0 | Ø-Reward:  1.435 | Places: [485 (0.24), 485 (0.24), 446 (0.22), 584 (0.29)]
+[2025-09-09 10:50:42] Timing @ep 9500: episode 17.4s | train 0.022s | eval 15.8s | plot 1.5s | save 0.001s | cum 0.15h
+[2025-09-09 10:50:42] [Population] Episode 9501: Lineup -> ['single_only', 'max_combo', 'random2']
+[2025-09-09 10:50:44] [Population] Episode 9601: Lineup -> ['max_combo', 'random2', 'max_combo']
+[2025-09-09 10:50:46] [Population] Episode 9701: Lineup -> ['random2', 'random2', 'random2']
+[2025-09-09 10:50:48] [Population] Episode 9801: Lineup -> ['random2', 'random2', 'single_only']
+[2025-09-09 10:50:50] [Population] Episode 9901: Lineup -> ['random2', 'max_combo', 'single_only']
+[2025-09-09 10:51:08] 
+[2025-09-09 10:51:08] Benchmark @train_ep   10000 (bench_eps: 2000)
+[2025-09-09 10:51:08] Macro Winrate          :  41.6%
+[2025-09-09 10:51:08] Macro Ø-Reward         :  1.894
+[2025-09-09 10:51:08] Winrate vs max_combo   :  37.1% | Σ-Reward:  3621.0 | Ø-Reward:  1.810 | Places: [742 (0.37), 473 (0.24), 449 (0.22), 336 (0.17)]
+[2025-09-09 10:51:08] Winrate vs random2     :  42.1% | Σ-Reward:  4079.0 | Ø-Reward:  2.039 | Places: [843 (0.42), 564 (0.28), 422 (0.21), 171 (0.09)]
+[2025-09-09 10:51:08] Winrate vs single_only :  62.4% | Σ-Reward:  4582.0 | Ø-Reward:  2.291 | Places: [1248 (0.62), 264 (0.13), 310 (0.15), 178 (0.09)]
+[2025-09-09 10:51:08] Winrate vs v_table     :  24.6% | Σ-Reward:  2872.0 | Ø-Reward:  1.436 | Places: [491 (0.25), 488 (0.24), 423 (0.21), 598 (0.30)]
+[2025-09-09 10:51:10] Timing @ep 10000: episode 17.6s | train 0.047s | eval 16.0s | plot 1.5s | save 0.002s | cum 0.16h
+[2025-09-09 10:51:10] [Population] Episode 10001: Lineup -> ['single_only', 'random2', 'single_only']
+[2025-09-09 10:51:12] [Population] Episode 10101: Lineup -> ['single_only', 'single_only', 'max_combo']
+[2025-09-09 10:51:14] [Population] Episode 10201: Lineup -> ['max_combo', 'single_only', 'single_only']
+[2025-09-09 10:51:16] [Population] Episode 10301: Lineup -> ['max_combo', 'single_only', 'single_only']
+[2025-09-09 10:51:18] [Population] Episode 10401: Lineup -> ['max_combo', 'single_only', 'random2']
+[2025-09-09 10:51:35] 
+[2025-09-09 10:51:35] Benchmark @train_ep   10500 (bench_eps: 2000)
+[2025-09-09 10:51:35] Macro Winrate          :  41.1%
+[2025-09-09 10:51:35] Macro Ø-Reward         :  1.881
+[2025-09-09 10:51:35] Winrate vs max_combo   :  36.1% | Σ-Reward:  3574.0 | Ø-Reward:  1.787 | Places: [723 (0.36), 481 (0.24), 443 (0.22), 353 (0.18)]
+[2025-09-09 10:51:35] Winrate vs random2     :  41.7% | Σ-Reward:  4089.0 | Ø-Reward:  2.045 | Places: [834 (0.42), 604 (0.30), 379 (0.19), 183 (0.09)]
+[2025-09-09 10:51:35] Winrate vs single_only :  62.5% | Σ-Reward:  4575.0 | Ø-Reward:  2.288 | Places: [1251 (0.63), 247 (0.12), 328 (0.16), 174 (0.09)]
+[2025-09-09 10:51:35] Winrate vs v_table     :  24.1% | Σ-Reward:  2808.0 | Ø-Reward:  1.404 | Places: [482 (0.24), 453 (0.23), 456 (0.23), 609 (0.30)]
+[2025-09-09 10:51:37] Timing @ep 10500: episode 17.9s | train 0.016s | eval 16.1s | plot 1.8s | save 0.002s | cum 0.17h
+[2025-09-09 10:51:37] [Population] Episode 10501: Lineup -> ['max_combo', 'random2', 'random2']
+[2025-09-09 10:51:39] [Population] Episode 10601: Lineup -> ['single_only', 'max_combo', 'single_only']
+[2025-09-09 10:51:42] [Population] Episode 10701: Lineup -> ['random2', 'single_only', 'random2']
+[2025-09-09 10:51:44] [Population] Episode 10801: Lineup -> ['single_only', 'single_only', 'max_combo']
+[2025-09-09 10:51:45] [Population] Episode 10901: Lineup -> ['random2', 'max_combo', 'random2']
+[2025-09-09 10:52:07] 
+[2025-09-09 10:52:07] Benchmark @train_ep   11000 (bench_eps: 2000)
+[2025-09-09 10:52:07] Macro Winrate          :  41.5%
+[2025-09-09 10:52:07] Macro Ø-Reward         :  1.887
+[2025-09-09 10:52:07] Winrate vs max_combo   :  36.7% | Σ-Reward:  3601.0 | Ø-Reward:  1.800 | Places: [734 (0.37), 480 (0.24), 439 (0.22), 347 (0.17)]
+[2025-09-09 10:52:07] Winrate vs random2     :  42.2% | Σ-Reward:  4073.0 | Ø-Reward:  2.037 | Places: [845 (0.42), 569 (0.28), 400 (0.20), 186 (0.09)]
+[2025-09-09 10:52:07] Winrate vs single_only :  63.0% | Σ-Reward:  4585.0 | Ø-Reward:  2.292 | Places: [1259 (0.63), 240 (0.12), 328 (0.16), 173 (0.09)]
+[2025-09-09 10:52:07] Winrate vs v_table     :  24.1% | Σ-Reward:  2839.0 | Ø-Reward:  1.419 | Places: [482 (0.24), 472 (0.24), 449 (0.22), 597 (0.30)]
+[2025-09-09 10:52:09] Timing @ep 11000: episode 21.2s | train 0.012s | eval 19.6s | plot 1.6s | save 0.002s | cum 0.18h
+[2025-09-09 10:52:09] [Population] Episode 11001: Lineup -> ['random2', 'max_combo', 'single_only']
+[2025-09-09 10:52:11] [Population] Episode 11101: Lineup -> ['max_combo', 'random2', 'max_combo']
+[2025-09-09 10:52:13] [Population] Episode 11201: Lineup -> ['random2', 'max_combo', 'random2']
+[2025-09-09 10:52:15] [Population] Episode 11301: Lineup -> ['random2', 'single_only', 'random2']
+[2025-09-09 10:52:17] [Population] Episode 11401: Lineup -> ['random2', 'random2', 'max_combo']
+[2025-09-09 10:52:34] 
+[2025-09-09 10:52:34] Benchmark @train_ep   11500 (bench_eps: 2000)
+[2025-09-09 10:52:34] Macro Winrate          :  43.0%
+[2025-09-09 10:52:34] Macro Ø-Reward         :  1.918
+[2025-09-09 10:52:34] Winrate vs max_combo   :  37.4% | Σ-Reward:  3670.0 | Ø-Reward:  1.835 | Places: [748 (0.37), 496 (0.25), 434 (0.22), 322 (0.16)]
+[2025-09-09 10:52:34] Winrate vs random2     :  44.0% | Σ-Reward:  4128.0 | Ø-Reward:  2.064 | Places: [880 (0.44), 553 (0.28), 382 (0.19), 185 (0.09)]
+[2025-09-09 10:52:34] Winrate vs single_only :  65.3% | Σ-Reward:  4725.0 | Ø-Reward:  2.362 | Places: [1306 (0.65), 255 (0.13), 297 (0.15), 142 (0.07)]
+[2025-09-09 10:52:34] Winrate vs v_table     :  25.4% | Σ-Reward:  2822.0 | Ø-Reward:  1.411 | Places: [507 (0.25), 431 (0.22), 439 (0.22), 623 (0.31)]
+[2025-09-09 10:52:35] Timing @ep 11500: episode 16.6s | train 0.005s | eval 14.9s | plot 1.6s | save 0.001s | cum 0.18h
+[2025-09-09 10:52:35] [Population] Episode 11501: Lineup -> ['single_only', 'max_combo', 'single_only']
+[2025-09-09 10:52:37] [Population] Episode 11601: Lineup -> ['max_combo', 'single_only', 'single_only']
+[2025-09-09 10:52:39] [Population] Episode 11701: Lineup -> ['single_only', 'single_only', 'random2']
+[2025-09-09 10:52:41] [Population] Episode 11801: Lineup -> ['random2', 'single_only', 'single_only']
+[2025-09-09 10:52:43] [Population] Episode 11901: Lineup -> ['random2', 'max_combo', 'max_combo']
+[2025-09-09 10:53:01] 
+[2025-09-09 10:53:01] Benchmark @train_ep   12000 (bench_eps: 2000)
+[2025-09-09 10:53:01] Macro Winrate          :  42.0%
+[2025-09-09 10:53:01] Macro Ø-Reward         :  1.912
+[2025-09-09 10:53:01] Winrate vs max_combo   :  35.9% | Σ-Reward:  3561.0 | Ø-Reward:  1.780 | Places: [717 (0.36), 486 (0.24), 438 (0.22), 359 (0.18)]
+[2025-09-09 10:53:01] Winrate vs random2     :  43.7% | Σ-Reward:  4167.0 | Ø-Reward:  2.083 | Places: [874 (0.44), 579 (0.29), 387 (0.19), 160 (0.08)]
+[2025-09-09 10:53:01] Winrate vs single_only :  63.9% | Σ-Reward:  4635.0 | Ø-Reward:  2.317 | Places: [1277 (0.64), 254 (0.13), 296 (0.15), 173 (0.09)]
+[2025-09-09 10:53:01] Winrate vs v_table     :  24.6% | Σ-Reward:  2937.0 | Ø-Reward:  1.468 | Places: [492 (0.25), 520 (0.26), 421 (0.21), 567 (0.28)]
+[2025-09-09 10:53:03] Timing @ep 12000: episode 17.5s | train 0.012s | eval 16.0s | plot 1.5s | save 0.002s | cum 0.19h
+[2025-09-09 10:53:03] [Population] Episode 12001: Lineup -> ['max_combo', 'single_only', 'single_only']
+[2025-09-09 10:53:05] [Population] Episode 12101: Lineup -> ['random2', 'random2', 'single_only']
+[2025-09-09 10:53:07] [Population] Episode 12201: Lineup -> ['random2', 'random2', 'max_combo']
+[2025-09-09 10:53:09] [Population] Episode 12301: Lineup -> ['single_only', 'max_combo', 'max_combo']
+[2025-09-09 10:53:11] [Population] Episode 12401: Lineup -> ['max_combo', 'random2', 'single_only']
+[2025-09-09 10:53:28] 
+[2025-09-09 10:53:28] Benchmark @train_ep   12500 (bench_eps: 2000)
+[2025-09-09 10:53:28] Macro Winrate          :  42.7%
+[2025-09-09 10:53:28] Macro Ø-Reward         :  1.926
+[2025-09-09 10:53:28] Winrate vs max_combo   :  38.2% | Σ-Reward:  3726.0 | Ø-Reward:  1.863 | Places: [764 (0.38), 514 (0.26), 406 (0.20), 316 (0.16)]
+[2025-09-09 10:53:28] Winrate vs random2     :  43.0% | Σ-Reward:  4096.0 | Ø-Reward:  2.048 | Places: [861 (0.43), 574 (0.29), 365 (0.18), 200 (0.10)]
+[2025-09-09 10:53:28] Winrate vs single_only :  64.4% | Σ-Reward:  4670.0 | Ø-Reward:  2.335 | Places: [1288 (0.64), 247 (0.12), 312 (0.16), 153 (0.08)]
+[2025-09-09 10:53:28] Winrate vs v_table     :  25.2% | Σ-Reward:  2915.0 | Ø-Reward:  1.458 | Places: [505 (0.25), 481 (0.24), 438 (0.22), 576 (0.29)]
+[2025-09-09 10:53:30] Timing @ep 12500: episode 17.0s | train 0.014s | eval 15.3s | plot 1.6s | save 0.002s | cum 0.20h
+[2025-09-09 10:53:30] [Population] Episode 12501: Lineup -> ['single_only', 'random2', 'single_only']
+[2025-09-09 10:53:32] [Population] Episode 12601: Lineup -> ['random2', 'random2', 'single_only']
+[2025-09-09 10:53:34] [Population] Episode 12701: Lineup -> ['single_only', 'random2', 'random2']
+[2025-09-09 10:53:36] [Population] Episode 12801: Lineup -> ['random2', 'max_combo', 'random2']
+[2025-09-09 10:53:38] [Population] Episode 12901: Lineup -> ['single_only', 'max_combo', 'single_only']
+[2025-09-09 10:53:56] 
+[2025-09-09 10:53:56] Benchmark @train_ep   13000 (bench_eps: 2000)
+[2025-09-09 10:53:56] Macro Winrate          :  43.6%
+[2025-09-09 10:53:56] Macro Ø-Reward         :  1.933
+[2025-09-09 10:53:56] Winrate vs max_combo   :  39.4% | Σ-Reward:  3734.0 | Ø-Reward:  1.867 | Places: [788 (0.39), 466 (0.23), 438 (0.22), 308 (0.15)]
+[2025-09-09 10:53:56] Winrate vs random2     :  43.7% | Σ-Reward:  4123.0 | Ø-Reward:  2.062 | Places: [874 (0.44), 549 (0.27), 403 (0.20), 174 (0.09)]
+[2025-09-09 10:53:56] Winrate vs single_only :  65.8% | Σ-Reward:  4748.0 | Ø-Reward:  2.374 | Places: [1317 (0.66), 241 (0.12), 315 (0.16), 127 (0.06)]
+[2025-09-09 10:53:56] Winrate vs v_table     :  25.6% | Σ-Reward:  2862.0 | Ø-Reward:  1.431 | Places: [513 (0.26), 443 (0.22), 437 (0.22), 607 (0.30)]
+[2025-09-09 10:53:57] Timing @ep 13000: episode 17.5s | train 0.014s | eval 15.6s | plot 1.8s | save 0.006s | cum 0.21h
+[2025-09-09 10:53:57] [Population] Episode 13001: Lineup -> ['random2', 'max_combo', 'single_only']
+[2025-09-09 10:54:02] [Population] Episode 13101: Lineup -> ['random2', 'max_combo', 'single_only']
+[2025-09-09 10:54:04] [Population] Episode 13201: Lineup -> ['single_only', 'max_combo', 'random2']
+[2025-09-09 10:54:09] [Population] Episode 13301: Lineup -> ['random2', 'max_combo', 'random2']
+[2025-09-09 10:54:13] [Population] Episode 13401: Lineup -> ['random2', 'max_combo', 'random2']
+[2025-09-09 10:54:36] 
+[2025-09-09 10:54:36] Benchmark @train_ep   13500 (bench_eps: 2000)
+[2025-09-09 10:54:36] Macro Winrate          :  42.0%
+[2025-09-09 10:54:36] Macro Ø-Reward         :  1.901
+[2025-09-09 10:54:36] Winrate vs max_combo   :  36.9% | Σ-Reward:  3599.0 | Ø-Reward:  1.800 | Places: [737 (0.37), 470 (0.23), 448 (0.22), 345 (0.17)]
+[2025-09-09 10:54:36] Winrate vs random2     :  42.8% | Σ-Reward:  4125.0 | Ø-Reward:  2.062 | Places: [855 (0.43), 598 (0.30), 364 (0.18), 183 (0.09)]
+[2025-09-09 10:54:36] Winrate vs single_only :  63.0% | Σ-Reward:  4618.0 | Ø-Reward:  2.309 | Places: [1261 (0.63), 250 (0.12), 335 (0.17), 154 (0.08)]
+[2025-09-09 10:54:36] Winrate vs v_table     :  25.1% | Σ-Reward:  2868.0 | Ø-Reward:  1.434 | Places: [503 (0.25), 455 (0.23), 449 (0.22), 593 (0.30)]
+[2025-09-09 10:54:38] Timing @ep 13500: episode 22.6s | train 0.015s | eval 20.8s | plot 1.8s | save 0.003s | cum 0.22h
+[2025-09-09 10:54:38] [Population] Episode 13501: Lineup -> ['max_combo', 'random2', 'single_only']
+[2025-09-09 10:54:41] [Population] Episode 13601: Lineup -> ['single_only', 'max_combo', 'random2']
+[2025-09-09 10:54:43] [Population] Episode 13701: Lineup -> ['max_combo', 'max_combo', 'max_combo']
+[2025-09-09 10:54:46] [Population] Episode 13801: Lineup -> ['random2', 'max_combo', 'random2']
+[2025-09-09 10:54:48] [Population] Episode 13901: Lineup -> ['single_only', 'max_combo', 'max_combo']
+[2025-09-09 10:55:11] 
+[2025-09-09 10:55:11] Benchmark @train_ep   14000 (bench_eps: 2000)
+[2025-09-09 10:55:11] Macro Winrate          :  42.6%
+[2025-09-09 10:55:11] Macro Ø-Reward         :  1.923
+[2025-09-09 10:55:11] Winrate vs max_combo   :  36.6% | Σ-Reward:  3640.0 | Ø-Reward:  1.820 | Places: [733 (0.37), 492 (0.25), 457 (0.23), 318 (0.16)]
+[2025-09-09 10:55:11] Winrate vs random2     :  42.7% | Σ-Reward:  4112.0 | Ø-Reward:  2.056 | Places: [854 (0.43), 587 (0.29), 376 (0.19), 183 (0.09)]
+[2025-09-09 10:55:11] Winrate vs single_only :  65.3% | Σ-Reward:  4720.0 | Ø-Reward:  2.360 | Places: [1307 (0.65), 254 (0.13), 291 (0.15), 148 (0.07)]
+[2025-09-09 10:55:11] Winrate vs v_table     :  25.8% | Σ-Reward:  2913.0 | Ø-Reward:  1.456 | Places: [516 (0.26), 463 (0.23), 439 (0.22), 582 (0.29)]
+[2025-09-09 10:55:13] Timing @ep 14000: episode 22.2s | train 0.009s | eval 20.3s | plot 1.8s | save 0.003s | cum 0.23h
+[2025-09-09 10:55:13] [Population] Episode 14001: Lineup -> ['max_combo', 'single_only', 'random2']
+[2025-09-09 10:55:15] [Population] Episode 14101: Lineup -> ['max_combo', 'random2', 'max_combo']
+[2025-09-09 10:55:17] [Population] Episode 14201: Lineup -> ['random2', 'random2', 'random2']
+[2025-09-09 10:55:20] [Population] Episode 14301: Lineup -> ['random2', 'random2', 'max_combo']
+[2025-09-09 10:55:23] [Population] Episode 14401: Lineup -> ['max_combo', 'max_combo', 'single_only']
+[2025-09-09 10:55:42] 
+[2025-09-09 10:55:42] Benchmark @train_ep   14500 (bench_eps: 2000)
+[2025-09-09 10:55:42] Macro Winrate          :  42.2%
+[2025-09-09 10:55:42] Macro Ø-Reward         :  1.920
+[2025-09-09 10:55:42] Winrate vs max_combo   :  39.5% | Σ-Reward:  3761.0 | Ø-Reward:  1.881 | Places: [791 (0.40), 501 (0.25), 386 (0.19), 322 (0.16)]
+[2025-09-09 10:55:42] Winrate vs random2     :  41.5% | Σ-Reward:  4089.0 | Ø-Reward:  2.045 | Places: [831 (0.42), 613 (0.31), 370 (0.18), 186 (0.09)]
+[2025-09-09 10:55:42] Winrate vs single_only :  64.5% | Σ-Reward:  4695.0 | Ø-Reward:  2.348 | Places: [1290 (0.65), 263 (0.13), 299 (0.15), 148 (0.07)]
+[2025-09-09 10:55:42] Winrate vs v_table     :  23.2% | Σ-Reward:  2812.0 | Ø-Reward:  1.406 | Places: [465 (0.23), 478 (0.24), 461 (0.23), 596 (0.30)]
+[2025-09-09 10:55:44] Timing @ep 14500: episode 18.8s | train 0.007s | eval 17.1s | plot 1.7s | save 0.003s | cum 0.24h
+[2025-09-09 10:55:44] [Population] Episode 14501: Lineup -> ['random2', 'single_only', 'random2']
+[2025-09-09 10:55:46] [Population] Episode 14601: Lineup -> ['max_combo', 'random2', 'max_combo']
+[2025-09-09 10:55:49] [Population] Episode 14701: Lineup -> ['max_combo', 'random2', 'random2']
+[2025-09-09 10:55:51] [Population] Episode 14801: Lineup -> ['single_only', 'max_combo', 'single_only']
+[2025-09-09 10:55:54] [Population] Episode 14901: Lineup -> ['max_combo', 'random2', 'random2']
+[2025-09-09 10:56:15] 
+[2025-09-09 10:56:15] Benchmark @train_ep   15000 (bench_eps: 2000)
+[2025-09-09 10:56:15] Macro Winrate          :  42.6%
+[2025-09-09 10:56:15] Macro Ø-Reward         :  1.940
+[2025-09-09 10:56:15] Winrate vs max_combo   :  38.7% | Σ-Reward:  3765.0 | Ø-Reward:  1.883 | Places: [774 (0.39), 512 (0.26), 419 (0.21), 295 (0.15)]
+[2025-09-09 10:56:15] Winrate vs random2     :  44.1% | Σ-Reward:  4212.0 | Ø-Reward:  2.106 | Places: [883 (0.44), 608 (0.30), 347 (0.17), 162 (0.08)]
+[2025-09-09 10:56:15] Winrate vs single_only :  63.7% | Σ-Reward:  4705.0 | Ø-Reward:  2.353 | Places: [1274 (0.64), 303 (0.15), 277 (0.14), 146 (0.07)]
+[2025-09-09 10:56:15] Winrate vs v_table     :  23.9% | Σ-Reward:  2837.0 | Ø-Reward:  1.419 | Places: [479 (0.24), 482 (0.24), 436 (0.22), 603 (0.30)]
+[2025-09-09 10:56:17] Timing @ep 15000: episode 20.6s | train 0.015s | eval 18.6s | plot 2.0s | save 0.002s | cum 0.25h
+[2025-09-09 10:56:17] [Population] Episode 15001: Lineup -> ['max_combo', 'max_combo', 'max_combo']
+[2025-09-09 10:56:20] [Population] Episode 15101: Lineup -> ['random2', 'single_only', 'random2']
+[2025-09-09 10:56:24] [Population] Episode 15201: Lineup -> ['single_only', 'single_only', 'max_combo']
+[2025-09-09 10:56:26] [Population] Episode 15301: Lineup -> ['random2', 'max_combo', 'single_only']
+[2025-09-09 10:56:28] [Population] Episode 15401: Lineup -> ['random2', 'single_only', 'random2']
+[2025-09-09 10:56:47] 
+[2025-09-09 10:56:47] Benchmark @train_ep   15500 (bench_eps: 2000)
+[2025-09-09 10:56:47] Macro Winrate          :  41.3%
+[2025-09-09 10:56:47] Macro Ø-Reward         :  1.891
+[2025-09-09 10:56:47] Winrate vs max_combo   :  38.5% | Σ-Reward:  3688.0 | Ø-Reward:  1.844 | Places: [771 (0.39), 471 (0.24), 433 (0.22), 325 (0.16)]
+[2025-09-09 10:56:47] Winrate vs random2     :  42.6% | Σ-Reward:  4112.0 | Ø-Reward:  2.056 | Places: [853 (0.43), 585 (0.29), 383 (0.19), 179 (0.09)]
+[2025-09-09 10:56:47] Winrate vs single_only :  61.5% | Σ-Reward:  4553.0 | Ø-Reward:  2.276 | Places: [1230 (0.61), 261 (0.13), 341 (0.17), 168 (0.08)]
+[2025-09-09 10:56:47] Winrate vs v_table     :  22.4% | Σ-Reward:  2773.0 | Ø-Reward:  1.387 | Places: [447 (0.22), 463 (0.23), 506 (0.25), 584 (0.29)]
+[2025-09-09 10:56:49] Timing @ep 15500: episode 18.0s | train 0.014s | eval 16.4s | plot 1.6s | save 0.002s | cum 0.26h
+[2025-09-09 10:56:49] [Population] Episode 15501: Lineup -> ['max_combo', 'single_only', 'single_only']
+[2025-09-09 10:56:51] [Population] Episode 15601: Lineup -> ['single_only', 'max_combo', 'max_combo']
+[2025-09-09 10:56:53] [Population] Episode 15701: Lineup -> ['max_combo', 'max_combo', 'single_only']
+[2025-09-09 10:56:55] [Population] Episode 15801: Lineup -> ['single_only', 'single_only', 'single_only']
+[2025-09-09 10:56:56] [Population] Episode 15901: Lineup -> ['single_only', 'max_combo', 'single_only']
+[2025-09-09 10:57:15] 
+[2025-09-09 10:57:15] Benchmark @train_ep   16000 (bench_eps: 2000)
+[2025-09-09 10:57:15] Macro Winrate          :  41.7%
+[2025-09-09 10:57:15] Macro Ø-Reward         :  1.927
+[2025-09-09 10:57:15] Winrate vs max_combo   :  38.0% | Σ-Reward:  3730.0 | Ø-Reward:  1.865 | Places: [761 (0.38), 504 (0.25), 439 (0.22), 296 (0.15)]
+[2025-09-09 10:57:15] Winrate vs random2     :  42.7% | Σ-Reward:  4125.0 | Ø-Reward:  2.062 | Places: [854 (0.43), 593 (0.30), 377 (0.19), 176 (0.09)]
+[2025-09-09 10:57:15] Winrate vs single_only :  64.2% | Σ-Reward:  4696.0 | Ø-Reward:  2.348 | Places: [1283 (0.64), 275 (0.14), 297 (0.15), 145 (0.07)]
+[2025-09-09 10:57:15] Winrate vs v_table     :  22.0% | Σ-Reward:  2862.0 | Ø-Reward:  1.431 | Places: [440 (0.22), 534 (0.27), 474 (0.24), 552 (0.28)]
+[2025-09-09 10:57:16] Timing @ep 16000: episode 18.2s | train 0.034s | eval 16.4s | plot 1.8s | save 0.002s | cum 0.26h
+[2025-09-09 10:57:16] [Population] Episode 16001: Lineup -> ['max_combo', 'max_combo', 'single_only']
+[2025-09-09 10:57:18] [Population] Episode 16101: Lineup -> ['single_only', 'max_combo', 'single_only']
+[2025-09-09 10:57:21] [Population] Episode 16201: Lineup -> ['single_only', 'random2', 'single_only']
+[2025-09-09 10:57:23] [Population] Episode 16301: Lineup -> ['single_only', 'max_combo', 'random2']
+[2025-09-09 10:57:25] [Population] Episode 16401: Lineup -> ['single_only', 'single_only', 'single_only']
+[2025-09-09 10:57:42] 
+[2025-09-09 10:57:42] Benchmark @train_ep   16500 (bench_eps: 2000)
+[2025-09-09 10:57:42] Macro Winrate          :  43.2%
+[2025-09-09 10:57:42] Macro Ø-Reward         :  1.940
+[2025-09-09 10:57:42] Winrate vs max_combo   :  39.5% | Σ-Reward:  3733.0 | Ø-Reward:  1.867 | Places: [789 (0.39), 469 (0.23), 428 (0.21), 314 (0.16)]
+[2025-09-09 10:57:42] Winrate vs random2     :  42.7% | Σ-Reward:  4123.0 | Ø-Reward:  2.062 | Places: [854 (0.43), 587 (0.29), 387 (0.19), 172 (0.09)]
+[2025-09-09 10:57:42] Winrate vs single_only :  66.7% | Σ-Reward:  4783.0 | Ø-Reward:  2.392 | Places: [1333 (0.67), 252 (0.13), 280 (0.14), 135 (0.07)]
+[2025-09-09 10:57:42] Winrate vs v_table     :  24.1% | Σ-Reward:  2883.0 | Ø-Reward:  1.442 | Places: [481 (0.24), 495 (0.25), 450 (0.23), 574 (0.29)]
+[2025-09-09 10:57:43] Timing @ep 16500: episode 16.4s | train 0.016s | eval 14.7s | plot 1.6s | save 0.002s | cum 0.27h
+[2025-09-09 10:57:43] [Population] Episode 16501: Lineup -> ['single_only', 'single_only', 'random2']
+[2025-09-09 10:57:45] [Population] Episode 16601: Lineup -> ['random2', 'random2', 'single_only']
+[2025-09-09 10:57:47] [Population] Episode 16701: Lineup -> ['single_only', 'random2', 'max_combo']
+[2025-09-09 10:57:49] [Population] Episode 16801: Lineup -> ['random2', 'single_only', 'max_combo']
+[2025-09-09 10:57:51] [Population] Episode 16901: Lineup -> ['max_combo', 'random2', 'max_combo']
+[2025-09-09 10:58:10] 
+[2025-09-09 10:58:10] Benchmark @train_ep   17000 (bench_eps: 2000)
+[2025-09-09 10:58:10] Macro Winrate          :  42.0%
+[2025-09-09 10:58:10] Macro Ø-Reward         :  1.907
+[2025-09-09 10:58:10] Winrate vs max_combo   :  36.1% | Σ-Reward:  3632.0 | Ø-Reward:  1.816 | Places: [722 (0.36), 514 (0.26), 438 (0.22), 326 (0.16)]
+[2025-09-09 10:58:10] Winrate vs random2     :  43.5% | Σ-Reward:  4105.0 | Ø-Reward:  2.053 | Places: [871 (0.44), 560 (0.28), 372 (0.19), 197 (0.10)]
+[2025-09-09 10:58:10] Winrate vs single_only :  62.7% | Σ-Reward:  4617.0 | Ø-Reward:  2.308 | Places: [1254 (0.63), 255 (0.13), 345 (0.17), 146 (0.07)]
+[2025-09-09 10:58:10] Winrate vs v_table     :  25.5% | Σ-Reward:  2903.0 | Ø-Reward:  1.452 | Places: [510 (0.26), 489 (0.24), 395 (0.20), 606 (0.30)]
+[2025-09-09 10:58:12] Timing @ep 17000: episode 18.8s | train 0.009s | eval 17.0s | plot 1.9s | save 0.002s | cum 0.28h
+[2025-09-09 10:58:12] [Population] Episode 17001: Lineup -> ['max_combo', 'single_only', 'max_combo']
+[2025-09-09 10:58:15] [Population] Episode 17101: Lineup -> ['max_combo', 'random2', 'max_combo']
+[2025-09-09 10:58:17] [Population] Episode 17201: Lineup -> ['random2', 'random2', 'single_only']
+[2025-09-09 10:58:20] [Population] Episode 17301: Lineup -> ['max_combo', 'single_only', 'max_combo']
+[2025-09-09 10:58:22] [Population] Episode 17401: Lineup -> ['single_only', 'random2', 'random2']
+[2025-09-09 10:58:40] 
+[2025-09-09 10:58:40] Benchmark @train_ep   17500 (bench_eps: 2000)
+[2025-09-09 10:58:40] Macro Winrate          :  42.8%
+[2025-09-09 10:58:40] Macro Ø-Reward         :  1.927
+[2025-09-09 10:58:40] Winrate vs max_combo   :  39.5% | Σ-Reward:  3723.0 | Ø-Reward:  1.861 | Places: [790 (0.40), 467 (0.23), 419 (0.21), 324 (0.16)]
+[2025-09-09 10:58:40] Winrate vs random2     :  42.8% | Σ-Reward:  4105.0 | Ø-Reward:  2.053 | Places: [855 (0.43), 588 (0.29), 364 (0.18), 193 (0.10)]
+[2025-09-09 10:58:40] Winrate vs single_only :  63.0% | Σ-Reward:  4627.0 | Ø-Reward:  2.313 | Places: [1261 (0.63), 278 (0.14), 288 (0.14), 173 (0.09)]
+[2025-09-09 10:58:40] Winrate vs v_table     :  25.9% | Σ-Reward:  2961.0 | Ø-Reward:  1.480 | Places: [517 (0.26), 475 (0.24), 460 (0.23), 548 (0.27)]
+[2025-09-09 10:58:42] Timing @ep 17500: episode 17.7s | train 0.017s | eval 15.8s | plot 1.9s | save 0.001s | cum 0.29h
+[2025-09-09 10:58:42] [Population] Episode 17501: Lineup -> ['random2', 'max_combo', 'random2']
+[2025-09-09 10:58:44] [Population] Episode 17601: Lineup -> ['random2', 'single_only', 'single_only']
+[2025-09-09 10:58:47] [Population] Episode 17701: Lineup -> ['max_combo', 'max_combo', 'single_only']
+[2025-09-09 10:58:49] [Population] Episode 17801: Lineup -> ['max_combo', 'max_combo', 'random2']
+[2025-09-09 10:58:51] [Population] Episode 17901: Lineup -> ['random2', 'single_only', 'random2']
+[2025-09-09 10:59:10] 
+[2025-09-09 10:59:10] Benchmark @train_ep   18000 (bench_eps: 2000)
+[2025-09-09 10:59:10] Macro Winrate          :  41.8%
+[2025-09-09 10:59:10] Macro Ø-Reward         :  1.915
+[2025-09-09 10:59:10] Winrate vs max_combo   :  37.0% | Σ-Reward:  3648.0 | Ø-Reward:  1.824 | Places: [740 (0.37), 484 (0.24), 460 (0.23), 316 (0.16)]
+[2025-09-09 10:59:10] Winrate vs random2     :  43.5% | Σ-Reward:  4126.0 | Ø-Reward:  2.063 | Places: [870 (0.43), 554 (0.28), 408 (0.20), 168 (0.08)]
+[2025-09-09 10:59:10] Winrate vs single_only :  63.2% | Σ-Reward:  4705.0 | Ø-Reward:  2.353 | Places: [1265 (0.63), 304 (0.15), 302 (0.15), 129 (0.06)]
+[2025-09-09 10:59:10] Winrate vs v_table     :  23.6% | Σ-Reward:  2841.0 | Ø-Reward:  1.421 | Places: [471 (0.24), 466 (0.23), 496 (0.25), 567 (0.28)]
+[2025-09-09 10:59:12] Timing @ep 18000: episode 18.4s | train 0.027s | eval 16.7s | plot 1.7s | save 0.003s | cum 0.30h
+[2025-09-09 10:59:12] [Population] Episode 18001: Lineup -> ['random2', 'max_combo', 'single_only']
+[2025-09-09 10:59:14] [Population] Episode 18101: Lineup -> ['single_only', 'max_combo', 'random2']
+[2025-09-09 10:59:17] [Population] Episode 18201: Lineup -> ['single_only', 'single_only', 'max_combo']
+[2025-09-09 10:59:19] [Population] Episode 18301: Lineup -> ['max_combo', 'random2', 'max_combo']
+[2025-09-09 10:59:22] [Population] Episode 18401: Lineup -> ['max_combo', 'max_combo', 'single_only']
+[2025-09-09 10:59:39] 
+[2025-09-09 10:59:39] Benchmark @train_ep   18500 (bench_eps: 2000)
+[2025-09-09 10:59:39] Macro Winrate          :  40.8%
+[2025-09-09 10:59:39] Macro Ø-Reward         :  1.897
+[2025-09-09 10:59:39] Winrate vs max_combo   :  36.0% | Σ-Reward:  3604.0 | Ø-Reward:  1.802 | Places: [720 (0.36), 494 (0.25), 456 (0.23), 330 (0.17)]
+[2025-09-09 10:59:39] Winrate vs random2     :  41.0% | Σ-Reward:  4068.0 | Ø-Reward:  2.034 | Places: [819 (0.41), 614 (0.31), 383 (0.19), 184 (0.09)]
+[2025-09-09 10:59:39] Winrate vs single_only :  63.5% | Σ-Reward:  4640.0 | Ø-Reward:  2.320 | Places: [1270 (0.64), 255 (0.13), 320 (0.16), 155 (0.08)]
+[2025-09-09 10:59:39] Winrate vs v_table     :  22.8% | Σ-Reward:  2867.0 | Ø-Reward:  1.433 | Places: [455 (0.23), 511 (0.26), 480 (0.24), 554 (0.28)]
+[2025-09-09 10:59:41] Timing @ep 18500: episode 17.3s | train 0.005s | eval 15.6s | plot 1.7s | save 0.002s | cum 0.30h
+[2025-09-09 10:59:41] [Population] Episode 18501: Lineup -> ['single_only', 'single_only', 'max_combo']
+[2025-09-09 10:59:44] [Population] Episode 18601: Lineup -> ['max_combo', 'random2', 'single_only']
+[2025-09-09 10:59:46] [Population] Episode 18701: Lineup -> ['single_only', 'random2', 'random2']
+[2025-09-09 10:59:49] [Population] Episode 18801: Lineup -> ['max_combo', 'single_only', 'single_only']
+[2025-09-09 10:59:51] [Population] Episode 18901: Lineup -> ['single_only', 'random2', 'single_only']
+[2025-09-09 11:00:10] 
+[2025-09-09 11:00:10] Benchmark @train_ep   19000 (bench_eps: 2000)
+[2025-09-09 11:00:10] Macro Winrate          :  42.7%
+[2025-09-09 11:00:10] Macro Ø-Reward         :  1.923
+[2025-09-09 11:00:10] Winrate vs max_combo   :  38.1% | Σ-Reward:  3664.0 | Ø-Reward:  1.832 | Places: [762 (0.38), 458 (0.23), 462 (0.23), 318 (0.16)]
+[2025-09-09 11:00:10] Winrate vs random2     :  42.5% | Σ-Reward:  4129.0 | Ø-Reward:  2.064 | Places: [851 (0.43), 609 (0.30), 358 (0.18), 182 (0.09)]
+[2025-09-09 11:00:10] Winrate vs single_only :  65.3% | Σ-Reward:  4725.0 | Ø-Reward:  2.362 | Places: [1306 (0.65), 258 (0.13), 291 (0.15), 145 (0.07)]
+[2025-09-09 11:00:10] Winrate vs v_table     :  24.8% | Σ-Reward:  2866.0 | Ø-Reward:  1.433 | Places: [495 (0.25), 474 (0.24), 433 (0.22), 598 (0.30)]
+[2025-09-09 11:00:12] Timing @ep 19000: episode 18.9s | train 0.011s | eval 17.1s | plot 1.8s | save 0.002s | cum 0.31h
+[2025-09-09 11:00:12] [Population] Episode 19001: Lineup -> ['random2', 'random2', 'single_only']
+[2025-09-09 11:00:14] [Population] Episode 19101: Lineup -> ['random2', 'single_only', 'random2']
+[2025-09-09 11:00:17] [Population] Episode 19201: Lineup -> ['single_only', 'single_only', 'single_only']
+[2025-09-09 11:00:19] [Population] Episode 19301: Lineup -> ['max_combo', 'single_only', 'random2']
+[2025-09-09 11:00:22] [Population] Episode 19401: Lineup -> ['single_only', 'max_combo', 'single_only']
+[2025-09-09 11:00:40] 
+[2025-09-09 11:00:40] Benchmark @train_ep   19500 (bench_eps: 2000)
+[2025-09-09 11:00:40] Macro Winrate          :  42.5%
+[2025-09-09 11:00:40] Macro Ø-Reward         :  1.924
+[2025-09-09 11:00:40] Winrate vs max_combo   :  39.6% | Σ-Reward:  3758.0 | Ø-Reward:  1.879 | Places: [792 (0.40), 488 (0.24), 406 (0.20), 314 (0.16)]
+[2025-09-09 11:00:40] Winrate vs random2     :  44.1% | Σ-Reward:  4182.0 | Ø-Reward:  2.091 | Places: [882 (0.44), 583 (0.29), 370 (0.18), 165 (0.08)]
+[2025-09-09 11:00:40] Winrate vs single_only :  63.0% | Σ-Reward:  4652.0 | Ø-Reward:  2.326 | Places: [1260 (0.63), 283 (0.14), 306 (0.15), 151 (0.08)]
+[2025-09-09 11:00:40] Winrate vs v_table     :  23.2% | Σ-Reward:  2802.0 | Ø-Reward:  1.401 | Places: [464 (0.23), 472 (0.24), 466 (0.23), 598 (0.30)]
+[2025-09-09 11:00:42] Timing @ep 19500: episode 17.6s | train 0.019s | eval 15.8s | plot 1.8s | save 0.002s | cum 0.32h
+[2025-09-09 11:00:42] [Population] Episode 19501: Lineup -> ['max_combo', 'max_combo', 'random2']
+[2025-09-09 11:00:44] [Population] Episode 19601: Lineup -> ['single_only', 'max_combo', 'single_only']
+[2025-09-09 11:00:46] [Population] Episode 19701: Lineup -> ['max_combo', 'max_combo', 'random2']
+[2025-09-09 11:00:49] [Population] Episode 19801: Lineup -> ['single_only', 'random2', 'single_only']
+[2025-09-09 11:00:52] [Population] Episode 19901: Lineup -> ['single_only', 'random2', 'random2']
+[2025-09-09 11:01:13] 
+[2025-09-09 11:01:13] Benchmark @train_ep   20000 (bench_eps: 2000)
+[2025-09-09 11:01:13] Macro Winrate          :  41.5%
+[2025-09-09 11:01:13] Macro Ø-Reward         :  1.918
+[2025-09-09 11:01:13] Winrate vs max_combo   :  35.8% | Σ-Reward:  3664.0 | Ø-Reward:  1.832 | Places: [715 (0.36), 540 (0.27), 439 (0.22), 306 (0.15)]
+[2025-09-09 11:01:13] Winrate vs random2     :  42.8% | Σ-Reward:  4096.0 | Ø-Reward:  2.048 | Places: [855 (0.43), 570 (0.28), 391 (0.20), 184 (0.09)]
+[2025-09-09 11:01:13] Winrate vs single_only :  62.6% | Σ-Reward:  4620.0 | Ø-Reward:  2.310 | Places: [1253 (0.63), 267 (0.13), 327 (0.16), 153 (0.08)]
+[2025-09-09 11:01:13] Winrate vs v_table     :  24.8% | Σ-Reward:  2963.0 | Ø-Reward:  1.482 | Places: [495 (0.25), 495 (0.25), 488 (0.24), 522 (0.26)]
+[2025-09-09 11:01:14] Timing @ep 20000: episode 20.2s | train 0.006s | eval 18.5s | plot 1.7s | save 0.002s | cum 0.33h
+[2025-09-09 11:01:14] Opponent-Usage gespeichert: /home/wasterix/OpenSpiel/open_spiel/President/models/k1a2/model_12/plots/opponent_usage.csv
+[2025-09-09 11:01:14] 
+[2025-09-09 11:01:14] Gesamtzeit: 0.33h (~ 16.88 eps/s)
+[2025-09-09 11:01:14] k1a2, Single Agent vs Population. Training abgeschlossen.
+[2025-09-09 11:01:14] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k1a2/model_12
