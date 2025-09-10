@@ -1,0 +1,329 @@
+[2025-09-09 18:57:26] New Training (k1a2): DQN Single-Agent vs Heuristiken/Population (P0→P0)
+[2025-09-09 18:57:26] Deck_Size: 64
+[2025-09-09 18:57:26] Episodes: 20000
+[2025-09-09 18:57:26] Path: /home/wasterix/Multiagent/OpenSpiel_neu/open_spiel/President/models/k1a2/model_16
+[2025-09-09 18:58:59] 
+[2025-09-09 18:58:59] Benchmark @train_ep     500 (bench_eps: 2000)
+[2025-09-09 18:58:59] Macro Winrate          :  19.4%
+[2025-09-09 18:58:59] Macro Ø-Reward         :  1.342
+[2025-09-09 18:58:59] Winrate vs max_combo   :   9.6% | Σ-Reward:  1753.0 | Ø-Reward:  0.876 | Places: [191 (0.10), 316 (0.16), 548 (0.27), 945 (0.47)]
+[2025-09-09 18:58:59] Winrate vs random2     :  36.3% | Σ-Reward:  3718.0 | Ø-Reward:  1.859 | Places: [726 (0.36), 573 (0.29), 394 (0.20), 307 (0.15)]
+[2025-09-09 18:58:59] Winrate vs single_only :  12.4% | Σ-Reward:  2581.0 | Ø-Reward:  1.290 | Places: [248 (0.12), 617 (0.31), 603 (0.30), 532 (0.27)]
+[2025-09-09 18:59:00] Timing @ep 500: episode 48.2s | train 0.078s | eval 46.3s | plot 1.8s | save 0.019s | cum 0.03h
+[2025-09-09 19:00:22] 
+[2025-09-09 19:00:22] Benchmark @train_ep    1000 (bench_eps: 2000)
+[2025-09-09 19:00:22] Macro Winrate          :  33.6%
+[2025-09-09 19:00:22] Macro Ø-Reward         :  1.684
+[2025-09-09 19:00:22] Winrate vs max_combo   :  12.6% | Σ-Reward:  2000.0 | Ø-Reward:  1.000 | Places: [252 (0.13), 363 (0.18), 518 (0.26), 867 (0.43)]
+[2025-09-09 19:00:22] Winrate vs random2     :  42.8% | Σ-Reward:  4079.0 | Ø-Reward:  2.039 | Places: [856 (0.43), 579 (0.29), 353 (0.18), 212 (0.11)]
+[2025-09-09 19:00:22] Winrate vs single_only :  45.4% | Σ-Reward:  4024.0 | Ø-Reward:  2.012 | Places: [908 (0.45), 458 (0.23), 384 (0.19), 250 (0.12)]
+[2025-09-09 19:00:24] Timing @ep 1000: episode 45.1s | train 0.084s | eval 42.9s | plot 2.1s | save 0.003s | cum 0.05h
+[2025-09-09 19:01:43] 
+[2025-09-09 19:01:43] Benchmark @train_ep    1500 (bench_eps: 2000)
+[2025-09-09 19:01:43] Macro Winrate          :  37.7%
+[2025-09-09 19:01:43] Macro Ø-Reward         :  1.763
+[2025-09-09 19:01:43] Winrate vs max_combo   :   9.4% | Σ-Reward:  1820.0 | Ø-Reward:  0.910 | Places: [189 (0.09), 349 (0.17), 555 (0.28), 907 (0.45)]
+[2025-09-09 19:01:43] Winrate vs random2     :  41.1% | Σ-Reward:  4023.0 | Ø-Reward:  2.011 | Places: [822 (0.41), 578 (0.29), 401 (0.20), 199 (0.10)]
+[2025-09-09 19:01:43] Winrate vs single_only :  62.6% | Σ-Reward:  4738.0 | Ø-Reward:  2.369 | Places: [1253 (0.63), 357 (0.18), 265 (0.13), 125 (0.06)]
+[2025-09-09 19:01:45] Timing @ep 1500: episode 44.0s | train 0.054s | eval 42.0s | plot 1.9s | save 0.002s | cum 0.07h
+[2025-09-09 19:02:58] 
+[2025-09-09 19:02:58] Benchmark @train_ep    2000 (bench_eps: 2000)
+[2025-09-09 19:02:58] Macro Winrate          :  41.7%
+[2025-09-09 19:02:58] Macro Ø-Reward         :  1.894
+[2025-09-09 19:02:58] Winrate vs max_combo   :  13.2% | Σ-Reward:  2165.0 | Ø-Reward:  1.083 | Places: [265 (0.13), 391 (0.20), 588 (0.29), 756 (0.38)]
+[2025-09-09 19:02:58] Winrate vs random2     :  44.6% | Σ-Reward:  4211.0 | Ø-Reward:  2.106 | Places: [892 (0.45), 565 (0.28), 405 (0.20), 138 (0.07)]
+[2025-09-09 19:02:58] Winrate vs single_only :  67.2% | Σ-Reward:  4988.0 | Ø-Reward:  2.494 | Places: [1343 (0.67), 368 (0.18), 223 (0.11), 66 (0.03)]
+[2025-09-09 19:03:01] Timing @ep 2000: episode 42.6s | train 0.036s | eval 40.4s | plot 2.1s | save 0.003s | cum 0.10h
+[2025-09-09 19:04:10] 
+[2025-09-09 19:04:10] Benchmark @train_ep    2500 (bench_eps: 2000)
+[2025-09-09 19:04:10] Macro Winrate          :  50.2%
+[2025-09-09 19:04:10] Macro Ø-Reward         :  2.074
+[2025-09-09 19:04:10] Winrate vs max_combo   :  15.9% | Σ-Reward:  2384.0 | Ø-Reward:  1.192 | Places: [318 (0.16), 438 (0.22), 554 (0.28), 690 (0.34)]
+[2025-09-09 19:04:10] Winrate vs random2     :  52.5% | Σ-Reward:  4623.0 | Ø-Reward:  2.312 | Places: [1051 (0.53), 605 (0.30), 260 (0.13), 84 (0.04)]
+[2025-09-09 19:04:10] Winrate vs single_only :  82.2% | Σ-Reward:  5438.0 | Ø-Reward:  2.719 | Places: [1643 (0.82), 194 (0.10), 121 (0.06), 42 (0.02)]
+[2025-09-09 19:04:12] Timing @ep 2500: episode 38.6s | train 0.051s | eval 36.4s | plot 2.1s | save 0.002s | cum 0.12h
+[2025-09-09 19:05:26] 
+[2025-09-09 19:05:26] Benchmark @train_ep    3000 (bench_eps: 2000)
+[2025-09-09 19:05:26] Macro Winrate          :  44.5%
+[2025-09-09 19:05:26] Macro Ø-Reward         :  1.969
+[2025-09-09 19:05:26] Winrate vs max_combo   :  12.0% | Σ-Reward:  2178.0 | Ø-Reward:  1.089 | Places: [240 (0.12), 436 (0.22), 586 (0.29), 738 (0.37)]
+[2025-09-09 19:05:26] Winrate vs random2     :  46.0% | Σ-Reward:  4367.0 | Ø-Reward:  2.183 | Places: [920 (0.46), 651 (0.33), 305 (0.15), 124 (0.06)]
+[2025-09-09 19:05:26] Winrate vs single_only :  75.6% | Σ-Reward:  5268.0 | Ø-Reward:  2.634 | Places: [1512 (0.76), 295 (0.15), 142 (0.07), 51 (0.03)]
+[2025-09-09 19:05:28] Timing @ep 3000: episode 40.3s | train 0.094s | eval 38.2s | plot 2.0s | save 0.002s | cum 0.14h
+[2025-09-09 19:06:43] 
+[2025-09-09 19:06:43] Benchmark @train_ep    3500 (bench_eps: 2000)
+[2025-09-09 19:06:43] Macro Winrate          :  48.8%
+[2025-09-09 19:06:43] Macro Ø-Reward         :  2.040
+[2025-09-09 19:06:43] Winrate vs max_combo   :  15.6% | Σ-Reward:  2336.0 | Ø-Reward:  1.168 | Places: [311 (0.16), 426 (0.21), 551 (0.28), 712 (0.36)]
+[2025-09-09 19:06:43] Winrate vs random2     :  53.9% | Σ-Reward:  4631.0 | Ø-Reward:  2.316 | Places: [1078 (0.54), 556 (0.28), 285 (0.14), 81 (0.04)]
+[2025-09-09 19:06:43] Winrate vs single_only :  76.8% | Σ-Reward:  5275.0 | Ø-Reward:  2.638 | Places: [1537 (0.77), 265 (0.13), 134 (0.07), 64 (0.03)]
+[2025-09-09 19:06:44] Timing @ep 3500: episode 39.7s | train 0.091s | eval 37.6s | plot 2.0s | save 0.003s | cum 0.16h
+[2025-09-09 19:08:07] 
+[2025-09-09 19:08:07] Benchmark @train_ep    4000 (bench_eps: 2000)
+[2025-09-09 19:08:07] Macro Winrate          :  37.9%
+[2025-09-09 19:08:07] Macro Ø-Reward         :  1.880
+[2025-09-09 19:08:07] Winrate vs max_combo   :  14.4% | Σ-Reward:  2317.0 | Ø-Reward:  1.159 | Places: [289 (0.14), 432 (0.22), 586 (0.29), 693 (0.35)]
+[2025-09-09 19:08:07] Winrate vs random2     :  50.2% | Σ-Reward:  4581.0 | Ø-Reward:  2.291 | Places: [1005 (0.50), 644 (0.32), 278 (0.14), 73 (0.04)]
+[2025-09-09 19:08:07] Winrate vs single_only :  49.0% | Σ-Reward:  4381.0 | Ø-Reward:  2.191 | Places: [981 (0.49), 536 (0.27), 366 (0.18), 117 (0.06)]
+[2025-09-09 19:08:10] Timing @ep 4000: episode 42.8s | train 0.094s | eval 40.5s | plot 2.2s | save 0.003s | cum 0.18h
+[2025-09-09 19:09:39] 
+[2025-09-09 19:09:39] Benchmark @train_ep    4500 (bench_eps: 2000)
+[2025-09-09 19:09:39] Macro Winrate          :  38.4%
+[2025-09-09 19:09:39] Macro Ø-Reward         :  1.899
+[2025-09-09 19:09:39] Winrate vs max_combo   :  13.5% | Σ-Reward:  2380.0 | Ø-Reward:  1.190 | Places: [270 (0.14), 444 (0.22), 682 (0.34), 604 (0.30)]
+[2025-09-09 19:09:39] Winrate vs random2     :  49.2% | Σ-Reward:  4507.0 | Ø-Reward:  2.253 | Places: [984 (0.49), 629 (0.31), 297 (0.15), 90 (0.04)]
+[2025-09-09 19:09:39] Winrate vs single_only :  52.5% | Σ-Reward:  4507.0 | Ø-Reward:  2.253 | Places: [1050 (0.53), 512 (0.26), 333 (0.17), 105 (0.05)]
+[2025-09-09 19:09:41] Timing @ep 4500: episode 46.1s | train 0.121s | eval 44.1s | plot 1.9s | save 0.003s | cum 0.21h
+[2025-09-09 19:11:10] 
+[2025-09-09 19:11:10] Benchmark @train_ep    5000 (bench_eps: 2000)
+[2025-09-09 19:11:10] Macro Winrate          :  43.1%
+[2025-09-09 19:11:10] Macro Ø-Reward         :  2.005
+[2025-09-09 19:11:10] Winrate vs max_combo   :  16.7% | Σ-Reward:  2536.0 | Ø-Reward:  1.268 | Places: [334 (0.17), 476 (0.24), 582 (0.29), 608 (0.30)]
+[2025-09-09 19:11:10] Winrate vs random2     :  57.0% | Σ-Reward:  4793.0 | Ø-Reward:  2.397 | Places: [1139 (0.57), 563 (0.28), 250 (0.12), 48 (0.02)]
+[2025-09-09 19:11:10] Winrate vs single_only :  55.8% | Σ-Reward:  4700.0 | Ø-Reward:  2.350 | Places: [1116 (0.56), 533 (0.27), 286 (0.14), 65 (0.03)]
+[2025-09-09 19:11:11] Timing @ep 5000: episode 44.2s | train 0.096s | eval 42.3s | plot 1.8s | save 0.002s | cum 0.24h
+[2025-09-09 19:12:39] 
+[2025-09-09 19:12:39] Benchmark @train_ep    5500 (bench_eps: 2000)
+[2025-09-09 19:12:39] Macro Winrate          :  47.7%
+[2025-09-09 19:12:39] Macro Ø-Reward         :  2.127
+[2025-09-09 19:12:39] Winrate vs max_combo   :  22.0% | Σ-Reward:  2942.0 | Ø-Reward:  1.471 | Places: [440 (0.22), 521 (0.26), 580 (0.29), 459 (0.23)]
+[2025-09-09 19:12:39] Winrate vs random2     :  60.3% | Σ-Reward:  4938.0 | Ø-Reward:  2.469 | Places: [1206 (0.60), 564 (0.28), 192 (0.10), 38 (0.02)]
+[2025-09-09 19:12:39] Winrate vs single_only :  60.7% | Σ-Reward:  4883.0 | Ø-Reward:  2.442 | Places: [1214 (0.61), 508 (0.25), 225 (0.11), 53 (0.03)]
+[2025-09-09 19:12:41] Timing @ep 5500: episode 42.5s | train 0.112s | eval 40.4s | plot 1.9s | save 0.002s | cum 0.26h
+[2025-09-09 19:14:23] 
+[2025-09-09 19:14:23] Benchmark @train_ep    6000 (bench_eps: 2000)
+[2025-09-09 19:14:23] Macro Winrate          :  48.1%
+[2025-09-09 19:14:23] Macro Ø-Reward         :  2.131
+[2025-09-09 19:14:23] Winrate vs max_combo   :  23.1% | Σ-Reward:  2969.0 | Ø-Reward:  1.484 | Places: [462 (0.23), 538 (0.27), 507 (0.25), 493 (0.25)]
+[2025-09-09 19:14:23] Winrate vs random2     :  61.5% | Σ-Reward:  4969.0 | Ø-Reward:  2.485 | Places: [1230 (0.61), 546 (0.27), 187 (0.09), 37 (0.02)]
+[2025-09-09 19:14:23] Winrate vs single_only :  59.9% | Σ-Reward:  4848.0 | Ø-Reward:  2.424 | Places: [1197 (0.60), 504 (0.25), 249 (0.12), 50 (0.03)]
+[2025-09-09 19:14:25] Timing @ep 6000: episode 28.0s | train 0.072s | eval 26.1s | plot 1.8s | save 0.002s | cum 0.29h
+[2025-09-09 19:15:35] 
+[2025-09-09 19:15:35] Benchmark @train_ep    6500 (bench_eps: 2000)
+[2025-09-09 19:15:35] Macro Winrate          :  53.2%
+[2025-09-09 19:15:35] Macro Ø-Reward         :  2.210
+[2025-09-09 19:15:35] Winrate vs max_combo   :  26.4% | Σ-Reward:  3163.0 | Ø-Reward:  1.581 | Places: [527 (0.26), 518 (0.26), 546 (0.27), 409 (0.20)]
+[2025-09-09 19:15:35] Winrate vs random2     :  69.2% | Σ-Reward:  5169.0 | Ø-Reward:  2.584 | Places: [1385 (0.69), 438 (0.22), 138 (0.07), 39 (0.02)]
+[2025-09-09 19:15:35] Winrate vs single_only :  64.0% | Σ-Reward:  4931.0 | Ø-Reward:  2.466 | Places: [1280 (0.64), 438 (0.22), 215 (0.11), 67 (0.03)]
+[2025-09-09 19:15:37] Timing @ep 6500: episode 28.2s | train 0.101s | eval 26.4s | plot 1.7s | save 0.002s | cum 0.31h
+[2025-09-09 19:16:52] 
+[2025-09-09 19:16:52] Benchmark @train_ep    7000 (bench_eps: 2000)
+[2025-09-09 19:16:52] Macro Winrate          :  52.5%
+[2025-09-09 19:16:52] Macro Ø-Reward         :  2.218
+[2025-09-09 19:16:52] Winrate vs max_combo   :  27.0% | Σ-Reward:  3269.0 | Ø-Reward:  1.635 | Places: [540 (0.27), 566 (0.28), 517 (0.26), 377 (0.19)]
+[2025-09-09 19:16:52] Winrate vs random2     :  66.1% | Σ-Reward:  5061.0 | Ø-Reward:  2.530 | Places: [1322 (0.66), 466 (0.23), 163 (0.08), 49 (0.02)]
+[2025-09-09 19:16:52] Winrate vs single_only :  64.4% | Σ-Reward:  4980.0 | Ø-Reward:  2.490 | Places: [1288 (0.64), 458 (0.23), 200 (0.10), 54 (0.03)]
+[2025-09-09 19:16:53] Timing @ep 7000: episode 29.6s | train 0.074s | eval 28.1s | plot 1.5s | save 0.002s | cum 0.34h
+[2025-09-09 19:18:06] 
+[2025-09-09 19:18:06] Benchmark @train_ep    7500 (bench_eps: 2000)
+[2025-09-09 19:18:06] Macro Winrate          :  55.6%
+[2025-09-09 19:18:06] Macro Ø-Reward         :  2.268
+[2025-09-09 19:18:06] Winrate vs max_combo   :  29.4% | Σ-Reward:  3390.0 | Ø-Reward:  1.695 | Places: [589 (0.29), 576 (0.29), 471 (0.24), 364 (0.18)]
+[2025-09-09 19:18:06] Winrate vs random2     :  69.4% | Σ-Reward:  5181.0 | Ø-Reward:  2.591 | Places: [1388 (0.69), 442 (0.22), 133 (0.07), 37 (0.02)]
+[2025-09-09 19:18:06] Winrate vs single_only :  68.0% | Σ-Reward:  5035.0 | Ø-Reward:  2.518 | Places: [1359 (0.68), 365 (0.18), 228 (0.11), 48 (0.02)]
+[2025-09-09 19:18:06] Timing @ep 7500: episode 29.5s | train 0.063s | eval 28.0s | plot 1.5s | save 0.002s | cum 0.36h
+[2025-09-09 19:19:19] 
+[2025-09-09 19:19:19] Benchmark @train_ep    8000 (bench_eps: 2000)
+[2025-09-09 19:19:19] Macro Winrate          :  56.1%
+[2025-09-09 19:19:19] Macro Ø-Reward         :  2.268
+[2025-09-09 19:19:19] Winrate vs max_combo   :  29.7% | Σ-Reward:  3362.0 | Ø-Reward:  1.681 | Places: [594 (0.30), 535 (0.27), 510 (0.26), 361 (0.18)]
+[2025-09-09 19:19:19] Winrate vs random2     :  69.8% | Σ-Reward:  5176.0 | Ø-Reward:  2.588 | Places: [1396 (0.70), 415 (0.21), 158 (0.08), 31 (0.02)]
+[2025-09-09 19:19:19] Winrate vs single_only :  69.0% | Σ-Reward:  5070.0 | Ø-Reward:  2.535 | Places: [1379 (0.69), 369 (0.18), 195 (0.10), 57 (0.03)]
+[2025-09-09 19:19:21] Timing @ep 8000: episode 27.3s | train 0.070s | eval 25.4s | plot 1.8s | save 0.002s | cum 0.38h
+[2025-09-09 19:20:40] 
+[2025-09-09 19:20:40] Benchmark @train_ep    8500 (bench_eps: 2000)
+[2025-09-09 19:20:40] Macro Winrate          :  56.7%
+[2025-09-09 19:20:40] Macro Ø-Reward         :  2.290
+[2025-09-09 19:20:40] Winrate vs max_combo   :  30.1% | Σ-Reward:  3425.0 | Ø-Reward:  1.712 | Places: [603 (0.30), 550 (0.28), 516 (0.26), 331 (0.17)]
+[2025-09-09 19:20:40] Winrate vs random2     :  70.0% | Σ-Reward:  5216.0 | Ø-Reward:  2.608 | Places: [1400 (0.70), 444 (0.22), 128 (0.06), 28 (0.01)]
+[2025-09-09 19:20:40] Winrate vs single_only :  69.8% | Σ-Reward:  5101.0 | Ø-Reward:  2.550 | Places: [1397 (0.70), 359 (0.18), 192 (0.10), 52 (0.03)]
+[2025-09-09 19:20:40] Timing @ep 8500: episode 29.1s | train 0.078s | eval 27.5s | plot 1.5s | save 0.002s | cum 0.40h
+[2025-09-09 19:22:00] 
+[2025-09-09 19:22:00] Benchmark @train_ep    9000 (bench_eps: 2000)
+[2025-09-09 19:22:00] Macro Winrate          :  55.3%
+[2025-09-09 19:22:00] Macro Ø-Reward         :  2.259
+[2025-09-09 19:22:00] Winrate vs max_combo   :  30.4% | Σ-Reward:  3415.0 | Ø-Reward:  1.708 | Places: [609 (0.30), 548 (0.27), 492 (0.25), 351 (0.18)]
+[2025-09-09 19:22:00] Winrate vs random2     :  69.2% | Σ-Reward:  5179.0 | Ø-Reward:  2.590 | Places: [1384 (0.69), 450 (0.23), 127 (0.06), 39 (0.02)]
+[2025-09-09 19:22:00] Winrate vs single_only :  66.3% | Σ-Reward:  4957.0 | Ø-Reward:  2.478 | Places: [1327 (0.66), 376 (0.19), 224 (0.11), 73 (0.04)]
+[2025-09-09 19:22:02] Timing @ep 9000: episode 30.6s | train 0.097s | eval 29.1s | plot 1.3s | save 0.002s | cum 0.43h
+[2025-09-09 19:23:22] 
+[2025-09-09 19:23:22] Benchmark @train_ep    9500 (bench_eps: 2000)
+[2025-09-09 19:23:22] Macro Winrate          :  57.1%
+[2025-09-09 19:23:22] Macro Ø-Reward         :  2.312
+[2025-09-09 19:23:22] Winrate vs max_combo   :  29.6% | Σ-Reward:  3431.0 | Ø-Reward:  1.716 | Places: [593 (0.30), 586 (0.29), 480 (0.24), 341 (0.17)]
+[2025-09-09 19:23:22] Winrate vs random2     :  71.5% | Σ-Reward:  5246.0 | Ø-Reward:  2.623 | Places: [1431 (0.72), 414 (0.21), 125 (0.06), 30 (0.01)]
+[2025-09-09 19:23:22] Winrate vs single_only :  70.2% | Σ-Reward:  5197.0 | Ø-Reward:  2.599 | Places: [1404 (0.70), 415 (0.21), 155 (0.08), 26 (0.01)]
+[2025-09-09 19:23:24] Timing @ep 9500: episode 29.1s | train 0.086s | eval 27.2s | plot 1.8s | save 0.002s | cum 0.45h
+[2025-09-09 19:24:47] 
+[2025-09-09 19:24:47] Benchmark @train_ep   10000 (bench_eps: 2000)
+[2025-09-09 19:24:47] Macro Winrate          :  53.8%
+[2025-09-09 19:24:47] Macro Ø-Reward         :  2.244
+[2025-09-09 19:24:47] Winrate vs max_combo   :  28.2% | Σ-Reward:  3296.0 | Ø-Reward:  1.648 | Places: [565 (0.28), 566 (0.28), 469 (0.23), 400 (0.20)]
+[2025-09-09 19:24:47] Winrate vs random2     :  68.2% | Σ-Reward:  5155.0 | Ø-Reward:  2.578 | Places: [1365 (0.68), 455 (0.23), 150 (0.07), 30 (0.01)]
+[2025-09-09 19:24:47] Winrate vs single_only :  64.8% | Σ-Reward:  5014.0 | Ø-Reward:  2.507 | Places: [1295 (0.65), 468 (0.23), 193 (0.10), 44 (0.02)]
+[2025-09-09 19:24:48] Timing @ep 10000: episode 30.6s | train 0.100s | eval 28.8s | plot 1.8s | save 0.002s | cum 0.47h
+[2025-09-09 19:26:14] 
+[2025-09-09 19:26:14] Benchmark @train_ep   10500 (bench_eps: 2000)
+[2025-09-09 19:26:14] Macro Winrate          :  55.2%
+[2025-09-09 19:26:14] Macro Ø-Reward         :  2.278
+[2025-09-09 19:26:14] Winrate vs max_combo   :  29.6% | Σ-Reward:  3405.0 | Ø-Reward:  1.702 | Places: [591 (0.30), 561 (0.28), 510 (0.26), 338 (0.17)]
+[2025-09-09 19:26:14] Winrate vs random2     :  69.8% | Σ-Reward:  5218.0 | Ø-Reward:  2.609 | Places: [1396 (0.70), 450 (0.23), 130 (0.07), 24 (0.01)]
+[2025-09-09 19:26:14] Winrate vs single_only :  66.2% | Σ-Reward:  5045.0 | Ø-Reward:  2.522 | Places: [1324 (0.66), 443 (0.22), 187 (0.09), 46 (0.02)]
+[2025-09-09 19:26:16] Timing @ep 10500: episode 29.9s | train 0.100s | eval 28.4s | plot 1.4s | save 0.002s | cum 0.50h
+[2025-09-09 19:27:35] 
+[2025-09-09 19:27:35] Benchmark @train_ep   11000 (bench_eps: 2000)
+[2025-09-09 19:27:35] Macro Winrate          :  59.3%
+[2025-09-09 19:27:35] Macro Ø-Reward         :  2.344
+[2025-09-09 19:27:35] Winrate vs max_combo   :  33.8% | Σ-Reward:  3603.0 | Ø-Reward:  1.802 | Places: [676 (0.34), 570 (0.28), 435 (0.22), 319 (0.16)]
+[2025-09-09 19:27:35] Winrate vs random2     :  73.5% | Σ-Reward:  5287.0 | Ø-Reward:  2.643 | Places: [1471 (0.74), 382 (0.19), 110 (0.06), 37 (0.02)]
+[2025-09-09 19:27:35] Winrate vs single_only :  70.7% | Σ-Reward:  5173.0 | Ø-Reward:  2.587 | Places: [1413 (0.71), 390 (0.20), 154 (0.08), 43 (0.02)]
+[2025-09-09 19:27:37] Timing @ep 11000: episode 28.0s | train 0.170s | eval 26.4s | plot 1.4s | save 0.002s | cum 0.52h
+[2025-09-09 19:29:03] 
+[2025-09-09 19:29:03] Benchmark @train_ep   11500 (bench_eps: 2000)
+[2025-09-09 19:29:03] Macro Winrate          :  51.5%
+[2025-09-09 19:29:03] Macro Ø-Reward         :  2.232
+[2025-09-09 19:29:03] Winrate vs max_combo   :  30.3% | Σ-Reward:  3455.0 | Ø-Reward:  1.728 | Places: [606 (0.30), 561 (0.28), 515 (0.26), 318 (0.16)]
+[2025-09-09 19:29:03] Winrate vs random2     :  67.7% | Σ-Reward:  5155.0 | Ø-Reward:  2.578 | Places: [1353 (0.68), 482 (0.24), 132 (0.07), 33 (0.02)]
+[2025-09-09 19:29:03] Winrate vs single_only :  56.4% | Σ-Reward:  4784.0 | Ø-Reward:  2.392 | Places: [1128 (0.56), 573 (0.29), 254 (0.13), 45 (0.02)]
+[2025-09-09 19:29:04] Timing @ep 11500: episode 32.1s | train 0.171s | eval 30.4s | plot 1.4s | save 0.002s | cum 0.55h
+[2025-09-09 19:30:24] 
+[2025-09-09 19:30:24] Benchmark @train_ep   12000 (bench_eps: 2000)
+[2025-09-09 19:30:24] Macro Winrate          :  60.2%
+[2025-09-09 19:30:24] Macro Ø-Reward         :  2.360
+[2025-09-09 19:30:24] Winrate vs max_combo   :  32.6% | Σ-Reward:  3580.0 | Ø-Reward:  1.790 | Places: [652 (0.33), 568 (0.28), 488 (0.24), 292 (0.15)]
+[2025-09-09 19:30:24] Winrate vs random2     :  72.7% | Σ-Reward:  5276.0 | Ø-Reward:  2.638 | Places: [1454 (0.73), 392 (0.20), 130 (0.07), 24 (0.01)]
+[2025-09-09 19:30:24] Winrate vs single_only :  75.3% | Σ-Reward:  5304.0 | Ø-Reward:  2.652 | Places: [1507 (0.75), 323 (0.16), 137 (0.07), 33 (0.02)]
+[2025-09-09 19:30:26] Timing @ep 12000: episode 27.4s | train 0.077s | eval 25.8s | plot 1.4s | save 0.002s | cum 0.57h
+[2025-09-09 19:31:57] 
+[2025-09-09 19:31:57] Benchmark @train_ep   12500 (bench_eps: 2000)
+[2025-09-09 19:31:57] Macro Winrate          :  57.4%
+[2025-09-09 19:31:57] Macro Ø-Reward         :  2.308
+[2025-09-09 19:31:57] Winrate vs max_combo   :  30.8% | Σ-Reward:  3473.0 | Ø-Reward:  1.736 | Places: [616 (0.31), 560 (0.28), 505 (0.25), 319 (0.16)]
+[2025-09-09 19:31:57] Winrate vs random2     :  71.7% | Σ-Reward:  5234.0 | Ø-Reward:  2.617 | Places: [1433 (0.72), 403 (0.20), 129 (0.06), 35 (0.02)]
+[2025-09-09 19:31:57] Winrate vs single_only :  69.6% | Σ-Reward:  5139.0 | Ø-Reward:  2.570 | Places: [1392 (0.70), 399 (0.20), 165 (0.08), 44 (0.02)]
+[2025-09-09 19:31:59] Timing @ep 12500: episode 34.9s | train 0.091s | eval 32.9s | plot 1.8s | save 0.002s | cum 0.60h
+[2025-09-09 19:33:19] 
+[2025-09-09 19:33:19] Benchmark @train_ep   13000 (bench_eps: 2000)
+[2025-09-09 19:33:19] Macro Winrate          :  60.7%
+[2025-09-09 19:33:19] Macro Ø-Reward         :  2.363
+[2025-09-09 19:33:19] Winrate vs max_combo   :  32.9% | Σ-Reward:  3572.0 | Ø-Reward:  1.786 | Places: [658 (0.33), 582 (0.29), 434 (0.22), 326 (0.16)]
+[2025-09-09 19:33:19] Winrate vs random2     :  74.2% | Σ-Reward:  5312.0 | Ø-Reward:  2.656 | Places: [1485 (0.74), 372 (0.19), 113 (0.06), 30 (0.01)]
+[2025-09-09 19:33:19] Winrate vs single_only :  74.9% | Σ-Reward:  5293.0 | Ø-Reward:  2.647 | Places: [1498 (0.75), 329 (0.16), 141 (0.07), 32 (0.02)]
+[2025-09-09 19:33:20] Timing @ep 13000: episode 27.5s | train 0.108s | eval 25.9s | plot 1.5s | save 0.002s | cum 0.62h
+[2025-09-09 19:34:42] 
+[2025-09-09 19:34:42] Benchmark @train_ep   13500 (bench_eps: 2000)
+[2025-09-09 19:34:42] Macro Winrate          :  57.4%
+[2025-09-09 19:34:42] Macro Ø-Reward         :  2.333
+[2025-09-09 19:34:42] Winrate vs max_combo   :  32.6% | Σ-Reward:  3590.0 | Ø-Reward:  1.795 | Places: [652 (0.33), 578 (0.29), 478 (0.24), 292 (0.15)]
+[2025-09-09 19:34:42] Winrate vs random2     :  72.8% | Σ-Reward:  5318.0 | Ø-Reward:  2.659 | Places: [1457 (0.73), 429 (0.21), 89 (0.04), 25 (0.01)]
+[2025-09-09 19:34:42] Winrate vs single_only :  66.8% | Σ-Reward:  5087.0 | Ø-Reward:  2.543 | Places: [1337 (0.67), 443 (0.22), 190 (0.10), 30 (0.01)]
+[2025-09-09 19:34:44] Timing @ep 13500: episode 29.8s | train 0.086s | eval 27.8s | plot 1.9s | save 0.002s | cum 0.65h
+[2025-09-09 19:36:05] 
+[2025-09-09 19:36:05] Benchmark @train_ep   14000 (bench_eps: 2000)
+[2025-09-09 19:36:05] Macro Winrate          :  64.4%
+[2025-09-09 19:36:05] Macro Ø-Reward         :  2.420
+[2025-09-09 19:36:05] Winrate vs max_combo   :  35.2% | Σ-Reward:  3623.0 | Ø-Reward:  1.812 | Places: [704 (0.35), 543 (0.27), 425 (0.21), 328 (0.16)]
+[2025-09-09 19:36:05] Winrate vs random2     :  77.3% | Σ-Reward:  5425.0 | Ø-Reward:  2.712 | Places: [1547 (0.77), 348 (0.17), 88 (0.04), 17 (0.01)]
+[2025-09-09 19:36:05] Winrate vs single_only :  80.7% | Σ-Reward:  5474.0 | Ø-Reward:  2.737 | Places: [1613 (0.81), 272 (0.14), 91 (0.05), 24 (0.01)]
+[2025-09-09 19:36:06] Timing @ep 14000: episode 28.7s | train 0.151s | eval 27.1s | plot 1.5s | save 0.002s | cum 0.67h
+[2025-09-09 19:37:29] 
+[2025-09-09 19:37:29] Benchmark @train_ep   14500 (bench_eps: 2000)
+[2025-09-09 19:37:29] Macro Winrate          :  59.0%
+[2025-09-09 19:37:29] Macro Ø-Reward         :  2.340
+[2025-09-09 19:37:29] Winrate vs max_combo   :  30.8% | Σ-Reward:  3476.0 | Ø-Reward:  1.738 | Places: [616 (0.31), 570 (0.28), 488 (0.24), 326 (0.16)]
+[2025-09-09 19:37:29] Winrate vs random2     :  72.8% | Σ-Reward:  5302.0 | Ø-Reward:  2.651 | Places: [1456 (0.73), 410 (0.20), 114 (0.06), 20 (0.01)]
+[2025-09-09 19:37:29] Winrate vs single_only :  73.5% | Σ-Reward:  5264.0 | Ø-Reward:  2.632 | Places: [1469 (0.73), 358 (0.18), 141 (0.07), 32 (0.02)]
+[2025-09-09 19:37:31] Timing @ep 14500: episode 28.4s | train 0.057s | eval 26.8s | plot 1.5s | save 0.002s | cum 0.69h
+[2025-09-09 19:38:57] 
+[2025-09-09 19:38:57] Benchmark @train_ep   15000 (bench_eps: 2000)
+[2025-09-09 19:38:57] Macro Winrate          :  59.3%
+[2025-09-09 19:38:57] Macro Ø-Reward         :  2.335
+[2025-09-09 19:38:57] Winrate vs max_combo   :  35.5% | Σ-Reward:  3604.0 | Ø-Reward:  1.802 | Places: [709 (0.35), 505 (0.25), 467 (0.23), 319 (0.16)]
+[2025-09-09 19:38:57] Winrate vs random2     :  72.2% | Σ-Reward:  5293.0 | Ø-Reward:  2.647 | Places: [1445 (0.72), 421 (0.21), 116 (0.06), 18 (0.01)]
+[2025-09-09 19:38:57] Winrate vs single_only :  70.2% | Σ-Reward:  5110.0 | Ø-Reward:  2.555 | Places: [1404 (0.70), 355 (0.18), 188 (0.09), 53 (0.03)]
+[2025-09-09 19:38:59] Timing @ep 15000: episode 33.4s | train 0.086s | eval 31.5s | plot 1.9s | save 0.002s | cum 0.72h
+[2025-09-09 19:40:10] 
+[2025-09-09 19:40:10] Benchmark @train_ep   15500 (bench_eps: 2000)
+[2025-09-09 19:40:10] Macro Winrate          :  64.1%
+[2025-09-09 19:40:10] Macro Ø-Reward         :  2.404
+[2025-09-09 19:40:10] Winrate vs max_combo   :  36.6% | Σ-Reward:  3666.0 | Ø-Reward:  1.833 | Places: [733 (0.37), 512 (0.26), 443 (0.22), 312 (0.16)]
+[2025-09-09 19:40:10] Winrate vs random2     :  74.8% | Σ-Reward:  5337.0 | Ø-Reward:  2.668 | Places: [1497 (0.75), 362 (0.18), 122 (0.06), 19 (0.01)]
+[2025-09-09 19:40:10] Winrate vs single_only :  81.0% | Σ-Reward:  5421.0 | Ø-Reward:  2.711 | Places: [1619 (0.81), 219 (0.11), 126 (0.06), 36 (0.02)]
+[2025-09-09 19:40:11] Timing @ep 15500: episode 23.8s | train 0.068s | eval 22.3s | plot 1.4s | save 0.002s | cum 0.74h
+[2025-09-09 19:41:22] 
+[2025-09-09 19:41:22] Benchmark @train_ep   16000 (bench_eps: 2000)
+[2025-09-09 19:41:22] Macro Winrate          :  61.7%
+[2025-09-09 19:41:22] Macro Ø-Reward         :  2.372
+[2025-09-09 19:41:22] Winrate vs max_combo   :  36.0% | Σ-Reward:  3628.0 | Ø-Reward:  1.814 | Places: [719 (0.36), 508 (0.25), 455 (0.23), 318 (0.16)]
+[2025-09-09 19:41:22] Winrate vs random2     :  75.5% | Σ-Reward:  5356.0 | Ø-Reward:  2.678 | Places: [1509 (0.75), 366 (0.18), 97 (0.05), 28 (0.01)]
+[2025-09-09 19:41:22] Winrate vs single_only :  73.8% | Σ-Reward:  5248.0 | Ø-Reward:  2.624 | Places: [1476 (0.74), 336 (0.17), 148 (0.07), 40 (0.02)]
+[2025-09-09 19:41:23] Timing @ep 16000: episode 25.3s | train 0.075s | eval 23.8s | plot 1.4s | save 0.002s | cum 0.76h
+[2025-09-09 19:42:32] 
+[2025-09-09 19:42:32] Benchmark @train_ep   16500 (bench_eps: 2000)
+[2025-09-09 19:42:32] Macro Winrate          :  63.4%
+[2025-09-09 19:42:32] Macro Ø-Reward         :  2.391
+[2025-09-09 19:42:32] Winrate vs max_combo   :  36.0% | Σ-Reward:  3633.0 | Ø-Reward:  1.817 | Places: [721 (0.36), 517 (0.26), 436 (0.22), 326 (0.16)]
+[2025-09-09 19:42:32] Winrate vs random2     :  76.0% | Σ-Reward:  5352.0 | Ø-Reward:  2.676 | Places: [1520 (0.76), 337 (0.17), 118 (0.06), 25 (0.01)]
+[2025-09-09 19:42:32] Winrate vs single_only :  78.2% | Σ-Reward:  5361.0 | Ø-Reward:  2.680 | Places: [1564 (0.78), 272 (0.14), 125 (0.06), 39 (0.02)]
+[2025-09-09 19:42:34] Timing @ep 16500: episode 24.6s | train 0.094s | eval 23.1s | plot 1.4s | save 0.002s | cum 0.78h
+[2025-09-09 19:43:45] 
+[2025-09-09 19:43:45] Benchmark @train_ep   17000 (bench_eps: 2000)
+[2025-09-09 19:43:45] Macro Winrate          :  62.8%
+[2025-09-09 19:43:45] Macro Ø-Reward         :  2.406
+[2025-09-09 19:43:45] Winrate vs max_combo   :  36.9% | Σ-Reward:  3759.0 | Ø-Reward:  1.879 | Places: [738 (0.37), 566 (0.28), 413 (0.21), 283 (0.14)]
+[2025-09-09 19:43:45] Winrate vs random2     :  75.8% | Σ-Reward:  5375.0 | Ø-Reward:  2.688 | Places: [1517 (0.76), 369 (0.18), 86 (0.04), 28 (0.01)]
+[2025-09-09 19:43:45] Winrate vs single_only :  75.8% | Σ-Reward:  5303.0 | Ø-Reward:  2.651 | Places: [1515 (0.76), 318 (0.16), 122 (0.06), 45 (0.02)]
+[2025-09-09 19:43:47] Timing @ep 17000: episode 24.8s | train 0.084s | eval 23.0s | plot 1.8s | save 0.002s | cum 0.80h
+[2025-09-09 19:44:57] 
+[2025-09-09 19:44:57] Benchmark @train_ep   17500 (bench_eps: 2000)
+[2025-09-09 19:44:57] Macro Winrate          :  61.9%
+[2025-09-09 19:44:57] Macro Ø-Reward         :  2.361
+[2025-09-09 19:44:57] Winrate vs max_combo   :  36.0% | Σ-Reward:  3586.0 | Ø-Reward:  1.793 | Places: [720 (0.36), 504 (0.25), 418 (0.21), 358 (0.18)]
+[2025-09-09 19:44:57] Winrate vs random2     :  75.3% | Σ-Reward:  5320.0 | Ø-Reward:  2.660 | Places: [1507 (0.75), 345 (0.17), 109 (0.05), 39 (0.02)]
+[2025-09-09 19:44:57] Winrate vs single_only :  74.5% | Σ-Reward:  5261.0 | Ø-Reward:  2.631 | Places: [1490 (0.74), 318 (0.16), 155 (0.08), 37 (0.02)]
+[2025-09-09 19:44:59] Timing @ep 17500: episode 24.9s | train 0.090s | eval 23.4s | plot 1.4s | save 0.002s | cum 0.82h
+[2025-09-09 19:46:16] 
+[2025-09-09 19:46:16] Benchmark @train_ep   18000 (bench_eps: 2000)
+[2025-09-09 19:46:16] Macro Winrate          :  61.1%
+[2025-09-09 19:46:16] Macro Ø-Reward         :  2.369
+[2025-09-09 19:46:16] Winrate vs max_combo   :  38.0% | Σ-Reward:  3752.0 | Ø-Reward:  1.876 | Places: [759 (0.38), 543 (0.27), 389 (0.19), 309 (0.15)]
+[2025-09-09 19:46:16] Winrate vs random2     :  75.5% | Σ-Reward:  5364.0 | Ø-Reward:  2.682 | Places: [1509 (0.75), 368 (0.18), 101 (0.05), 22 (0.01)]
+[2025-09-09 19:46:16] Winrate vs single_only :  69.8% | Σ-Reward:  5096.0 | Ø-Reward:  2.548 | Places: [1396 (0.70), 360 (0.18), 188 (0.09), 56 (0.03)]
+[2025-09-09 19:46:17] Timing @ep 18000: episode 26.5s | train 0.113s | eval 25.0s | plot 1.4s | save 0.002s | cum 0.85h
+[2025-09-09 19:47:34] 
+[2025-09-09 19:47:34] Benchmark @train_ep   18500 (bench_eps: 2000)
+[2025-09-09 19:47:34] Macro Winrate          :  59.6%
+[2025-09-09 19:47:34] Macro Ø-Reward         :  2.332
+[2025-09-09 19:47:34] Winrate vs max_combo   :  35.5% | Σ-Reward:  3562.0 | Ø-Reward:  1.781 | Places: [710 (0.35), 495 (0.25), 442 (0.22), 353 (0.18)]
+[2025-09-09 19:47:34] Winrate vs random2     :  73.2% | Σ-Reward:  5302.0 | Ø-Reward:  2.651 | Places: [1463 (0.73), 404 (0.20), 105 (0.05), 28 (0.01)]
+[2025-09-09 19:47:34] Winrate vs single_only :  70.2% | Σ-Reward:  5129.0 | Ø-Reward:  2.564 | Places: [1404 (0.70), 376 (0.19), 165 (0.08), 55 (0.03)]
+[2025-09-09 19:47:35] Timing @ep 18500: episode 26.6s | train 0.087s | eval 25.1s | plot 1.4s | save 0.002s | cum 0.87h
+[2025-09-09 19:48:48] 
+[2025-09-09 19:48:48] Benchmark @train_ep   19000 (bench_eps: 2000)
+[2025-09-09 19:48:48] Macro Winrate          :  65.0%
+[2025-09-09 19:48:48] Macro Ø-Reward         :  2.411
+[2025-09-09 19:48:48] Winrate vs max_combo   :  38.3% | Σ-Reward:  3708.0 | Ø-Reward:  1.854 | Places: [766 (0.38), 486 (0.24), 438 (0.22), 310 (0.15)]
+[2025-09-09 19:48:48] Winrate vs random2     :  79.3% | Σ-Reward:  5435.0 | Ø-Reward:  2.717 | Places: [1587 (0.79), 290 (0.14), 94 (0.05), 29 (0.01)]
+[2025-09-09 19:48:48] Winrate vs single_only :  77.2% | Σ-Reward:  5321.0 | Ø-Reward:  2.660 | Places: [1545 (0.77), 276 (0.14), 134 (0.07), 45 (0.02)]
+[2025-09-09 19:48:49] Timing @ep 19000: episode 24.7s | train 0.059s | eval 23.3s | plot 1.4s | save 0.002s | cum 0.89h
+[2025-09-09 19:50:00] 
+[2025-09-09 19:50:00] Benchmark @train_ep   19500 (bench_eps: 2000)
+[2025-09-09 19:50:00] Macro Winrate          :  61.9%
+[2025-09-09 19:50:00] Macro Ø-Reward         :  2.377
+[2025-09-09 19:50:00] Winrate vs max_combo   :  35.2% | Σ-Reward:  3641.0 | Ø-Reward:  1.821 | Places: [705 (0.35), 548 (0.27), 430 (0.21), 317 (0.16)]
+[2025-09-09 19:50:00] Winrate vs random2     :  75.3% | Σ-Reward:  5356.0 | Ø-Reward:  2.678 | Places: [1507 (0.75), 363 (0.18), 109 (0.05), 21 (0.01)]
+[2025-09-09 19:50:00] Winrate vs single_only :  75.1% | Σ-Reward:  5266.0 | Ø-Reward:  2.633 | Places: [1502 (0.75), 307 (0.15), 146 (0.07), 45 (0.02)]
+[2025-09-09 19:50:02] Timing @ep 19500: episode 25.8s | train 0.086s | eval 23.9s | plot 1.7s | save 0.002s | cum 0.91h
+[2025-09-09 19:51:09] 
+[2025-09-09 19:51:09] Benchmark @train_ep   20000 (bench_eps: 2000)
+[2025-09-09 19:51:09] Macro Winrate          :  64.9%
+[2025-09-09 19:51:09] Macro Ø-Reward         :  2.415
+[2025-09-09 19:51:09] Winrate vs max_combo   :  39.8% | Σ-Reward:  3745.0 | Ø-Reward:  1.873 | Places: [796 (0.40), 491 (0.25), 375 (0.19), 338 (0.17)]
+[2025-09-09 19:51:09] Winrate vs random2     :  76.0% | Σ-Reward:  5357.0 | Ø-Reward:  2.679 | Places: [1521 (0.76), 351 (0.18), 92 (0.05), 36 (0.02)]
+[2025-09-09 19:51:09] Winrate vs single_only :  79.0% | Σ-Reward:  5387.0 | Ø-Reward:  2.693 | Places: [1579 (0.79), 259 (0.13), 132 (0.07), 30 (0.01)]
+[2025-09-09 19:51:11] Timing @ep 20000: episode 24.5s | train 0.049s | eval 23.0s | plot 1.4s | save 0.002s | cum 0.93h
+[2025-09-09 19:51:11] Opponent-Usage gespeichert: /home/wasterix/Multiagent/OpenSpiel_neu/open_spiel/President/models/k1a2/model_16/plots/opponent_usage.csv
+[2025-09-09 19:51:11] 
+[2025-09-09 19:51:11] Gesamtzeit: 0.93h (~ 5.96 eps/s)
+[2025-09-09 19:51:11] k1a2, Single Agent vs Fixed. Training abgeschlossen.
+[2025-09-09 19:51:11] Path: /home/wasterix/Multiagent/OpenSpiel_neu/open_spiel/President/models/k1a2/model_16

@@ -34,13 +34,13 @@ CONFIG = {
     # Tabellengegner einfach als "v_table" referenzieren
     "OPPONENT_POOL": {
         "max_combo": 1.0,
-        "single_only": 0.0,
-        "random2": 0.0,
+        "single_only": 1.0,
+        "random2": 1.0,
         "v_table": 0.0
     },
 
     # >0: Wechsel alle n Episoden; 0/negativ: nie wechseln
-    "SWITCH_INTERVAL": 0,
+    "SWITCH_INTERVAL": 100,
 
     # PPO-Hyperparameter
     "PPO": {
