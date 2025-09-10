@@ -60,6 +60,33 @@ class MetricsPlotter:
         self._train_save_csv = bool(save_csv)
         self.train_keys: Optional[List[str]] = None
         self.train_rows: List[dict] = []
+                # ---- Konsistente Farben für alle Return-Plots ----
+        # Passe hier an, wenn du andere Farben willst.
+        self._ret_colors = {
+            "env_score":    "tab:blue",
+            "shaping":      "tab:green",
+            "final_bonus":  "tab:orange",
+            # Total-Return (ep_return_raw):
+            "total_scatter": "tab:gray",    # Punktewolke
+            "total_ma":      "tab:red",     # Moving Average
+        }
+
+        # dezenter, einheitlicher Scatter-Ton für alle Komponenten
+        self._ret_colors["component_scatter"] = "#B0B0B0"  # helles Grau
+        # optionale Sichtbarkeits-Parameter
+        self._ret_scatter_alpha = 0.18
+        self._ret_scatter_size  = 6
+        self._ret_line_width    = 2.2
+        self._ret_use_outline   = True   # weiße Kontur für Kurven (bessere Sichtbarkeit)
+
+
+
+        # --- In-Memory Episode-Returns (kein CSV, keine Pandas) ---
+        # Pro globaler Trainingsepisode genau ein Return (z. B. P0), plus optionale Komponenten
+        self.ep_ret_eps: List[int] = []            # global_ep
+        self.ep_ret_vals: List[float] = []         # total return (env + shaping + final)
+        self.ep_ret_components: Dict[str, List[float]] = {}  # z.B. {"env_score": [...], "shaping": [...], "final_bonus": [...]}
+
 
         # CSV-Header für Benchmark: dynamisch beim ersten add_benchmark, da Gegnerliste auch aus den Daten kommen kann
         # train_csv: Header dynamisch beim ersten add_train
@@ -386,6 +413,9 @@ class MetricsPlotter:
         - Header wird nur einmal geschrieben.
         - Bereits vorhandene (opponent, episode)-Kombinationen werden nicht doppelt angefügt.
         """
+        if not self._bench_save_csv:
+            return
+
         if not self.bench_episodes:
             return
 
@@ -462,41 +492,296 @@ class MetricsPlotter:
             with open(self.train_csv_path, "a", newline="") as f:
                 csv.writer(f).writerow([row.get(k, "") for k in self.train_keys])
 
-    def plot_train(self, filename_prefix: str = "training_metrics", separate: bool = True):
-        if not self.train_rows or not self.train_keys:
+    def plot_train(
+        self,
+        filename_prefix: str = "training_metrics",
+        separate: bool = True,
+        include_keys: Optional[List[str]] = None,
+        exclude_keys: Optional[List[str]] = None,
+    ):
+        # Sonder-Keys, die nicht aus train_rows kommen, sondern aus Memory:
+        special_keys = {
+            "ep_return_raw", "ep_return_components",
+            "ep_return_env", "ep_return_shaping", "ep_return_final"
+        }
+
+        wants_special = False
+        if include_keys is not None:
+            wants_special = any(k in special_keys for k in include_keys)
+
+        # Nur abbrechen, wenn weder Trainingsmetriken noch Sonderplots gewünscht sind
+        if (not self.train_rows or not self.train_keys) and not wants_special:
             return
+
+
         episodes = [r["episode"] for r in self.train_rows]
-        metric_keys = [k for k in self.train_keys if k != "episode"]
+        # alle möglichen Keys (ohne 'episode')
+        all_keys = [k for k in self.train_keys if k != "episode"]
+
+        # Filter anwenden
+        keys = all_keys
+        if include_keys is not None:
+            allow = set(include_keys)
+            keys = [k for k in keys if k in allow]
+        if exclude_keys is not None:
+            deny = set(exclude_keys)
+            keys = [k for k in keys if k not in deny]
+
+                # --- Sonderplots über PLOT_KEYS steuern ---
+        # Wenn "ep_return_raw" oder "ep_return_components" angefragt sind,
+        # zeichnen wir sie über plot_ep_returns() und entfernen die Pseudo-Keys
+        # aus der normalen Metrikenliste.
+        # --- Sonderplots über PLOT_KEYS steuern ---
+        if include_keys is not None:
+            req = set(include_keys)
+
+            # Gesamt + Komponenten-Mehrfachplot
+            if ("ep_return_raw" in req) or ("ep_return_components" in req):
+                self.plot_ep_returns(window=500)
+
+            # Einzelplots je Komponente (Mapping Pseudo-Key -> Komponentenname)
+            mapping = {
+                "ep_return_env":     "env_score",
+                "ep_return_shaping": "shaping",
+                "ep_return_final":   "final_bonus",
+            }
+            for pseudo, comp in mapping.items():
+                if pseudo in req:
+                    self.plot_ep_return_component(comp, window=500)
+
+            # Pseudo-Keys aus der normalen Metrikenliste entfernen
+            keys = [k for k in keys if k not in {"ep_return_raw", "ep_return_components",
+                                                 "ep_return_env", "ep_return_shaping", "ep_return_final"}]
+
+
+
+        if not keys:
+            return  # nichts zu plotten
 
         if separate:
-            for k in metric_keys:
+            for k in keys:
                 vals = [r.get(k, float("nan")) for r in self.train_rows]
                 plt.figure(figsize=(10, 6))
-                plt.plot(episodes, vals,
-                        marker="o", markersize=3,
-                        linestyle="None")  # nur Punkte
+                plt.plot(episodes, vals, marker="o", markersize=3, linestyle="None")
                 plt.title(f"Training – {k}")
-                plt.xlabel("Episode")
-                plt.ylabel(k)
-                plt.grid(True)
-                plt.tight_layout()
+                plt.xlabel("Episode"); plt.ylabel(k)
+                plt.grid(True); plt.tight_layout()
                 plt.savefig(os.path.join(self.out_dir, f"{filename_prefix}_{k}.png"))
                 plt.close()
         else:
             plt.figure(figsize=(12, 8))
-            for k in metric_keys:
+            for k in keys:
                 vals = [r.get(k, float("nan")) for r in self.train_rows]
-                plt.plot(episodes, vals,
-                        marker="o", markersize=3,
-                        linestyle="None", label=k)
+                plt.plot(episodes, vals, marker="o", markersize=3, linestyle="None", label=k)
             plt.title("Training – Metrics")
-            plt.xlabel("Episode")
-            plt.ylabel("Value")
-            plt.grid(True)
-            plt.legend(loc="upper left")
-            plt.tight_layout()
+            plt.xlabel("Episode"); plt.ylabel("Value")
+            plt.grid(True); plt.legend(loc="upper left"); plt.tight_layout()
             plt.savefig(os.path.join(self.out_dir, f"{filename_prefix}_all.png"))
             plt.close()
+
+    def add_ep_returns(
+        self,
+        global_episode: int,
+        ep_returns: List[float],
+        components: Optional[Dict[str, List[float]]] = None
+    ):
+
+        """
+        Nimmt Episode-Return(s) entgegen und speichert sie NUR im Speicher.
+        - Keine CSV, keine Pandas.
+        - Üblicher Use-Case: genau 1 Return pro globaler Episode.
+        """
+        if not ep_returns:
+            return
+
+        comp_keys = list(components.keys()) if components else []
+        for k in comp_keys:
+            if k not in self.ep_ret_components:
+                self.ep_ret_components[k] = []
+
+        for i, r in enumerate(ep_returns):
+            self.ep_ret_eps.append(int(global_episode))
+            self.ep_ret_vals.append(float(r))
+            for k in comp_keys:
+                vals = components.get(k) or []
+                self.ep_ret_components[k].append(float(vals[i]) if i < len(vals) else float("nan"))
+
+    def plot_ep_returns(self, window: int = 500):
+        """
+        Plottet die Episode-Returns aus dem IN-MEMORY-Puffer.
+        - Erzeugt:
+            - ep_return_raw.png (roh + Moving Avg, in 2 festen Farben)
+            - ep_return_components.png (alle Komponenten gemeinsam)
+            - ep_return_<komponente>.png (je Komponente einzeln)
+        """
+        if not self.ep_ret_eps or not self.ep_ret_vals:
+            return
+
+        import numpy as np, matplotlib.pyplot as plt, os
+
+        x = np.asarray(self.ep_ret_eps, dtype=float)
+        y = np.asarray(self.ep_ret_vals, dtype=float)
+
+        def _movavg(v: np.ndarray, w: int) -> np.ndarray:
+            if v.size == 0:
+                return v
+            w = max(1, int(w))
+            c = np.cumsum(np.insert(v, 0, 0.0))
+            tail = (c[w:] - c[:-w]) / float(w)                       # volle Fenster
+            head = np.array([np.mean(v[:i+1]) for i in range(min(w-1, v.size))], dtype=float)
+            return np.concatenate([head, tail])
+
+        y_ma = _movavg(y, window)
+
+        # --- ep_return_raw.png (2 feste Farben, konsistent) ---
+        plt.figure(figsize=(12, 7))
+
+        # Punkte in dezentem Grau
+        plt.scatter(
+            x, y,
+            s=self._ret_scatter_size,
+            alpha=self._ret_scatter_alpha,
+            label="Episode-Return (roh)",
+            color=self._ret_colors["total_scatter"],
+            zorder=1,
+        )
+
+        # Moving Average in Kontrastfarbe (über den Punkten)
+        line_ma, = plt.plot(
+            x, y_ma,
+            linewidth=self._ret_line_width,
+            label=f"Moving Avg (w={window})",
+            color=self._ret_colors["total_ma"],
+            zorder=3,
+        )
+
+        # optional weiße Outline für bessere Lesbarkeit
+        if self._ret_use_outline:
+            import matplotlib.patheffects as pe
+            line_ma.set_path_effects([pe.Stroke(linewidth=self._ret_line_width+1.4, foreground="white"), pe.Normal()])
+
+        plt.title("Training – echter Episoden-Return (roh)")
+        plt.xlabel("Trainings-Episode (global)")
+        plt.ylabel("Return (Summe aus Step + Final)")
+        plt.grid(True); plt.legend(); plt.tight_layout()
+        plt.savefig(os.path.join(self.out_dir, "ep_return_raw.png"))
+        plt.close()
+
+        # --- ep_return_components.png (alle Komponenten gemeinsam) ---
+        comp_keys = [k for k in ("env_score", "shaping", "final_bonus") if k in self.ep_ret_components]
+        if comp_keys:
+            plt.figure(figsize=(12, 7))
+            for k in comp_keys:
+                v = np.asarray(self.ep_ret_components[k], dtype=float)
+                col = self._ret_colors.get(k, None)
+                plt.plot(x, _movavg(v, window), label=k, color=col)
+            plt.title("Training – Return-Komponenten (Moving Avg)")
+            plt.xlabel("Trainings-Episode (global)")
+            plt.ylabel("Ø pro Episode")
+            plt.grid(True); plt.legend(); plt.tight_layout()
+            plt.savefig(os.path.join(self.out_dir, "ep_return_components.png"))
+            plt.close()
+
+            # --- Einzelplots pro Komponente (gleiche Farben) ---
+            for k in comp_keys:
+                v  = np.asarray(self.ep_ret_components[k], dtype=float)
+                mv = _movavg(v, window)
+                col_line = self._ret_colors.get(k, None)
+                col_scatter = self._ret_colors["component_scatter"]
+
+                plt.figure(figsize=(10, 6))
+                # dezente Punkte
+                plt.scatter(
+                    x, v,
+                    s=self._ret_scatter_size,
+                    alpha=self._ret_scatter_alpha,
+                    label="roh",
+                    color=col_scatter,
+                    zorder=1,
+                )
+                # farbige MA-Linie drüber
+                line_comp, = plt.plot(
+                    x, mv,
+                    linewidth=self._ret_line_width,
+                    label=f"{k} (MA)",
+                    color=col_line,
+                    zorder=3,
+                )
+                if self._ret_use_outline:
+                    import matplotlib.patheffects as pe
+                    line_comp.set_path_effects([pe.Stroke(linewidth=self._ret_line_width+1.2, foreground="white"), pe.Normal()])
+
+                plt.title(f"Training – {k} (Moving Avg)")
+                plt.xlabel("Trainings-Episode (global)")
+                plt.ylabel(k)
+                plt.grid(True); plt.legend(); plt.tight_layout()
+                plt.savefig(os.path.join(self.out_dir, f"ep_return_{k}.png"))
+                plt.close()
+
+
+
+    def plot_ep_return_component(self, component_key: str, window: int = 500,
+                                filename: Optional[str] = None, title: Optional[str] = None):
+        """
+        Einzelplot für eine Return-Komponente aus dem In-Memory-Puffer.
+        component_key: "env_score" | "shaping" | "final_bonus"
+        Erzeugt standardmäßig: ep_return_<component_key>.png
+        """
+        if not self.ep_ret_eps or component_key not in self.ep_ret_components:
+            return
+
+        import numpy as np, matplotlib.pyplot as plt, os
+
+        x = np.asarray(self.ep_ret_eps, dtype=float)
+        v = np.asarray(self.ep_ret_components[component_key], dtype=float)
+
+        def _movavg(arr: np.ndarray, w: int) -> np.ndarray:
+            if arr.size == 0:
+                return arr
+            w = max(1, int(w))
+            w = min(w, arr.size)
+            c = np.cumsum(np.insert(arr, 0, 0.0))
+            tail = (c[w:] - c[:-w]) / float(w)
+            head = np.array([np.mean(arr[:i+1]) for i in range(w-1)], dtype=float)
+            return np.concatenate([head, tail])
+
+        mv = _movavg(v, window)
+        out_name = filename or f"ep_return_{component_key}.png"
+        ttl = title or f"Training – {component_key} (Moving Avg)"
+        col = self._ret_colors.get(component_key, None)
+
+        plt.figure(figsize=(12, 7))
+
+        # dezente, einheitliche Punkte
+        plt.scatter(
+            x, v,
+            s=self._ret_scatter_size,
+            alpha=self._ret_scatter_alpha,
+            label="roh",
+            color=self._ret_colors["component_scatter"],
+            zorder=1,
+        )
+
+        # farbige MA-Linie
+        line_comp, = plt.plot(
+            x, mv,
+            linewidth=self._ret_line_width,
+            label=f"Moving Avg (w={window})",
+            color=col,
+            zorder=3,
+        )
+        if self._ret_use_outline:
+            import matplotlib.patheffects as pe
+            line_comp.set_path_effects([pe.Stroke(linewidth=self._ret_line_width+1.2, foreground="white"), pe.Normal()])
+
+        plt.title(ttl)
+        plt.xlabel("Trainings-Episode (global)")
+        plt.ylabel("Ø pro Episode")
+        plt.grid(True); plt.legend(); plt.tight_layout()
+        plt.savefig(os.path.join(self.out_dir, out_name))
+        plt.close()
+
+
 
 
     # ---------- Logging (Konsole + run.log) ----------
@@ -660,3 +945,4 @@ class EvalPlotter:
         plt.tight_layout()
         plt.savefig(os.path.join(self.out_dir, f"{self.prefix}_alle_strategien_avg.png"))
         plt.close()
+

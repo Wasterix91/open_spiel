@@ -18,9 +18,9 @@ from utils.benchmark import run_benchmark
 # ============== CONFIG  ==============
 CONFIG = {
     "EPISODES":         100_000,
-    "BENCH_INTERVAL":   2_000,
-    "BENCH_EPISODES":   2_000,
-    "DECK_SIZE":        "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+    "BENCH_INTERVAL":   5000,
+    "BENCH_EPISODES":   500,
+    "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
     # Training-Gegner (Heuristiken) für Seats 1..3
@@ -28,40 +28,64 @@ CONFIG = {
 
     # PPO-Hyperparameter
     "PPO": {
-        "learning_rate": 3e-4,
-        "num_epochs": 1,
-        "batch_size": 256,
-        "entropy_cost": 0.01,
-        "gamma": 0.99,
-        "gae_lambda": 0.95,
-        "clip_eps": 0.2,
-        "value_coef": 0.5,
-        "max_grad_norm": 0.5,
+    "learning_rate": 5e-4,   # ↑
+    "num_epochs": 10,        # ↑
+    "batch_size": 64,        # ↓
+    "entropy_cost": 0.015,   # leicht ↑, um zu frühe Exploitation zu vermeiden
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "clip_eps": 0.2,         # erst so lassen; ggf. 0.3 testen, wenn KL zu klein bleibt
+    "value_coef": 0.5,
+    "max_grad_norm": 1.0,    # ↑ erlaubt größere Schritte
     },
 
     # ======= Rewards (NEUES System) =======
     # STEP_MODE : "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
     # FINAL_MODE: "none" | "env_only" | "rank_bonus" | "both"
     "REWARD": {
-        "STEP_MODE": "none",
-        "DELTA_WEIGHT": 0.0,
+        "STEP_MODE": "delta_weight_only",
+        "DELTA_WEIGHT": 0.5,
         "HAND_PENALTY_COEFF": 0.0,
 
-        "FINAL_MODE": "env_only",
-        "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
+        "FINAL_MODE": "both",
+        "BONUS_WIN": 10.0, "BONUS_2ND": 5.0, "BONUS_3RD": 2.0, "BONUS_LAST": -5.0,
     },
 
-    # Feature-Toggles
     "FEATURES": {
-        "USE_HISTORY": True,    # ✅ True = Variante 2 (mit Historie), False = Variante 1 (ohne)
-        "SEAT_ONEHOT": False,   # optional: Sitz-One-Hot im Agent verwenden
-        "PLOT_METRICS": False,
+        "USE_HISTORY": False,
+        "SEAT_ONEHOT": False,
+        "PLOT_METRICS": True,
         "SAVE_METRICS_TO_CSV": False,
-    },
+        "PLOT_KEYS": [               # steuert plot_train(); mögliche Keys:
+            # PPO-Metriken:
+            #   reward_mean, reward_std, return_mean,
+            #   adv_mean_raw, adv_std_raw,
+            #   policy_loss, value_loss,
+            #   entropy, approx_kl, clip_frac
+            # Trainings-/Umgebungsmetriken:
+            #   train_seconds, ep_env_score, ep_shaping_return,
+            #   ep_final_bonus, ep_length
+            # Sonderplots (aus Memory, nicht aus metrics):
+            #   ep_return_raw, ep_return_components,
+            #   ep_return_env, ep_return_shaping, ep_return_final
+            "return_mean",
+            "reward_mean",
+            "entropy",
+            "approx_kl",
+            "clip_frac",
+            "policy_loss",
+            "value_loss",
+            "ep_return_raw",
+            "ep_return_components",
+            "ep_return_env",         # Einzelplot env_score
+            "ep_return_shaping",     # Einzelplot shaping
+            "ep_return_final",       # Einzelplot final_bonus
+            ],
+        },
 
     # Benchmark-Gegner
     "BENCH_OPPONENTS": ["single_only", "max_combo", "random2"],
-}
+    }
 
 
 # =========================== Training ===========================
@@ -82,7 +106,7 @@ def main():
         benchmark_opponents=list(CONFIG["BENCH_OPPONENTS"]),
         benchmark_csv="benchmark_curves.csv",
         train_csv="training_metrics.csv",
-        save_csv=True,
+        save_csv=CONFIG["FEATURES"]["SAVE_METRICS_TO_CSV"],
         verbosity=1,
     )
 
@@ -235,6 +259,20 @@ def main():
                 "ep_final_bonus":     ep_final_bonus,
                 "ep_length":          ep_len,
             })
+            # --- ECHTER Return pro Trainingsepisode (P0) ---
+            ep_return = ep_env_score + ep_final_bonus + (ep_shaping_return if shaper.step_active() else 0.0)
+            plotter.add_ep_returns(
+                global_episode=ep,
+                ep_returns=[ep_return],
+                components={
+                    "env_score":  [ep_env_score],
+                    "shaping":    [ep_shaping_return],
+                    "final_bonus":[ep_final_bonus],
+                },
+            )
+
+
+
             # Nur wenn in CSV gewünscht, wirklich persistieren
             if CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False):
                 plotter.add_train(ep, metrics)
@@ -263,8 +301,9 @@ def main():
             plotter.log_bench_summary(ep, per_opponent)
             eval_seconds = time.perf_counter() - ev_start
 
-            # Plot & CSV
-            plot_start = time.perf_counter()
+            # --- Plot & CSV
+            plot_start = time.perf_counter()   # ← WIEDER EINFÜGEN
+
             plotter.add_benchmark(ep, per_opponent)
             plotter.plot_benchmark_rewards()
             plotter.plot_places_latest()
@@ -273,14 +312,18 @@ def main():
             plotter.plot_benchmark(
                 filename_prefix="lernkurve",
                 with_macro=True,
-                family_title=family.upper(),   # für Einzelplots: „Lernkurve - K1A1 vs {gegner}“
-                multi_title=title_multi,       # für Multi- & Macro-Plot: gleicher Titel
+                family_title=family.upper(),
+                multi_title=title_multi,
             )
 
             if CONFIG["FEATURES"].get("PLOT_METRICS", False):
-                plotter.plot_train(filename_prefix="training_metrics", separate=True)
+                plotter.plot_train(
+                    include_keys=CONFIG["FEATURES"].get("PLOT_KEYS"),
+                    separate=True,
+                )
 
             plot_seconds = time.perf_counter() - plot_start
+
 
             # Save weights (PPO)
             save_start = time.perf_counter()

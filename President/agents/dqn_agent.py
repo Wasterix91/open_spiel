@@ -1,7 +1,9 @@
 # agents/dqn_agent.py
-import random
-from collections import deque, namedtuple
-from typing import Optional, Sequence, Iterable, List
+# -*- coding: utf-8 -*-
+from __future__ import annotations
+import os, random
+from dataclasses import dataclass
+from typing import Optional, Sequence, Iterable, List, Tuple
 
 import numpy as np
 import torch
@@ -10,51 +12,60 @@ import torch.optim as optim
 
 
 # ===================== DQN Config ===================== #
-DQNConfig = namedtuple(
-    "DQNConfig",
-    [
-        "learning_rate",
-        "batch_size",
-        "gamma",
-        "epsilon_start",
-        "epsilon_end",
-        "epsilon_decay",       # multiplicative decay per train_step (0<decay<=1) or frames-based if <1? -> we keep multiplicative
-        "buffer_size",
-        "target_update_freq",  # hard update every N train steps (ignored if soft_target_tau>0)
-        "soft_target_tau",     # Polyak/soft update (0 => off)
-        "max_grad_norm",       # grad clipping (None/0 => off)
-        "use_double_dqn",      # Double-DQN targets
-        "loss_huber_delta",    # None => MSE, else SmoothL1Loss with delta
-    ],
-)
+@dataclass
+class DQNConfig:
+    # Optimizer
+    learning_rate: float = 1e-3
+    optimizer: str = "adam"           # "adam" | "rmsprop"
+    rmsprop_alpha: float = 0.95
+    rmsprop_eps: float = 1e-2
 
-DEFAULT_CONFIG = DQNConfig(
-    learning_rate=1e-3,
-    batch_size=64,
-    gamma=0.99,
-    epsilon_start=1.0,
-    epsilon_end=0.1,
-    epsilon_decay=0.995,
-    buffer_size=100_000,
-    target_update_freq=1000,
-    soft_target_tau=0.0,
-    max_grad_norm=0.0,
-    use_double_dqn=True,
-    loss_huber_delta=1.0,
-)
+    # Training
+    batch_size: int = 64
+    gamma: float = 0.99
+    max_grad_norm: float = 0.0        # 0/None => aus
+
+    # Exploration (ε-greedy)
+    epsilon_start: float = 1.0
+    epsilon_end: float = 0.1
+    epsilon_decay: float = 0.995       # benutzt bei epsilon_decay_type="multiplicative"
+    epsilon_decay_type: str = "multiplicative"  # "multiplicative" | "linear"
+    epsilon_decay_frames: int = 1_000_000       # benutzt bei "linear" (paper-nah)
+
+    # Replay
+    buffer_size: int = 100_000
+
+    # Target-Net
+    target_update_freq: int = 1000     # harte Kopie alle N train steps (wenn tau==0)
+    soft_target_tau: float = 0.0       # Polyak (0 => aus)
+
+    # Algorithmus-Variante
+    use_double_dqn: bool = True
+
+    # Loss
+    loss_huber_delta: Optional[float] = 1.0     # None => MSE, sonst SmoothL1 mit beta=delta
+
+    # Netz
+    hidden_sizes: Tuple[int, int] = (128, 128)
+
+    # Device
+    device: str = "cpu"
+
+
+DEFAULT_CONFIG = DQNConfig()
 
 
 # ===================== Netzarchitektur ===================== #
 class QNetwork(nn.Module):
-    def __init__(self, input_size: int, output_size: int):
+    def __init__(self, input_size: int, output_size: int, hidden: Sequence[int] = (128, 128)):
         super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(input_size, 128),
-            nn.ReLU(),
-            nn.Linear(128, 128),
-            nn.ReLU(),
-            nn.Linear(128, output_size),
-        )
+        layers: List[nn.Module] = []
+        last = input_size
+        for h in hidden:
+            layers += [nn.Linear(last, h), nn.ReLU()]
+            last = h
+        layers += [nn.Linear(last, output_size)]
+        self.net = nn.Sequential(*layers)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.net(x)
@@ -63,25 +74,25 @@ class QNetwork(nn.Module):
 # ===================== Replay Buffer (mit Legal-Mask) ===================== #
 class ReplayBuffer:
     """
-    Kompatibel zu deinem k1a2-Skript:
-      - hat self.buffer (deque) aus Experience(...)
-      - Experience Felder: state, action, reward, next_state, done, next_legal_mask
-      - add(...) akzeptiert next_legal_actions=
+    Speichert (state, action, reward, next_state, done, next_legal_mask).
+    next_legal_mask ist eine 0/1-Maske der Größe [num_actions].
     """
+    class Experience(tuple):  # nur Typmarker
+        pass
+
     def __init__(self, capacity: int, num_actions: int):
+        from collections import deque, namedtuple
         self.buffer = deque(maxlen=int(capacity))
         self.num_actions = int(num_actions)
-        fields = ["state", "action", "reward", "next_state", "done", "next_legal_mask"]
-        self.Experience = namedtuple("Experience", fields)
+        self.Experience = namedtuple(
+            "Experience", ["state", "action", "reward", "next_state", "done", "next_legal_mask"]
+        )
 
     def _to_mask(self, next_legal_actions: Optional[Iterable[int]]):
         if next_legal_actions is None:
             return None
         mask = np.zeros((self.num_actions,), dtype=np.float32)
-        if isinstance(next_legal_actions, np.ndarray):
-            idxs = next_legal_actions.tolist()
-        else:
-            idxs = list(next_legal_actions)
+        idxs = list(next_legal_actions)
         if len(idxs) > 0:
             mask[idxs] = 1.0
         return mask
@@ -94,7 +105,7 @@ class ReplayBuffer:
         batch = random.sample(self.buffer, batch_size)
         states, actions, rewards, next_states, dones, next_masks = zip(*batch)
 
-        # Falls einzelne Transitions keine Maske enthalten, behandle als "alle legal"
+        # fehlende Masken => "alle legal"
         masks_filled = []
         for m in next_masks:
             if m is None:
@@ -110,7 +121,7 @@ class ReplayBuffer:
             np.array(rewards, dtype=np.float32),
             np.array(next_states, dtype=np.float32),
             np.array(dones, dtype=np.float32),
-            next_masks_arr,  # shape: [B, A]
+            next_masks_arr,  # [B, A]
         )
 
     def __len__(self):
@@ -120,33 +131,52 @@ class ReplayBuffer:
 # ===================== DQN Agent ===================== #
 class DQNAgent:
     """
-    - select_action(state, legal_actions): maskiert ILLEGAL mit -inf
-    - Buffer speichert next_legal_mask und train_step maskiert Targets
-    - epsilon ist kompatibel zu deinem Skript (wird dort ausgedruckt / auf 0.0 gesetzt)
-    - save/restore nutzt *_qnet.pt / *_tgt.pt wie zuvor
+    - ε-greedy über LEGAL actions (illegale werden maskiert)
+    - Replay speichert next_legal_mask; Targets werden entsprechend maskiert
+    - Hard- oder Polyak-Update des Target-Netzes
+    - save/restore kompatibel zu *_qnet.pt / *_tgt.pt
     """
-    def __init__(self, state_size: int, num_actions: int, config: DQNConfig = None, device="cpu"):
-        self.device = torch.device(device)
+    def __init__(self, state_size: int, num_actions: int, config: Optional[DQNConfig] = None, device: Optional[str] = None):
+        self.config = config or DEFAULT_CONFIG
+        self.device = torch.device(device or self.config.device)
         self.state_size = int(state_size)
         self.num_actions = int(num_actions)
-        self.config = config or DEFAULT_CONFIG
 
-        self.q_network = QNetwork(self.state_size, self.num_actions).to(self.device)
-        self.target_network = QNetwork(self.state_size, self.num_actions).to(self.device)
+        # Netze
+        self.q_network = QNetwork(self.state_size, self.num_actions, hidden=self.config.hidden_sizes).to(self.device)
+        self.target_network = QNetwork(self.state_size, self.num_actions, hidden=self.config.hidden_sizes).to(self.device)
         self.target_network.load_state_dict(self.q_network.state_dict())
         self.target_network.eval()
 
-        self.optimizer = optim.Adam(self.q_network.parameters(), lr=self.config.learning_rate)
+        # Optimizer
+        if (self.config.optimizer or "adam").lower() == "rmsprop":
+            self.optimizer = optim.RMSprop(
+                self.q_network.parameters(),
+                lr=self.config.learning_rate,
+                alpha=self.config.rmsprop_alpha,
+                eps=self.config.rmsprop_eps,
+            )
+        else:
+            self.optimizer = optim.Adam(self.q_network.parameters(), lr=self.config.learning_rate)
+
+        # Loss
         if self.config.loss_huber_delta is None:
             self.criterion = nn.MSELoss()
         else:
-            self.criterion = nn.SmoothL1Loss(beta=self.config.loss_huber_delta)
+            # PyTorch SmoothL1Loss(beta=delta)
+            self.criterion = nn.SmoothL1Loss(beta=float(self.config.loss_huber_delta))
 
+        # Replay
         self.buffer = ReplayBuffer(self.config.buffer_size, num_actions=self.num_actions)
 
-        # Epsilon-Handling kompatibel halten
+        # Epsilon / Schrittzähler
         self.epsilon = float(self.config.epsilon_start)
-        self.steps_done = 0  # train_step-Zähler (für target_update_freq)
+        self._eps_steps_done = 0            # zählt Trainingsschritte (train_step Aufrufe)
+        self._eps_mode = (self.config.epsilon_decay_type or "multiplicative").lower()
+        self._eps_decay = float(self.config.epsilon_decay)
+        self._eps_frames = max(1, int(self.config.epsilon_decay_frames))
+
+        self.steps_done = 0                 # Zähler für Target-Update
 
     # ---------- Utils ---------- #
     @staticmethod
@@ -157,10 +187,7 @@ class DQNAgent:
 
     @staticmethod
     def _masked_argmax_torch(q_values: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
-        """
-        q_values: [B, A], mask: [B, A] in {0,1}
-        Gibt indices [B] der argmax über maskierte q zurück.
-        """
+        """q_values: [B,A], mask: [B,A] in {0,1}"""
         neg_inf = torch.finfo(q_values.dtype).min
         q_masked = torch.where(mask > 0, q_values, neg_inf)
         return torch.argmax(q_masked, dim=1)
@@ -171,10 +198,21 @@ class DQNAgent:
         q_masked = torch.where(mask > 0, q_values, neg_inf)
         return torch.max(q_masked, dim=1).values
 
+    def _update_epsilon(self):
+        self._eps_steps_done += 1
+        if self._eps_mode == "linear":
+            frac = min(1.0, self._eps_steps_done / float(self._eps_frames))
+            self.epsilon = self.config.epsilon_start + frac * (self.config.epsilon_end - self.config.epsilon_start)
+        else:
+            # multiplikativ (bisheriges Verhalten)
+            self.epsilon = max(self.config.epsilon_end, self.epsilon * self._eps_decay)
+
     # ---------- API ---------- #
     def select_action(self, state: np.ndarray, legal_actions: Sequence[int]) -> int:
-        # Epsilon-Greedy nur über LEGAL actions
+        # ε-greedy NUR über LEGAL actions
         if random.random() < self.epsilon:
+            if len(legal_actions) == 0:
+                return int(random.randrange(self.num_actions))
             return int(random.choice(list(legal_actions)))
         with torch.no_grad():
             state_t = torch.tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0)
@@ -188,40 +226,39 @@ class DQNAgent:
 
         states, actions, rewards, next_states, dones, next_masks = self.buffer.sample(self.config.batch_size)
 
-        states = torch.tensor(states, dtype=torch.float32, device=self.device)
-        actions = torch.tensor(actions, dtype=torch.long, device=self.device).unsqueeze(1)  # [B,1]
-        rewards = torch.tensor(rewards, dtype=torch.float32, device=self.device).unsqueeze(1)  # [B,1]
-        next_states = torch.tensor(next_states, dtype=torch.float32, device=self.device)
-        dones = torch.tensor(dones, dtype=torch.float32, device=self.device).unsqueeze(1)  # [B,1]
-        next_masks = torch.tensor(next_masks, dtype=torch.float32, device=self.device)  # [B, A]
+        states = torch.tensor(states, dtype=torch.float32, device=self.device)                     # [B,D]
+        actions = torch.tensor(actions, dtype=torch.long, device=self.device).unsqueeze(1)        # [B,1]
+        rewards = torch.tensor(rewards, dtype=torch.float32, device=self.device).unsqueeze(1)     # [B,1]
+        next_states = torch.tensor(next_states, dtype=torch.float32, device=self.device)          # [B,D]
+        dones = torch.tensor(dones, dtype=torch.float32, device=self.device).unsqueeze(1)         # [B,1]
+        next_masks = torch.tensor(next_masks, dtype=torch.float32, device=self.device)            # [B,A]
 
         # Q(s,a)
-        q_sa = self.q_network(states).gather(1, actions).squeeze(1)  # [B]
+        q_sa = self.q_network(states).gather(1, actions).squeeze(1)                               # [B]
 
         with torch.no_grad():
-            q_next_online = self.q_network(next_states)   # [B, A]
-            q_next_target = self.target_network(next_states)  # [B, A]
+            q_next_online = self.q_network(next_states)                                           # [B,A]
+            q_next_target = self.target_network(next_states)                                      # [B,A]
 
             if self.config.use_double_dqn:
-                # a* = argmax_a q_online(ns,a) über LEGAL
-                a_star = self._masked_argmax_torch(q_next_online, next_masks)  # [B]
-                q_next_sa = q_next_target.gather(1, a_star.view(-1, 1)).squeeze(1)  # [B]
+                a_star = self._masked_argmax_torch(q_next_online, next_masks)                     # [B]
+                q_next_sa = q_next_target.gather(1, a_star.view(-1, 1)).squeeze(1)               # [B]
             else:
-                q_next_sa = self._masked_max_torch(q_next_target, next_masks)  # [B]
+                q_next_sa = self._masked_max_torch(q_next_target, next_masks)                     # [B]
 
-            targets = rewards.squeeze(1) + self.config.gamma * q_next_sa * (1.0 - dones.squeeze(1))  # [B]
+            targets = rewards.squeeze(1) + self.config.gamma * q_next_sa * (1.0 - dones.squeeze(1))
 
         loss = self.criterion(q_sa, targets)
 
-        self.optimizer.zero_grad()
+        self.optimizer.zero_grad(set_to_none=True)
         loss.backward()
         if self.config.max_grad_norm and self.config.max_grad_norm > 0:
             nn.utils.clip_grad_norm_(self.q_network.parameters(), self.config.max_grad_norm)
         self.optimizer.step()
 
-        # Schrittzähler & Epsilon-Decay (multiplikativ wie zuvor)
+        # Schritt- & Epsilon-Update
         self.steps_done += 1
-        self.epsilon = max(self.config.epsilon_end, self.epsilon * self.config.epsilon_decay)
+        self._update_epsilon()
 
         # Target-Update
         tau = float(self.config.soft_target_tau or 0.0)
@@ -236,6 +273,7 @@ class DQNAgent:
 
     # ---------- Persistence ---------- #
     def save(self, path_base: str):
+        os.makedirs(os.path.dirname(path_base), exist_ok=True)
         torch.save(self.q_network.state_dict(), f"{path_base}_qnet.pt")
         torch.save(self.target_network.state_dict(), f"{path_base}_tgt.pt")
 

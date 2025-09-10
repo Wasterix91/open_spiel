@@ -2,9 +2,9 @@
 # k1a2.py — K1: Single-Agent DQN vs Heuristiken
 # Training: P0→P0-Transitions
 #
-# Kombi:
-# - state_size wie im ursprünglichen, funktionierenden Skript (observation_tensor_shape + optional Seat-1hot)
-# - restliche Logik aus der neuen Version (info_state + augment_observation ohne Seat-1hot, optionales Seat-1hot extern)
+# - benchmark_curves.csv wird immer persistiert.
+# - training_metrics.csv nur, wenn SAVE_METRICS_TO_CSV=True.
+# - Episoden-Return + Komponenten wie in k1a1, mit PLOT_KEYS gesteuert.
 
 import os, time, datetime
 import numpy as np, torch
@@ -21,10 +21,10 @@ from utils.strategies import STRATS
 from utils.reward_shaper import RewardShaper
 
 CONFIG = {
-    "EPISODES":         100_000,
-    "BENCH_INTERVAL":   2_000,
-    "BENCH_EPISODES":   2_000,
-    "DECK_SIZE":        "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+    "EPISODES":         5000,
+    "BENCH_INTERVAL":   1000,
+    "BENCH_EPISODES":   2000,
+    "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
     # Training-Gegner (Heuristiken)
@@ -32,38 +32,49 @@ CONFIG = {
 
     # DQN (kompatibel zu agents/dqn_agent.DQNConfig)
     "DQN": {
-        "learning_rate":     3e-4,
-        "batch_size":        128,
-        "gamma":             0.995,
-        "epsilon_start":     1.0,
-        "epsilon_end":       0.05,
-        "epsilon_decay":     0.9997,   # multiplikativ pro train_step
-        "buffer_size":       200_000,
-        "target_update_freq": 5000,
-        "soft_target_tau":   0.0,      # z.B. 0.005 für Polyak
-        "max_grad_norm":     1.0,
-        "use_double_dqn":    True,
-        "loss_huber_delta":  1.0,
+        "learning_rate": 1e-3,
+        "batch_size": 32,
+        "gamma": 0.99,
+        "epsilon_start": 1.0,
+        "epsilon_end": 0.1,
+        "epsilon_decay_type": "linear",   # "linear" | "multiplicative"
+        "epsilon_decay_frames": 1_000_000,
+        "buffer_size": 1_000_000,
+        "target_update_freq": 10_000,
+        "soft_target_tau": 0.0,
+        "max_grad_norm": 0.0,
+        "use_double_dqn": False,
+        "loss_huber_delta": 1.0,
+        "optimizer": "adam"
     },
 
     # ======= Rewards (neues System) =======
     # STEP_MODE : "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
     # FINAL_MODE: "none" | "env_only" | "rank_bonus" | "both"
     "REWARD": {
-        "STEP_MODE": "none",
-        "DELTA_WEIGHT": 0.0,
+        "STEP_MODE": "delta_weight_only",
+        "DELTA_WEIGHT": 0.5,
         "HAND_PENALTY_COEFF": 0.0,
 
-        "FINAL_MODE": "env_only",
-        "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
+        "FINAL_MODE": "both",
+        "BONUS_WIN": 10.0, "BONUS_2ND": 5.0, "BONUS_3RD": 2.0, "BONUS_LAST": -5.0,
     },
 
-    # Feature-Toggles (analog "neu")
+    # Feature-Toggles
     "FEATURES": {
-        "USE_HISTORY": True,    # Historie in Features einbetten?
-        "SEAT_ONEHOT": False,    # Sitz-One-Hot optional separat anhängen
-        "PLOT_METRICS": False,   # Trainingsplots erzeugen?
+        "USE_HISTORY": False,     # Historie in Features einbetten?
+        "SEAT_ONEHOT": False,     # Sitz-One-Hot optional separat anhängen
+        "PLOT_METRICS": True,     # Trainingsplots erzeugen?
         "SAVE_METRICS_TO_CSV": False,  # Trainingsmetriken persistent speichern?
+
+        # Steuert plot_train(); Sonder-Keys triggern In-Memory-Return-Plots.
+        "PLOT_KEYS": [
+            # DQN/Train (Beispiele):
+            "epsilon", "ep_length", "train_seconds",
+            # Sonderplots aus Memory (Episoden-Return):
+            "ep_return_raw", "ep_return_components",
+            "ep_return_env", "ep_return_shaping", "ep_return_final",
+        ],
     },
 
     # Benchmark-Gegner (für Plotter/Reports)
@@ -87,12 +98,16 @@ def main():
     version = find_next_version(family_dir, prefix="model")
     paths = prepare_run_dirs(MODELS_ROOT, family, version, prefix="model")
 
+    # WICHTIG:
+    # - save_csv=True  -> Benchmark-CSV wird immer geschrieben.
+    # - Training-CSV nur via add_train() (rufen wir nur bei SAVE_METRICS_TO_CSV=True).
     plotter = MetricsPlotter(
         out_dir=paths["plots_dir"],
         benchmark_opponents=list(CONFIG["BENCH_OPPONENTS"]),
         benchmark_csv="benchmark_curves.csv",
         train_csv="training_metrics.csv",
-        save_csv=True, verbosity=1
+        save_csv=True,                  # <— Benchmark-CSV immer
+        verbosity=1
     )
     plotter.log("New Training (k1a2): DQN Single-Agent vs Heuristiken (P0→P0)")
     plotter.log(f"Deck_Size: {CONFIG['DECK_SIZE']}")
@@ -108,19 +123,17 @@ def main():
     A = env.action_spec()["num_actions"]
     num_players = game.num_players()
 
-    # ---- Features (wie "neu": augment_observation ohne Seat-1hot; Seat-1hot extern anhängen) ----
+    # ---- Features (augment_observation ohne Seat-1hot; Seat-1hot extern anhängen) ----
     deck_int = int(CONFIG["DECK_SIZE"])
     num_ranks = ranks_for_deck(deck_int)
     feat_cfg = FeatureConfig(
         num_players=num_players,
         num_ranks=num_ranks,
-        add_seat_onehot=False,                           # Seat-One-Hot NICHT in augment_observation
+        add_seat_onehot=False,
         include_history=CONFIG["FEATURES"]["USE_HISTORY"]
     )
 
-    # ==== state_size WIE URSPRÜNGLICH (funktionierend) ====
-    # Basierend auf observation_tensor_shape + optionalem externen Seat-1hot
-    base_dim = game.observation_tensor_shape()[0]
+    # State-Dimension (kompatibel zum Agenten):
     seat_id_dim = num_players if CONFIG["FEATURES"]["SEAT_ONEHOT"] else 0
     state_size = expected_feature_len(feat_cfg) + seat_id_dim
 
@@ -158,7 +171,7 @@ def main():
     t0 = time.perf_counter()
     BINT, BEPS = CONFIG["BENCH_INTERVAL"], CONFIG["BENCH_EPISODES"]
 
-    # Optionales Sammeln von Metriken (analog "neu")
+    # Sammeln nur, wenn wir es brauchen (CSV oder Plot)
     collect_metrics = (
         CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False)
         or CONFIG["FEATURES"].get("PLOT_METRICS", False)
@@ -259,16 +272,28 @@ def main():
             "epsilon": float(getattr(agent, "epsilon", np.nan)),
         }
 
+        # --- ECHTER Return pro Trainingsepisode (P0) wie in k1a1 ---
+        ep_return = ep_env_score + ep_final_bonus + (ep_shaping_return if (hasattr(shaper, "step_active") and shaper.step_active()) else 0.0)
+        plotter.add_ep_returns(
+            global_episode=ep,
+            ep_returns=[ep_return],
+            components={
+                "env_score":  [ep_env_score],
+                "shaping":    [ep_shaping_return],
+                "final_bonus":[ep_final_bonus],
+            },
+        )
+
+        # Trainingsmetriken speichern/merken
         if collect_metrics:
             if CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False):
+                # -> persistente CSV
                 plotter.add_train(ep, metrics)
             else:
+                # -> nur In-Memory für Plots
                 plotter.train_rows.append({"episode": int(ep), **metrics})
                 if plotter.train_keys is None:
                     plotter.train_keys = ["episode"] + list(metrics.keys())
-        else:
-            # minimal: trotzdem in CSV, falls save_csv=True
-            plotter.add_train(ep, metrics)
 
         # ---- Benchmark + Save in Intervallen
         eval_seconds = plot_seconds = save_seconds = 0.0
@@ -297,9 +322,13 @@ def main():
             )
 
             if CONFIG["FEATURES"].get("PLOT_METRICS", False):
-                plotter.plot_train(filename_prefix="training_metrics", separate=True)
+                plotter.plot_train(
+                    include_keys=CONFIG["FEATURES"].get("PLOT_KEYS"),
+                    separate=True,
+                )
             plot_seconds = time.perf_counter() - ps
 
+            # Speichern des Agenten
             ss = time.perf_counter()
             tag = f"{family}_model_{version}_agent_p0_ep{ep:07d}"
             agent.save(os.path.join(paths["weights_dir"], tag))
