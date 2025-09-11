@@ -22,7 +22,7 @@ CONFIG = {
     "BENCH_EPISODES":   2_000,
     "DECK_SIZE":        "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
-    
+
     # DQN
     "DQN": {
         "learning_rate":     3e-4,
@@ -47,12 +47,14 @@ CONFIG = {
     },
 
     # Rewards
+    # STEP_MODE : "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
+    # FINAL_MODE: "none" | "env_only" | "rank_only" | "both"
     "REWARD": {
-        "STEP_MODE": "none",         # "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
+        "STEP_MODE": "none",
         "DELTA_WEIGHT": 0.0,
         "HAND_PENALTY_COEFF": 0.0,
 
-        "FINAL_MODE": "env_only",    # "none" | "env_only" | "rank_bonus" | "both"
+        "FINAL_MODE": "env_only",
         "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
     },
 
@@ -60,8 +62,17 @@ CONFIG = {
     "FEATURES": {
         "USE_HISTORY": True,
         "SEAT_ONEHOT": True,
-        "PLOT_METRICS": False,
-        "SAVE_METRICS_TO_CSV": False,  # Plotter-CSV steuern
+        "PLOT_METRICS": True,
+        "SAVE_METRICS_TO_CSV": False,   # steuert Trainings-CSV
+        "RET_SMOOTH_WINDOW": 150,       # Plot-Smoothing
+        "PLOT_KEYS": [
+            # DQN/Train:
+            "epsilon", "ep_length", "train_seconds",
+            # Episoden-Returns (aus Memory):
+            "ep_return_raw", "ep_return_components",
+            "ep_return_env", "ep_return_shaping", "ep_return_final",
+            "ep_return_training",
+        ],
     },
 
     "BENCH_OPPONENTS": ["single_only", "max_combo", "random2"],
@@ -89,6 +100,7 @@ def main():
         train_csv="training_metrics.csv",
         save_csv=CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False),
         verbosity=1,
+        smooth_window=CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 150),
     )
     plotter.log("New Training (k4a2): Shared-Policy DQN — In-Proc External Trainer (Bundle-Updates)")
     plotter.log(f"Deck_Size: {CONFIG['DECK_SIZE']}")
@@ -130,6 +142,7 @@ def main():
         "bench_interval": CONFIG["BENCH_INTERVAL"], "bench_episodes": CONFIG["BENCH_EPISODES"],
         "observation_dim": state_size, "num_actions": A,
         "seat_onehot": CONFIG["FEATURES"]["SEAT_ONEHOT"],
+        "ret_smooth_window": CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 150),
         "step_mode": shaper.step_mode, "delta_weight": shaper.dw,
         "hand_penalty_coeff": shaper.hp, "final_mode": shaper.final_mode,
         "bonus_win": CONFIG["REWARD"]["BONUS_WIN"], "bonus_2nd": CONFIG["REWARD"]["BONUS_2ND"],
@@ -229,11 +242,29 @@ def main():
                     old.next_state, old.done, old.next_legal_mask
                 )
 
+        # ---- Episoden-Returns (P0) konsistent berechnen & plotten ----
+        env_part     = finals[0] if shaper.include_env_reward() else 0.0
+        shaping_part = ep_shaping_returns[0] if shaper.step_active() else 0.0
+        final_bonus  = float(shaper.final_bonus(finals, 0))
+        ep_return_training = shaping_part + env_part + final_bonus
+
+        plotter.add_ep_returns(
+            global_episode=ep,
+            ep_returns=[ep_return_training],
+            components={
+                "env_score":   [env_part],      # 0.0, wenn inaktiv
+                "shaping":     [shaping_part],  # 0.0, wenn inaktiv
+                "final_bonus": [final_bonus],
+            },
+        )
+
         # ---- Episoden-Metriken ----
         ep_metrics = {
             "ep_length":             int(ep_len),
             "ep_env_return_p0":      finals[0],
             "ep_shaping_return_p0":  ep_shaping_returns[0],
+            "ep_final_bonus_p0":     final_bonus,
+            "ep_return_training":    ep_return_training,
             "epsilon":               float(agent.epsilon),
         }
         if collect_metrics:
@@ -254,7 +285,7 @@ def main():
             if buf_len >= MIN_SAMPLES:
                 t_train = time.perf_counter()
 
-                # „Epochen“-ähnliche Skalierung: etwa 1x durch den Buffer in Batches
+                # „Epochen“-ähnliche Skalierung: etwa 1x durch den Buffer in Batches je Call
                 bs = int(CONFIG["DQN"]["batch_size"])
                 batches_per_epoch = max(1, buf_len // bs)
                 total_train_steps = UPDATES_PER_CALL * batches_per_epoch
@@ -280,7 +311,7 @@ def main():
 
             # Buffer leeren (on-policy-ähnlicher Rhythmus für fairen Vergleich)
             if hasattr(agent.buffer, "clear"):
-                agent.buffer.clear()  # falls implementiert
+                agent.buffer.clear()
             else:
                 agent.buffer.buffer.clear()
             ep_in_bundle = 0
@@ -313,7 +344,10 @@ def main():
                 multi_title=title_multi,
             )
             if CONFIG["FEATURES"].get("PLOT_METRICS", False):
-                plotter.plot_train(filename_prefix="training_metrics", separate=True)
+                plotter.plot_train(
+                    include_keys=CONFIG["FEATURES"].get("PLOT_KEYS"),
+                    separate=True,
+                )
             plot_seconds = time.perf_counter() - plot_start
 
             save_start = time.perf_counter()

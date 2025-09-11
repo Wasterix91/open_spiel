@@ -5,7 +5,8 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.patheffects as pe
-
+# 0% Rand links/rechts auf allen Achsen
+mpl.rcParams["axes.xmargin"] = 0.0
 
 mpl.rcParams.update({
     "font.family": "serif",
@@ -563,74 +564,85 @@ class MetricsPlotter:
             x, y,
             s=self._ret_scatter_size,
             alpha=self._ret_scatter_alpha,
-            label="Rewards (roh)",
+            label="roh",                         # <-- NEU
             color=self._ret_colors["total_scatter"],
             zorder=1,
         )
         line_ma, = plt.plot(
             x, y_ma,
             linewidth=self._ret_line_width,
-            label=f"Moving Avg (w={window})",
+            label=f"Rewards gesamt (MA, w={window})",   # <-- NEU
             color=self._ret_colors["total_ma"],
             zorder=3,
         )
+
         if self._ret_use_outline:
             line_ma.set_path_effects([pe.Stroke(linewidth=self._ret_line_width+1.4, foreground="white"), pe.Normal()])
 
         plt.title("Training – Rewards (roh)")
-        plt.xlabel("Trainings-Episode (global)")
+        plt.xlabel("Trainings-Episode")
         plt.ylabel("Rewards")
         plt.grid(True); plt.legend(); plt.tight_layout()
         plt.savefig(os.path.join(self.out_dir, "ep_return_raw.png"))
         plt.close()
 
         # --- ep_return_components.png ---
-        comp_keys = [k for k in ("env_score", "shaping", "final_bonus") if k in self.ep_ret_components]
-        if comp_keys:
-            plt.figure(figsize=(12, 7))
-            for k in comp_keys:
-                v = np.asarray(self.ep_ret_components[k], dtype=float)
-                col = self._ret_colors.get(k, None)
-                plt.plot(x, _movavg(v, window), label=k, color=col)
-            plt.title("Training – Return-Komponenten (Moving Avg)")
-            plt.xlabel("Trainings-Episode (global)")
+        # Immer diese drei Komponenten zeigen; fehlende werden als 0-Liste nachgerüstet
+        comp_keys = ["env_score", "shaping", "final_bonus"]
+        for k in comp_keys:
+            if k not in self.ep_ret_components:
+                self.ep_ret_components[k] = [0.0] * len(self.ep_ret_eps)
+        
+        # Mapping für schönere Legendenamen
+        legend_names = {
+            "env_score":   "Final Reward (Env)",
+            "shaping":     "Step Reward",
+            "final_bonus": "Final Reward (Rank)",
+        }
+
+
+        plt.figure(figsize=(12, 7))
+        for k in comp_keys:
+            v = np.asarray(self.ep_ret_components[k], dtype=float)
+            col = self._ret_colors.get(k, None)
+            plt.plot(x, _movavg(v, window), label=legend_names.get(k, k), color=col)
+
+        plt.title("Reward-Komponenten (Moving Avg)")
+        plt.xlabel("Trainings-Episode")
+        plt.ylabel("Rewards")
+        plt.grid(True); plt.legend(); plt.tight_layout()
+        plt.savefig(os.path.join(self.out_dir, "ep_return_components.png"))
+        plt.close()
+
+        # --- Einzelplots pro Komponente ---
+        for k in comp_keys:
+            v  = np.asarray(self.ep_ret_components[k], dtype=float)
+            mv = _movavg(v, window)
+            col_line = self._ret_colors.get(k, None)
+            col_scatter = self._ret_colors["component_scatter"]
+
+            plt.figure(figsize=(10, 6))
+            plt.scatter(x, v, s=self._ret_scatter_size, alpha=self._ret_scatter_alpha,
+                        label="roh", color=col_scatter, zorder=1)
+            nice = legend_names.get(k, k)
+            line_comp, = plt.plot(
+                x, mv,
+                linewidth=self._ret_line_width,
+                label=f"{nice} (MA)",
+                color=col_line,
+                zorder=3,
+)
+
+            if self._ret_use_outline:
+                line_comp.set_path_effects([pe.Stroke(linewidth=self._ret_line_width+1.2, foreground="white"), pe.Normal()])
+
+            plt.title(f"Training – {legend_names.get(k, k)} (Moving Avg)")
+            plt.xlabel("Trainings-Episode")
             plt.ylabel("Rewards")
             plt.grid(True); plt.legend(); plt.tight_layout()
-            plt.savefig(os.path.join(self.out_dir, "ep_return_components.png"))
+            plt.savefig(os.path.join(self.out_dir, f"ep_return_{k}.png"))
             plt.close()
 
-            # Einzelplots pro Komponente
-            for k in comp_keys:
-                v  = np.asarray(self.ep_ret_components[k], dtype=float)
-                mv = _movavg(v, window)
-                col_line = self._ret_colors.get(k, None)
-                col_scatter = self._ret_colors["component_scatter"]
-
-                plt.figure(figsize=(10, 6))
-                plt.scatter(
-                    x, v,
-                    s=self._ret_scatter_size,
-                    alpha=self._ret_scatter_alpha,
-                    label="roh",
-                    color=col_scatter,
-                    zorder=1,
-                )
-                line_comp, = plt.plot(
-                    x, mv,
-                    linewidth=self._ret_line_width,
-                    label=f"{k} (MA)",
-                    color=col_line,
-                    zorder=3,
-                )
-                if self._ret_use_outline:
-                    line_comp.set_path_effects([pe.Stroke(linewidth=self._ret_line_width+1.2, foreground="white"), pe.Normal()])
-
-                plt.title(f"Training – {k} (Moving Avg)")
-                plt.xlabel("Trainings-Episode (global)")
-                plt.ylabel("Rewards")
-                plt.grid(True); plt.legend(); plt.tight_layout()
-                plt.savefig(os.path.join(self.out_dir, f"ep_return_{k}.png"))
-                plt.close()
 
     def plot_ep_return_component(self, component_key: str, window: int | None = None,
                                  filename: Optional[str] = None, title: Optional[str] = None):
@@ -639,11 +651,23 @@ class MetricsPlotter:
         component_key: "env_score" | "shaping" | "final_bonus"
         Erzeugt standardmäßig: ep_return_<component_key>.png
         """
-        if not self.ep_ret_eps or component_key not in self.ep_ret_components:
+        if not self.ep_ret_eps:
             return
+        # Falls die Komponente bisher nie geliefert wurde: flache 0-Linie erzeugen
+        if component_key not in self.ep_ret_components:
+            self.ep_ret_components[component_key] = [0.0] * len(self.ep_ret_eps)
+
 
         x = np.asarray(self.ep_ret_eps, dtype=float)
         v = np.asarray(self.ep_ret_components[component_key], dtype=float)
+        # Mapping für schönere Legendenamen
+        legend_names = {
+            "env_score":   "Final Reward (Env)",
+            "shaping":     "Step Reward",
+            "final_bonus": "Final Reward (Rank)",
+        }
+        nice_name = legend_names.get(component_key, component_key)
+
 
         def _movavg(arr: np.ndarray, w: int) -> np.ndarray:
             if arr.size == 0:
@@ -658,7 +682,7 @@ class MetricsPlotter:
         window = self.smooth_window if (window is None) else int(window)
         mv = _movavg(v, window)
         out_name = filename or f"ep_return_{component_key}.png"
-        ttl = title or f"Training – {component_key} (Moving Avg)"
+        ttl = title or f"Training – {nice_name} (Moving Avg)"
         col = self._ret_colors.get(component_key, None)
 
         plt.figure(figsize=(12, 7))
@@ -673,15 +697,16 @@ class MetricsPlotter:
         line_comp, = plt.plot(
             x, mv,
             linewidth=self._ret_line_width,
-            label=f"Moving Avg (w={window})",
+            label=f"{nice_name} (MA)",
             color=col,
             zorder=3,
         )
+
         if self._ret_use_outline:
             line_comp.set_path_effects([pe.Stroke(linewidth=self._ret_line_width+1.2, foreground="white"), pe.Normal()])
 
         plt.title(ttl)
-        plt.xlabel("Trainings-Episode (global)")
+        plt.xlabel("Trainings-Episode")
         plt.ylabel("Rewards")
         plt.grid(True); plt.legend(); plt.tight_layout()
         plt.savefig(os.path.join(self.out_dir, out_name))

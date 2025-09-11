@@ -173,6 +173,8 @@ def main():
         "observation_dim": expected_input_dim(feat_cfg),  # inkl. Seat-One-Hot, falls aktiv
         "num_actions": A,
         "seat_onehot": CONFIG["FEATURES"]["SEAT_ONEHOT"],
+        "ret_smooth_window": CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 150),
+
 
         "opponents": ",".join(CONFIG["OPPONENTS"]),
         "models_dir": paths["weights_dir"], "plots_dir": paths["plots_dir"],
@@ -275,13 +277,16 @@ def main():
             # --- ECHTER Return pro Trainingsepisode (P0) ---
             plotter.add_ep_returns(
                 global_episode=ep,
-                ep_returns=[ep_return_training],  # WICHTIG: genau das Trainingssignal
+                ep_returns=[ep_return_training],
                 components={
-                    "env_score":  [ep_env_score],
-                    "shaping":    [ep_shaping_return],
+                    # env_score nur dann „echt“, sonst explizit 0.0 => flache Linie
+                    "env_score":  [ep_env_score if shaper.include_env_reward() else 0.0],
+                    # shaping nur wenn Step-Reward aktiv, sonst 0.0
+                    "shaping":    [ep_shaping_return if shaper.step_active() else 0.0],
                     "final_bonus":[ep_final_bonus],
                 },
             )
+
 
 
             # Nur wenn in CSV gewünscht, wirklich persistieren

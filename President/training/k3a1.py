@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 # President/training/k3a1.py — PPO (K3): Snapshot-Selfplay, 1 Learner + 3 Sparring
 # Hinweis: analog zu k1a1-Änderungen:
-#  - TimingMeter entfernt, Metrics/Plots optional per Flags
+#  - Metrics/Plots optional per Flags
 #  - FeatureConfig mit include_history; Seat-One-Hot nicht in augment_observation
 #  - Dimensionsberechnung über expected_feature_len/expected_input_dim
 #  - umfangreicheres Config-Logging
-#  - größeres Standard-Setup (Episoden/Bench/Deck)
+#  - Plot-Parität zu k1a1: smooth_window, SAVE_METRICS_TO_CSV, ep_return_training, Komponenten-Gating, PLOT_KEYS
 
 import os, datetime, time, copy, numpy as np, torch
 import pyspiel
@@ -46,7 +46,7 @@ CONFIG = {
 
     # ======= Rewards (NEUES System) =======
     # STEP_MODE : "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
-    # FINAL_MODE: "none" | "env_only" | "rank_bonus" | "both"
+    # FINAL_MODE: "none" | "env_only" | "rank_only" | "both"
     "REWARD": {
         "STEP_MODE": "none",
         "DELTA_WEIGHT": 0.0,
@@ -56,12 +56,27 @@ CONFIG = {
         "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
     },
 
-    # Features (analog k1a1)
+    # Features (analog k1a1/k1a2)
     "FEATURES": {
-        "USE_HISTORY": True,     # True = mit Historie
+        "USE_HISTORY": True,      # True = mit Historie
         "SEAT_ONEHOT": False,     # optional: Sitz-One-Hot dem Agent geben
-        "PLOT_METRICS": False,    # Trainingsplots erzeugen?
+        "PLOT_METRICS": True,     # Trainingsplots erzeugen?
         "SAVE_METRICS_TO_CSV": False,  # Trainingsmetriken persistent speichern?
+        "RET_SMOOTH_WINDOW": 150,
+
+        # Steuert plot_train(); Sonder-Keys triggern In-Memory-Return-Plots.
+        "PLOT_KEYS": [
+            # PPO/Train-ähnliche Metriken (falls vorhanden):
+            "return_mean", "reward_mean", "entropy", "approx_kl",
+            "clip_frac", "policy_loss", "value_loss",
+            # Trainings-/Umgebungsmetriken (Learner-Seat):
+            "train_seconds", "ep_env_return", "ep_shaping_return",
+            "ep_final_bonus", "ep_length",
+            # Sonderplots (aus Memory, nicht aus metrics):
+            "ep_return_raw", "ep_return_components",
+            "ep_return_env", "ep_return_shaping", "ep_return_final",
+            "ep_return_training",
+        ],
     },
 
     # Snapshot-Selfplay
@@ -113,7 +128,9 @@ def main():
         benchmark_opponents=list(CONFIG["BENCH_OPPONENTS"]),
         benchmark_csv="benchmark_curves.csv",
         train_csv="training_metrics.csv",
-        save_csv=True, verbosity=1,
+        save_csv=CONFIG["FEATURES"]["SAVE_METRICS_TO_CSV"],
+        verbosity=1,
+        smooth_window=CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 150),
     )
     plotter.log("New Training (k3a1): Snapshot-Selfplay PPO")
     plotter.log(f"Deck_Size: {CONFIG['DECK_SIZE']}")
@@ -172,6 +189,7 @@ def main():
         "observation_dim": expected_input_dim(feat_cfg),  # inkl. Seat-One-Hot, falls aktiv
         "num_actions": A,
         "seat_onehot": CONFIG["FEATURES"]["SEAT_ONEHOT"],
+        "ret_smooth_window": CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 150),
 
         "models_dir": paths["weights_dir"], "plots_dir": paths["plots_dir"],
         "mix_current": CONFIG["SNAPSHOT"]["MIX_CURRENT"],
@@ -276,6 +294,11 @@ def main():
         train_metrics = agent.train()
         train_seconds = time.perf_counter() - train_start
 
+        # --- Trainingsäquivalenter Return (Learner) wie k1a1 ---
+        env_part     = ep_env_return if shaper.include_env_reward() else 0.0
+        shaping_part = ep_shaping_return if shaper.step_active() else 0.0
+        ep_return_training = shaping_part + env_part + ep_final_bonus
+
         # Trainingsmetriken sammeln / speichern analog k1a1
         metrics = train_metrics or {}
         metrics.update({
@@ -284,7 +307,20 @@ def main():
             "ep_shaping_return":  ep_shaping_return,
             "ep_final_bonus":     ep_final_bonus,
             "ep_length":          ep_len,
+            "ep_return_training": ep_return_training,
         })
+
+        # Sonderplot: Episoden-Return + Komponenten (mit Gating)
+        plotter.add_ep_returns(
+            global_episode=ep,
+            ep_returns=[ep_return_training],
+            components={
+                "env_score":   [env_part],      # 0.0, wenn nicht aktiv
+                "shaping":     [shaping_part],  # 0.0, wenn nicht aktiv
+                "final_bonus": [ep_final_bonus],
+            },
+        )
+
         if collect_metrics:
             if CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False):
                 plotter.add_train(ep, metrics)
@@ -322,18 +358,19 @@ def main():
             plotter.plot_places_latest()
 
             # Einheitliche Titel:
-            # - Einzelplots:  "Lernkurve - KxAy vs <gegner>"
-            # - Multi/Macro:  "Lernkurve - KxAy vs feste Heuristiken"
             title_multi = f"Lernkurve - {family.upper()} vs feste Heuristiken"
             plotter.plot_benchmark(
                 filename_prefix="lernkurve",
                 with_macro=True,
-                family_title=family.upper(),   # für Einzelplots
-                multi_title=title_multi,       # für Multi- & Macro-Plot
+                family_title=family.upper(),
+                multi_title=title_multi,
             )
 
             if CONFIG["FEATURES"].get("PLOT_METRICS", False):
-                plotter.plot_train(filename_prefix="training_metrics", separate=True)
+                plotter.plot_train(
+                    include_keys=CONFIG["FEATURES"].get("PLOT_KEYS"),
+                    separate=True,
+                )
 
             plot_seconds = time.perf_counter() - plot_start
 

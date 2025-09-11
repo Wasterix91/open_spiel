@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 # k2a2.py — K2: Vier getrennte DQN-Agents, simultanes Lernen (IQL)
 #
-# Ausrichtung wie k1a2:
+# Ausrichtung wie k1a2 / k1a1:
 # - augment_observation ohne Seat-1hot; optionaler Seat-1hot wird extern angehängt
 # - state_size = expected_feature_len(feat_cfg) + seat_id_dim
 # - Beobachtungen basieren auf env._state.observation_tensor(p)
 # - RewardShaper & Benchmark wie k1a2
+# - Plot-Äquivalenz zu k1a1/k1a2: smooth_window, SAVE_METRICS_TO_CSV, ep_return_training, Komponenten-Gating, PLOT_KEYS
 
 import os, time, datetime
 import numpy as np, torch
@@ -45,6 +46,8 @@ CONFIG = {
     },
 
     # Rewards (neues System)
+    # STEP_MODE : "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
+    # FINAL_MODE: "none" | "env_only" | "rank_only" | "both"
     "REWARD": {
         "STEP_MODE": "none",
         "DELTA_WEIGHT": 0.0,
@@ -53,12 +56,21 @@ CONFIG = {
         "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
     },
 
-    # Feature-Toggles wie k1a2
+    # Feature-Toggles wie k1a2 / k1a1 (für Plot-Parität ergänzt)
     "FEATURES": {
         "USE_HISTORY": True,
         "SEAT_ONEHOT": False,
-        "PLOT_METRICS": False,
+        "PLOT_METRICS": True,
         "SAVE_METRICS_TO_CSV": False,
+        "RET_SMOOTH_WINDOW": 150,
+        "PLOT_KEYS": [
+            # DQN/Train:
+            "epsilon_p0", "ep_length",
+            # Sonderplots (aus Memory; Episoden-Return und Komponenten):
+            "ep_return_raw", "ep_return_components",
+            "ep_return_env", "ep_return_shaping", "ep_return_final",
+            "ep_return_training",
+        ],
     },
 
     # Benchmark-Gegner
@@ -85,7 +97,9 @@ def main():
         benchmark_opponents=list(CONFIG["BENCH_OPPONENTS"]),
         benchmark_csv="benchmark_curves.csv",
         train_csv="training_metrics.csv",
-        save_csv=True, verbosity=1
+        save_csv=CONFIG["FEATURES"]["SAVE_METRICS_TO_CSV"],
+        verbosity=1,
+        smooth_window=CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 150),
     )
     plotter.log("New Training (k2a2): 4 getrennte DQN-Agents — simultanes Lernen")
     plotter.log(f"Deck_Size: {CONFIG['DECK_SIZE']}")
@@ -127,6 +141,7 @@ def main():
         "bench_interval": CONFIG["BENCH_INTERVAL"], "bench_episodes": CONFIG["BENCH_EPISODES"],
         "observation_dim": state_size, "num_actions": A,
         "seat_onehot": CONFIG["FEATURES"]["SEAT_ONEHOT"],
+        "ret_smooth_window": CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 150),
         "models_dir": paths["weights_dir"], "plots_dir": paths["plots_dir"],
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "step_mode": shaper.step_mode, "delta_weight": shaper.dw,
@@ -139,6 +154,12 @@ def main():
 
     t0 = time.perf_counter()
     BINT, BEPS = CONFIG["BENCH_INTERVAL"], CONFIG["BENCH_EPISODES"]
+
+    # Sammeln nur, wenn wir es brauchen (CSV oder Plot)
+    collect_metrics = (
+        CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False)
+        or CONFIG["FEATURES"].get("PLOT_METRICS", False)
+    )
 
     for ep in range(1, CONFIG["EPISODES"] + 1):
         ep_start = time.perf_counter()
@@ -217,7 +238,7 @@ def main():
                 old.next_state, old.done, old.next_legal_mask
             )
 
-        # ---- Metriken ----
+        # ---- Metriken (P0-zentriert + Aggregat) ----
         metrics = {
             "ep_length":             ep_len,
             "ep_env_return_p0":      float(finals[0]),
@@ -228,9 +249,35 @@ def main():
             "ep_final_bonus_avg":    float(np.mean(ep_final_bonus)),
             "epsilon_p0":            float(agents[0].epsilon),
         }
-        plotter.add_train(ep, metrics)
+
+        # --- Trainingsäquivalenter Return (P0) exakt wie k1a1/k1a2 ---
+        env_part_p0     = float(finals[0]) if shaper.include_env_reward() else 0.0
+        shaping_part_p0 = float(ep_shape[0]) if shaper.step_active() else 0.0
+        ep_return_training_p0 = shaping_part_p0 + env_part_p0 + float(shaper.final_bonus(finals, 0))
+        metrics["ep_return_training"] = ep_return_training_p0
+
+        # Sonderplot: Episoden-Return (P0) + Komponenten (mit Gating)
+        plotter.add_ep_returns(
+            global_episode=ep,
+            ep_returns=[ep_return_training_p0],
+            components={
+                "env_score":   [env_part_p0],      # 0.0, wenn nicht aktiv
+                "shaping":     [shaping_part_p0],  # 0.0, wenn nicht aktiv
+                "final_bonus": [float(shaper.final_bonus(finals, 0))],
+            },
+        )
+
+        # Trainingsmetriken speichern/merken (Parität zu k1a1/k1a2)
+        if collect_metrics:
+            if CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False):
+                plotter.add_train(ep, metrics)
+            else:
+                plotter.train_rows.append({"episode": int(ep), **metrics})
+                if plotter.train_keys is None:
+                    plotter.train_keys = ["episode"] + list(metrics.keys())
 
         # ---- Benchmark (Agent 0) & Save ----
+        eval_seconds = plot_seconds = save_seconds = 0.0
         if ep % BINT == 0:
             evs = time.perf_counter()
             per_opponent = run_benchmark(
@@ -250,10 +297,17 @@ def main():
             plotter.plot_benchmark_rewards()
             plotter.plot_places_latest()
             title_multi = f"Lernkurve - {family.upper()} vs feste Heuristiken"
-            plotter.plot_benchmark("lernkurve", with_macro=True,
-                                   family_title=family.upper(), multi_title=title_multi)
+            plotter.plot_benchmark(
+                filename_prefix="lernkurve",
+                with_macro=True,
+                family_title=family.upper(),
+                multi_title=title_multi,
+            )
             if CONFIG["FEATURES"].get("PLOT_METRICS", False):
-                plotter.plot_train(filename_prefix="training_metrics", separate=True)
+                plotter.plot_train(
+                    include_keys=CONFIG["FEATURES"].get("PLOT_KEYS"),
+                    separate=True,
+                )
             plot_seconds = time.perf_counter() - ps
 
             ss = time.perf_counter()
@@ -262,7 +316,6 @@ def main():
                 ag.save(os.path.join(paths["weights_dir"], tag))
             save_seconds = time.perf_counter() - ss
 
-            cum_seconds = time.perf_counter() - ep_start  # lokale Episode
             plotter.log_timing(
                 ep,
                 ep_seconds=(time.perf_counter() - ep_start),

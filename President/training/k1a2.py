@@ -50,7 +50,7 @@ CONFIG = {
 
     # ======= Rewards (neues System) =======
     # STEP_MODE : "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
-    # FINAL_MODE: "none" | "env_only" | "rank_bonus" | "both"
+    # FINAL_MODE: "none" | "env_only" | "rank_only" | "both"
     "REWARD": {
         "STEP_MODE": "delta_weight_only",
         "DELTA_WEIGHT": 0.5,
@@ -74,6 +74,7 @@ CONFIG = {
             # Sonderplots aus Memory (Episoden-Return):
             "ep_return_raw", "ep_return_components",
             "ep_return_env", "ep_return_shaping", "ep_return_final",
+            "ep_return_training",
         ],
     },
 
@@ -106,8 +107,9 @@ def main():
         benchmark_opponents=list(CONFIG["BENCH_OPPONENTS"]),
         benchmark_csv="benchmark_curves.csv",
         train_csv="training_metrics.csv",
-        save_csv=True,                  # <— Benchmark-CSV immer
-        verbosity=1
+        save_csv=CONFIG["FEATURES"]["SAVE_METRICS_TO_CSV"],                  # <— Benchmark-CSV immer
+        verbosity=1,
+        smooth_window=CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 150),
     )
     plotter.log("New Training (k1a2): DQN Single-Agent vs Heuristiken (P0→P0)")
     plotter.log(f"Deck_Size: {CONFIG['DECK_SIZE']}")
@@ -152,6 +154,7 @@ def main():
         "bench_interval": CONFIG["BENCH_INTERVAL"], "bench_episodes": CONFIG["BENCH_EPISODES"],
         "observation_dim": state_size, "num_actions": A,
         "seat_onehot": CONFIG["FEATURES"]["SEAT_ONEHOT"],
+        "ret_smooth_window": CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 150),
         "opponents": ",".join(CONFIG["OPPONENTS"]),
         "models_dir": paths["weights_dir"], "plots_dir": paths["plots_dir"],
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -272,15 +275,18 @@ def main():
             "epsilon": float(getattr(agent, "epsilon", np.nan)),
         }
 
-        # --- ECHTER Return pro Trainingsepisode (P0) wie in k1a1 ---
-        ep_return = ep_env_score + ep_final_bonus + (ep_shaping_return if (hasattr(shaper, "step_active") and shaper.step_active()) else 0.0)
+        # --- Trainingsäquivalenter Return exakt wie in k1a1 ---
+        env_part     = ep_env_score if (hasattr(shaper, "include_env_reward") and shaper.include_env_reward()) else 0.0
+        shaping_part = ep_shaping_return if (hasattr(shaper, "step_active") and shaper.step_active()) else 0.0
+        ep_return_training = shaping_part + env_part + ep_final_bonus
+        metrics["ep_return_training"] = ep_return_training
         plotter.add_ep_returns(
             global_episode=ep,
-            ep_returns=[ep_return],
+            ep_returns=[ep_return_training],  # identisch zum Trainingssignal
             components={
-                "env_score":  [ep_env_score],
-                "shaping":    [ep_shaping_return],
-                "final_bonus":[ep_final_bonus],
+                "env_score":   [env_part],      # 0.0, wenn nicht aktiv
+                "shaping":     [shaping_part],  # 0.0, wenn nicht aktiv
+                "final_bonus": [ep_final_bonus],
             },
         )
 

@@ -24,6 +24,7 @@ CONFIG = {
     "BENCH_EPISODES":   2_000,
     "DECK_SIZE":        "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
+
     # PPO
     "PPO": {
         "learning_rate": 3e-4,
@@ -45,12 +46,14 @@ CONFIG = {
     },
 
     # Rewards
+    # STEP_MODE : "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
+    # FINAL_MODE: "none" | "env_only" | "rank_only" | "both"
     "REWARD": {
-        "STEP_MODE": "none",         # "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
+        "STEP_MODE": "none",
         "DELTA_WEIGHT": 0.0,
         "HAND_PENALTY_COEFF": 0.0,
 
-        "FINAL_MODE": "env_only",    # "none" | "env_only" | "rank_bonus" | "both"
+        "FINAL_MODE": "env_only",
         "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
     },
 
@@ -58,8 +61,18 @@ CONFIG = {
     "FEATURES": {
         "USE_HISTORY": True,
         "SEAT_ONEHOT": True,
-        "PLOT_METRICS": False,
-        "SAVE_METRICS_TO_CSV": False,   # <- Flag ist nun maßgeblich für Plotter-CSV
+        "PLOT_METRICS": True,
+        "SAVE_METRICS_TO_CSV": False,          # steuert Trainings-CSV
+        "RET_SMOOTH_WINDOW": 150,              # für Plot-Smoothing
+        "PLOT_KEYS": [
+            # PPO/Train:
+            "return_mean", "reward_mean", "entropy", "approx_kl",
+            "clip_frac", "policy_loss", "value_loss",
+            # Episoden-Returns (Sonderplots aus Memory):
+            "ep_return_raw", "ep_return_components",
+            "ep_return_env", "ep_return_shaping", "ep_return_final",
+            "ep_return_training",
+        ],
     },
 
     # Benchmark-Gegner
@@ -82,7 +95,7 @@ def main():
     version = find_next_version(family_dir, prefix="model")
     paths = prepare_run_dirs(MODELS_ROOT, family, version, prefix="model")
 
-    # Plotter mit korrektem save_csv-Flag
+    # Plotter mit konsistenten Flags / Smooth-Window
     plotter = MetricsPlotter(
         out_dir=paths["plots_dir"],
         benchmark_opponents=list(CONFIG["BENCH_OPPONENTS"]),
@@ -90,6 +103,7 @@ def main():
         train_csv="training_metrics.csv",
         save_csv=CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False),
         verbosity=1,
+        smooth_window=CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 150),
     )
     plotter.log("New Training (k4a1): Shared-Policy PPO — In-Proc External Trainer (Bundle-Updates)")
     plotter.log(f"Deck_Size: {CONFIG['DECK_SIZE']}")
@@ -113,11 +127,10 @@ def main():
     feat_cfg = FeatureConfig(
         num_players=num_players,
         num_ranks=num_ranks,
-        add_seat_onehot=False,  # Seat-1hot NICHT in augment_observation angehängt
+        add_seat_onehot=False,              # Seat-1hot NICHT in augment_observation
         include_history=CONFIG["FEATURES"]["USE_HISTORY"],
     )
     seat_id_dim = num_players if CONFIG["FEATURES"]["SEAT_ONEHOT"] else 0
-    # korrektes observation_dim (inkl. optionalem Seat-1hot)
     observation_dim = expected_feature_len(feat_cfg) + seat_id_dim
 
     # ---- Agent / Shaper ----
@@ -152,6 +165,7 @@ def main():
         "observation_dim": observation_dim,
         "num_actions": A,
         "seat_onehot": CONFIG["FEATURES"]["SEAT_ONEHOT"],
+        "ret_smooth_window": CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 150),
 
         # In-Proc Trainer
         "episodes_per_update": CONFIG["INPROC_TRAINER"]["EPISODES_PER_UPDATE"],
@@ -159,8 +173,8 @@ def main():
         "min_samples_to_train": CONFIG["INPROC_TRAINER"]["MIN_SAMPLES_TO_TRAIN"],
 
         "models_dir": paths["weights_dir"], "plots_dir": paths["plots_dir"],
-        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "benchmark_opponents": ",".join(CONFIG["BENCH_OPPONENTS"]),
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }, paths["config_csv"])
     save_run_meta({"family": family, "version": version, "algo": "ppo_shared_inproc", "deck": CONFIG["DECK_SIZE"]},
                   paths["run_meta_json"])
@@ -181,7 +195,8 @@ def main():
         ep_len = 0
 
         ts = env.reset()
-        last_idx = {p: None for p in range(num_players)}  # letzte Transition je Sitz (für Finals)
+        last_idx = {p: None for p in range(num_players)}  # letzte Transition je Sitz
+        ep_shaping_return_p0 = 0.0                        # nur P0 für Plot-Parität
 
         while not ts.last():
             p = ts.observations["current_player"]
@@ -202,29 +217,56 @@ def main():
             a = int(agent.step(obs, legal, seat_one_hot=seat_oh, player_id=p))
             last_idx[p] = len(agent._buffer.states) - 1
 
-            ts = env.step([a])
+            ts_next = env.step([a])
             ep_len += 1
 
             if shaper.step_active():
-                hand_after = shaper.hand_size(ts, p, deck_int)
-                step_r = shaper.step_reward(hand_before=hand_before, hand_after=hand_after)
-                agent.post_step(step_r, done=ts.last())
+                hand_after = shaper.hand_size(ts_next, p, deck_int)
+                step_r = float(shaper.step_reward(hand_before=hand_before, hand_after=hand_after))
+                if p == 0:  # nur P0 aufsummieren für konsistente Plots
+                    ep_shaping_return_p0 += step_r
+                agent.post_step(step_r, done=ts_next.last())
+
+            ts = ts_next
 
         # Episodenende: Finals/Bonis je Sitz in die *letzte* Transition buchen + done markieren
         finals = env._state.returns()
         for p in range(num_players):
             li = last_idx[p]
-            if li is None: continue
+            if li is None:
+                continue
             if shaper.include_env_reward():
                 agent._buffer.rewards[li] += float(finals[p])
             agent._buffer.rewards[li] += float(shaper.final_bonus(finals, p))
             agent._buffer.dones[li] = True
 
-        # Sammelzähler
-        ep_in_bundle += 1
+        # --- Train-Äquivalent-Return (nur P0) für Plots ---
+        ep_env_p0   = float(finals[0])
+        ep_bonus_p0 = float(shaper.final_bonus(finals, 0))
+        env_part     = ep_env_p0 if shaper.include_env_reward() else 0.0
+        shaping_part = ep_shaping_return_p0 if shaper.step_active() else 0.0
+        ep_return_training = shaping_part + env_part + ep_bonus_p0
 
-        # Episoden-Metriken (einheitlich)
-        ep_metrics = {"ep_length": int(ep_len), "ep_env_return_p0": float(finals[0])}
+        # Episoden-Metriken (P0-Fokus für Plot-Parität)
+        ep_metrics = {
+            "ep_length":            int(ep_len),
+            "ep_env_score":         ep_env_p0,
+            "ep_shaping_return":    ep_shaping_return_p0,
+            "ep_final_bonus":       ep_bonus_p0,
+            "ep_return_training":   ep_return_training,
+        }
+
+        # Sonderplot: Episoden-Return + Komponenten (mit Gating)
+        plotter.add_ep_returns(
+            global_episode=ep,
+            ep_returns=[ep_return_training],
+            components={
+                "env_score":   [env_part],      # 0.0, wenn nicht aktiv
+                "shaping":     [shaping_part],  # 0.0, wenn nicht aktiv
+                "final_bonus": [ep_bonus_p0],
+            },
+        )
+
         if collect_metrics:
             if CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False):
                 plotter.add_train(ep, ep_metrics)
@@ -235,16 +277,17 @@ def main():
 
         # ======= Bündel-Update =======
         train_seconds = 0.0
+        ep_in_bundle += 1
         if ep_in_bundle >= EPISODES_PER_UPDATE:
             buf_len = len(agent._buffer.states)
             if buf_len >= MIN_SAMPLES:
                 t_train = time.perf_counter()
+                train_metrics = None
                 for _ in range(UPDATES_PER_CALL):
-                    train_metrics = agent.train()
+                    train_metrics = agent.train()  # kann None sein
                 train_seconds = time.perf_counter() - t_train
 
                 if collect_metrics:
-                    # Logging der Update-Größe/Qualität
                     bs = int(CONFIG["PPO"]["batch_size"])
                     batches_per_epoch = max(1, buf_len // bs)
                     upd_metrics = {
@@ -253,7 +296,6 @@ def main():
                         "batches_per_epoch": int(batches_per_epoch),
                         "num_epochs": int(CONFIG["PPO"]["num_epochs"]),
                     }
-                    # PPO-eigene Metriken, falls vorhanden
                     if train_metrics:
                         upd_metrics.update({
                             "policy_loss": train_metrics.get("policy_loss", 0.0),
@@ -268,7 +310,7 @@ def main():
                         plotter.train_rows.append({"episode": int(ep), **upd_metrics})
                         if plotter.train_keys is None:
                             plotter.train_keys = ["episode"] + list(upd_metrics.keys())
-            # Buffer leeren (on-policy Rhythmus)
+            # On-policy: Buffer leeren
             agent._buffer.clear()
             ep_in_bundle = 0
 
@@ -297,7 +339,10 @@ def main():
                 multi_title=title_multi,
             )
             if CONFIG["FEATURES"].get("PLOT_METRICS", False):
-                plotter.plot_train(filename_prefix="training_metrics", separate=True)
+                plotter.plot_train(
+                    include_keys=CONFIG["FEATURES"].get("PLOT_KEYS"),
+                    separate=True,
+                )
             plot_seconds = time.perf_counter() - plot_start
 
             save_start = time.perf_counter()

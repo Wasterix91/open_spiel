@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 # k3a2.py — DQN Snapshot-Selfplay (1 Learner + 3 Sparring)
 #
-# Ausrichtung wie k1a2:
-# - augment_observation ohne Seat-1hot; optionaler Seat-1hot wird extern angehängt
-# - state_size = expected_feature_len(feat_cfg) + seat_id_dim
-# - Beobachtungen basieren auf env._state.observation_tensor(p)
-# - RewardShaper & Benchmark wie k1a2
+# Plot-Parität zu k1a1/k1a2:
+# - smooth_window via FEATURES.RET_SMOOTH_WINDOW
+# - SAVE_METRICS_TO_CSV steuert CSV-Schreiben (Train); Benchmark-CSV immer
+# - ep_return_training = shaping(+optional) + env(+optional) + final_bonus
+# - Komponenten-Gating in add_ep_returns
+# - plot_train(include_keys=FEATURES.PLOT_KEYS, separate=True)
 
 import os, datetime, time, copy, numpy as np, torch
 import pyspiel
@@ -27,7 +28,6 @@ CONFIG = {
     "DECK_SIZE":        "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
-
     # DQN
     "DQN": {
         "learning_rate":     3e-4,
@@ -46,7 +46,7 @@ CONFIG = {
 
     # ======= Rewards (NEUES System) =======
     # STEP_MODE : "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
-    # FINAL_MODE: "none" | "env_only" | "rank_bonus" | "both"
+    # FINAL_MODE: "none" | "env_only" | "rank_only" | "both"
     "REWARD": {
         "STEP_MODE": "none",
         "DELTA_WEIGHT": 0.0,
@@ -56,12 +56,21 @@ CONFIG = {
         "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
     },
 
-    # Features (wie k1a2)
+    # Features (wie k1a2, für Plot-Parität erweitert)
     "FEATURES": {
         "USE_HISTORY": True,
         "SEAT_ONEHOT": False,
-        "PLOT_METRICS": False,
+        "PLOT_METRICS": True,
         "SAVE_METRICS_TO_CSV": False,
+        "RET_SMOOTH_WINDOW": 150,
+        "PLOT_KEYS": [
+            # DQN/Train:
+            "epsilon", "ep_length", "train_seconds",
+            # Sonderplots (aus Memory; Episoden-Return und Komponenten):
+            "ep_return_raw", "ep_return_components",
+            "ep_return_env", "ep_return_shaping", "ep_return_final",
+            "ep_return_training",
+        ],
     },
 
     "SNAPSHOT": { "LEARNER_SEAT": 0, "MIX_CURRENT": 0.8, "SNAPSHOT_INTERVAL": 200, "POOL_CAP": 20 },
@@ -93,8 +102,6 @@ def _with_seat_onehot(vec: np.ndarray, p: int, num_players: int, enabled: bool) 
 
 class SnapshotDQNA:
     def __init__(self, state_size, num_actions, dqn_cfg, q_state_dict):
-        # ---- FIX: dqn_cfg ist bereits ein DQNConfig (namedtuple). Direkt durchreichen.
-        # Falls mal ein dict reinkommt, in DQNConfig umwandeln.
         cfg = DQNConfig(**dqn_cfg) if isinstance(dqn_cfg, dict) else dqn_cfg
         self.agent = DQNAgent(state_size, num_actions, cfg, device="cpu")
         self.agent.target_network.eval()
@@ -120,7 +127,9 @@ def main():
         benchmark_opponents=list(CONFIG["BENCH_OPPONENTS"]),
         benchmark_csv="benchmark_curves.csv",
         train_csv="training_metrics.csv",
-        save_csv=True, verbosity=1,
+        save_csv=CONFIG["FEATURES"]["SAVE_METRICS_TO_CSV"],
+        verbosity=1,
+        smooth_window=CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 150),
     )
     plotter.log("New Training (k3a2): Snapshot-Selfplay DQN")
     plotter.log(f"Deck_Size: {CONFIG['DECK_SIZE']}")
@@ -164,6 +173,7 @@ def main():
         "bench_interval": CONFIG["BENCH_INTERVAL"], "bench_episodes": CONFIG["BENCH_EPISODES"],
         "observation_dim": state_size, "num_actions": A,
         "seat_onehot": CONFIG["FEATURES"]["SEAT_ONEHOT"],
+        "ret_smooth_window": CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 150),
         "models_dir": paths["weights_dir"], "plots_dir": paths["plots_dir"],
         "mix_current": CONFIG["SNAPSHOT"]["MIX_CURRENT"],
         "snapshot_interval": CONFIG["SNAPSHOT"]["SNAPSHOT_INTERVAL"],
@@ -189,7 +199,7 @@ def main():
     t0 = time.perf_counter()
     BINT, BEPS = CONFIG["BENCH_INTERVAL"], CONFIG["BENCH_EPISODES"]
 
-    # Optional: Sammeln wie k1a2
+    # Sammeln nur, wenn wir es brauchen (CSV oder Plot)
     collect_metrics = (
         CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False)
         or CONFIG["FEATURES"].get("PLOT_METRICS", False)
@@ -199,6 +209,7 @@ def main():
         ep_start = time.perf_counter()
         ep_len = 0
         ep_shaping_return = 0.0
+        train_seconds_accum = 0.0
 
         ts = env.reset()
         last_idx_learner = None
@@ -225,7 +236,9 @@ def main():
                 learner.buffer.add(pending["s"], pending["a"], pending["r"], s_now, False,
                                    next_legal_actions=legal)
                 last_idx_learner = len(learner.buffer.buffer) - 1
+                tts = time.perf_counter()
                 learner.train_step()
+                train_seconds_accum += (time.perf_counter() - tts)
                 pending = None
 
             # aktuelle Beobachtung
@@ -266,7 +279,9 @@ def main():
             learner.buffer.add(pending["s"], pending["a"], pending["r"], s_next, True,
                                next_legal_actions=list(range(A)))
             last_idx_learner = len(learner.buffer.buffer) - 1
+            tts = time.perf_counter()
             learner.train_step()
+            train_seconds_accum += (time.perf_counter() - tts)
             pending = None
 
         # Finale Rewards / Bonus
@@ -288,16 +303,44 @@ def main():
             if len(pool) > POOL_CAP:
                 pool.pop(0)
 
-        # Metriken
+        # --- Trainingsäquivalenter Return (Learner) wie k1a1/k1a2 ---
+        env_part     = ep_env if shaper.include_env_reward() else 0.0
+        shaping_part = ep_shaping_return if shaper.step_active() else 0.0
+        ep_return_training = shaping_part + env_part + ep_bonus
+
+        # Metriken (nur P0/Learner — konsistent zur Linie)
         metrics = {
             "ep_length":         ep_len,
+            "train_seconds":     train_seconds_accum,
             "ep_env_return":     ep_env,
             "ep_shaping_return": ep_shaping_return,
             "ep_final_bonus":    ep_bonus,
+            "epsilon":           float(getattr(learner, "epsilon", np.nan)),
+            "ep_return_training": ep_return_training,
         }
-        plotter.add_train(ep, metrics)
+
+        # Sonderplot: Episoden-Return + Komponenten (mit Gating)
+        plotter.add_ep_returns(
+            global_episode=ep,
+            ep_returns=[ep_return_training],
+            components={
+                "env_score":   [env_part],      # 0.0, wenn nicht aktiv
+                "shaping":     [shaping_part],  # 0.0, wenn nicht aktiv
+                "final_bonus": [ep_bonus],
+            },
+        )
+
+        # Train-Metriken ggf. persistieren oder nur puffern
+        if collect_metrics:
+            if CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False):
+                plotter.add_train(ep, metrics)
+            else:
+                plotter.train_rows.append({"episode": int(ep), **metrics})
+                if plotter.train_keys is None:
+                    plotter.train_keys = ["episode"] + list(metrics.keys())
 
         # Benchmark & Save
+        eval_seconds = plot_seconds = save_seconds = 0.0
         if CONFIG["BENCH_INTERVAL"] > 0 and (ep % BINT == 0):
             evs = time.perf_counter()
             per_opponent = run_benchmark(
@@ -313,10 +356,17 @@ def main():
             plotter.plot_benchmark_rewards()
             plotter.plot_places_latest()
             title_multi = f"Lernkurve - {family.upper()} vs feste Heuristiken"
-            plotter.plot_benchmark("lernkurve", with_macro=True,
-                                   family_title=family.upper(), multi_title=title_multi)
+            plotter.plot_benchmark(
+                filename_prefix="lernkurve",
+                with_macro=True,
+                family_title=family.upper(),
+                multi_title=title_multi,
+            )
             if CONFIG["FEATURES"].get("PLOT_METRICS", False):
-                plotter.plot_train(filename_prefix="training_metrics", separate=True)
+                plotter.plot_train(
+                    include_keys=CONFIG["FEATURES"].get("PLOT_KEYS"),
+                    separate=True,
+                )
             plot_seconds = time.perf_counter() - ps
 
             ss = time.perf_counter()
@@ -327,7 +377,7 @@ def main():
             plotter.log_timing(
                 ep,
                 ep_seconds=(time.perf_counter() - ep_start),
-                train_seconds=0.0,
+                train_seconds=train_seconds_accum,
                 eval_seconds=eval_seconds,
                 plot_seconds=plot_seconds,
                 save_seconds=save_seconds,

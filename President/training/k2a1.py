@@ -42,7 +42,7 @@ CONFIG = {
 
     # ======= Rewards (NEUES System) =======
     # STEP_MODE : "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
-    # FINAL_MODE: "none" | "env_only" | "rank_bonus" | "both"
+    # FINAL_MODE: "none" | "env_only" | "rank_only" | "both"
     "REWARD": {
         "STEP_MODE": "none",
         "DELTA_WEIGHT": 0.0,
@@ -54,10 +54,25 @@ CONFIG = {
 
     # Feature-Toggles (analog k1a1)
     "FEATURES": {
-        "USE_HISTORY": True,    # ✅ True = Variante 2 (mit Historie), False = Variante 1 (ohne)
+        "USE_HISTORY": True,     # ✅ True = Variante 2 (mit Historie), False = Variante 1 (ohne)
         "SEAT_ONEHOT": False,    # optional: Sitz-One-Hot im Agent verwenden
-        "PLOT_METRICS": False,   # Trainingsplots erzeugen?
+        "PLOT_METRICS": True,    # Trainingsplots erzeugen?
         "SAVE_METRICS_TO_CSV": False,  # Trainingsmetriken persistent speichern?
+        "RET_SMOOTH_WINDOW": 150,
+
+        # Steuert plot_train(); Sonder-Keys triggern In-Memory-Return-Plots.
+        "PLOT_KEYS": [
+            # PPO/Train-ähnliche Metriken (falls vom Agent geliefert):
+            "return_mean", "reward_mean", "entropy", "approx_kl",
+            "clip_frac", "policy_loss", "value_loss",
+            # Trainings-/Umgebungsmetriken:
+            "train_seconds_p0", "ep_env_return_p0", "ep_shaping_return_p0",
+            "ep_final_bonus_p0", "ep_length",
+            # Sonderplots (aus Memory, nicht aus metrics):
+            "ep_return_raw", "ep_return_components",
+            "ep_return_env", "ep_return_shaping", "ep_return_final",
+            "ep_return_training",
+        ],
     },
 
     # Benchmark-Gegner (wie in k1a1)
@@ -83,8 +98,9 @@ def main():
         benchmark_opponents=list(CONFIG["BENCH_OPPONENTS"]),
         benchmark_csv="benchmark_curves.csv",
         train_csv="training_metrics.csv",
-        save_csv=True,
+        save_csv=CONFIG["FEATURES"]["SAVE_METRICS_TO_CSV"],
         verbosity=1,
+        smooth_window=CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 150),
     )
 
     plotter.log("New Training (k2a1): 4 getrennte PPO-Agents — simultanes Lernen")
@@ -147,6 +163,7 @@ def main():
         "observation_dim": expected_input_dim(feat_cfg),  # inkl. Seat-One-Hot, falls aktiv
         "num_actions": A,
         "seat_onehot": CONFIG["FEATURES"]["SEAT_ONEHOT"],
+        "ret_smooth_window": CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 150),
 
         "opponents": ",".join(CONFIG["BENCH_OPPONENTS"]),
         "models_dir": paths["weights_dir"], "plots_dir": paths["plots_dir"],
@@ -254,6 +271,24 @@ def main():
             "ep_length":             ep_len,
         }
 
+        # --- Trainingsäquivalenter Return (P0) exakt wie in k1a1 ---
+        env_part_p0     = finals[0] if shaper.include_env_reward() else 0.0
+        shaping_part_p0 = ep_shaping_returns[0] if shaper.step_active() else 0.0
+        ep_return_training_p0 = shaping_part_p0 + env_part_p0 + float(shaper.final_bonus(finals, 0))
+        # In Metrics mitschreiben (damit plot_train() dieselben Keys findet)
+        train_metrics["ep_return_training"] = ep_return_training_p0
+
+        # Sonderplot: Episoden-Return (P0) + Komponenten (mit Gating)
+        plotter.add_ep_returns(
+            global_episode=ep,
+            ep_returns=[ep_return_training_p0],
+            components={
+                "env_score":   [env_part_p0],      # 0.0, wenn nicht aktiv
+                "shaping":     [shaping_part_p0],  # 0.0, wenn nicht aktiv
+                "final_bonus": [float(shaper.final_bonus(finals, 0))],
+            },
+        )
+
         # Speicherung/Buffering analog k1a1
         if collect_metrics:
             if CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False):
@@ -289,8 +324,8 @@ def main():
             plotter.plot_places_latest()
 
             # Einheitliche Titel:
-            # - Einzelplots:  "Lernkurve - K1A1 vs <gegner>"
-            # - Multi/Macro:  "Lernkurve - K1A1 vs feste Heuristiken"
+            # - Einzelplots:  "Lernkurve - K2A1 vs <gegner>"
+            # - Multi/Macro:  "Lernkurve - K2A1 vs feste Heuristiken"
             title_multi = f"Lernkurve - {family.upper()} vs feste Heuristiken"
             plotter.plot_benchmark(
                 filename_prefix="lernkurve",
@@ -300,7 +335,10 @@ def main():
             )
 
             if CONFIG["FEATURES"].get("PLOT_METRICS", False):
-                plotter.plot_train(filename_prefix="training_metrics", separate=True)
+                plotter.plot_train(
+                    include_keys=CONFIG["FEATURES"].get("PLOT_KEYS"),
+                    separate=True,
+                )
 
             plot_seconds = time.perf_counter() - plot_start
 
