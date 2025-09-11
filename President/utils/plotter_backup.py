@@ -22,14 +22,15 @@ class MetricsPlotter:
         train_csv: str = "train_metrics.csv",
         save_csv: bool = True,
         verbosity: int = 1,
-        smooth_window: int | None = None,   # Fenstergröße für Moving Average der Rewards
+        smooth_window: int | None = None,   # NEU
     ):
         self.out_dir = out_dir
         os.makedirs(self.out_dir, exist_ok=True)
 
         # Logging
         self.verbosity = verbosity
-        self.smooth_window = int(smooth_window) if smooth_window is not None else 150
+        self.smooth_window = int(smooth_window) if smooth_window is not None else 150  # NEU
+
 
         # Benchmark
         self.bench_names: List[str] = list(benchmark_opponents or [])
@@ -52,28 +53,39 @@ class MetricsPlotter:
         self._train_save_csv = bool(save_csv)
         self.train_keys: Optional[List[str]] = None
         self.train_rows: List[dict] = []
-
-        # ---- Konsistente Farben für alle Return-Plots ----
+                # ---- Konsistente Farben für alle Return-Plots ----
+        # Passe hier an, wenn du andere Farben willst.
         self._ret_colors = {
             "env_score":    "tab:blue",
             "shaping":      "tab:green",
             "final_bonus":  "tab:orange",
-            # Total-Return:
-            "total_scatter": "tab:gray",
-            "total_ma":      "tab:red",
+            # Total-Return (ep_return_raw):
+            "total_scatter": "tab:gray",    # Punktewolke
+            "total_ma":      "tab:red",     # Moving Average
         }
+
+        # dezenter, einheitlicher Scatter-Ton für alle Komponenten
         self._ret_colors["component_scatter"] = "#B0B0B0"  # helles Grau
+        # optionale Sichtbarkeits-Parameter
         self._ret_scatter_alpha = 0.18
         self._ret_scatter_size  = 6
         self._ret_line_width    = 2.2
-        self._ret_use_outline   = True
+        self._ret_use_outline   = True   # weiße Kontur für Kurven (bessere Sichtbarkeit)
 
-        # In-Memory Episode-Returns
-        self.ep_ret_eps: List[int] = []     # global_ep
-        self.ep_ret_vals: List[float] = []  # Trainings-Reward (Buffersignal)
+
+
+        # --- In-Memory Episode-Returns (kein CSV, keine Pandas) ---
+        # Pro globaler Trainingsepisode genau ein Return (z. B. P0), plus optionale Komponenten
+        self.ep_ret_eps: List[int] = []            # global_ep
+        self.ep_ret_vals: List[float] = []         # trainingsäquivalenter Return (genaues Buffersignal)
         self.ep_ret_components: Dict[str, List[float]] = {}  # z.B. {"env_score": [...], "shaping": [...], "final_bonus": [...]}
 
-    # ---------- Benchmark: add ----------
+
+        # CSV-Header für Benchmark: dynamisch beim ersten add_benchmark, da Gegnerliste auch aus den Daten kommen kann
+        # train_csv: Header dynamisch beim ersten add_train
+
+
+        # ---------- Benchmark: add ----------
     def add_benchmark(
         self,
         episode: int,
@@ -85,24 +97,27 @@ class MetricsPlotter:
         results-Format (neu):
         {
             "<opp>": {
-              "winrate": float,   # in %
-              "reward": float,    # Ø ENV-Reward P0
-              "places": [p0,p1,p2,p3],
-              "episodes": int
+            "winrate": float,             # in %
+            "reward": float,              # mittlerer ENV-Reward von P0
+            "places": [p0,p1,p2,p3],      # Anteile (sum ~ 1.0)
+            "episodes": int               # Anzahl Episoden
             },
             ...
         }
+
         Abwärtskompatibel:
-        - float -> Winrate
-        - reward -> mean_reward Fallback
-        - places -> place_dist Fallback
+        - Wenn results[name] nur eine Zahl ist → als Winrate interpretiert.
+        - Wenn reward fehlt → Fallback auf mean_reward.
+        - Wenn places fehlt → Fallback auf place_dist.
         """
+        # Falls bench_names noch leer sind: aus results ableiten
         if not self.bench_names:
             self.bench_names = list(results.keys())
             self.bench_hist_wr = {n: [] for n in self.bench_names}
             self.bench_hist_reward = {n: [] for n in self.bench_names}
             self.bench_hist_places = {n: [] for n in self.bench_names}
 
+        # --- Header sicherstellen (neu oder fehlend -> ergänzen, ohne Daten zu verlieren) ---
         if self._bench_save_csv:
             header_fields = ["episode"]
             for name in self.bench_names:
@@ -124,14 +139,18 @@ class MetricsPlotter:
                 with open(self.bench_csv_path, "r", encoding="utf-8") as f:
                     first = f.readline()
                     if not first.strip().startswith("episode"):
+                        # Datei hat keinen Header -> wir fügen ihn vorne an
                         rest = f.read()
                         with open(self.bench_csv_path, "w", newline="", encoding="utf-8") as fw:
                             fw.write(header_line)
                             fw.write(rest)
+                    # falls first bereits mit "episode" beginnt: nichts tun
+
             if need_header:
                 with open(self.bench_csv_path, "w", newline="", encoding="utf-8") as f:
                     f.write(header_line)
 
+        # --- Werte einsammeln ---
         self.bench_episodes.append(int(episode))
 
         row = [episode]
@@ -139,6 +158,7 @@ class MetricsPlotter:
         for name in self.bench_names:
             val = results.get(name, float("nan"))
 
+            # Legacy: nur Winrate als float
             if isinstance(val, (int, float)):
                 wr = float(val)
                 rw = float("nan")
@@ -147,11 +167,13 @@ class MetricsPlotter:
                 wr = float(val.get("winrate", float("nan")))
                 rw = float(val.get("reward", val.get("mean_reward", float("nan"))))
                 place = val.get("places") or val.get("place_dist", [float("nan")] * 4)
+                # robust extrahieren
                 p0 = float(place[0]) if len(place) > 0 else float("nan")
                 p1 = float(place[1]) if len(place) > 1 else float("nan")
                 p2 = float(place[2]) if len(place) > 2 else float("nan")
                 p3 = float(place[3]) if len(place) > 3 else float("nan")
 
+            # Historie
             self.bench_hist_wr[name].append(wr)
             self.bench_hist_reward[name].append(rw)
             self.bench_hist_places[name].append((p0, p1, p2, p3))
@@ -162,6 +184,7 @@ class MetricsPlotter:
             if math.isfinite(rw):
                 rw_for_macro.append(rw)
 
+        # Macros
         macro_wr = float(np.mean(wr_for_macro)) if (macro_wr is None) else float(macro_wr)
         macro_reward = float(np.mean(rw_for_macro)) if (macro_reward is None) else float(macro_reward)
         self.bench_macro_wr.append(macro_wr)
@@ -183,6 +206,7 @@ class MetricsPlotter:
         if not self.bench_episodes:
             return
 
+        # ---- Pretty-Namen für Gegner ----
         def _pretty_opp(name: str) -> str:
             mapping = {
                 "max_combo": "Max Combo",
@@ -190,16 +214,19 @@ class MetricsPlotter:
                 "single_only": "Single Only",
             }
             return mapping.get(name, name)
+        
 
+        # ---- Titel-Helper ----
         def _title_single(opp_pretty: str) -> str:
             return f"Lernkurve - {family_title} vs {opp_pretty}" if family_title else f"{filename_prefix}"
-
+        
         def _title_multi() -> str:
             if multi_title:
                 return multi_title
             if family_title:
                 return f"Lernkurve - {family_title} vs feste Heuristiken"
             return f"{filename_prefix}"
+
 
         def _plot_multi(out_path: str, include_macro: bool, add_25: bool = False):
             plt.figure(figsize=(12, 8))
@@ -209,7 +236,7 @@ class MetricsPlotter:
                     self.bench_hist_wr[name],
                     marker="o",
                     markersize=4,
-                    label=_pretty_opp(name),
+                    label=_pretty_opp(name),   # statt label=name
                     color=colors[name],
                 )
             if include_macro:
@@ -219,7 +246,7 @@ class MetricsPlotter:
                     marker="o",
                     markersize=4,
                     linestyle="--",
-                    label="Avg Macro",
+                    label="Avg Macro",        # schöner Name
                     color=macro_color,
                 )
             _apply_common_axes(_title_multi(), add_25=add_25)
@@ -228,14 +255,19 @@ class MetricsPlotter:
             plt.savefig(out_path)
             plt.close()
 
+
+        # ---- Farbpalette aus aktuellem Prop-Cycle ----
         base_colors = plt.rcParams.get("axes.prop_cycle", None)
         if base_colors is not None:
             base_colors = base_colors.by_key().get("color", [])
         if not base_colors:
             base_colors = [plt.cm.tab10(i) for i in range(10)]
         colors = {name: base_colors[i % len(base_colors)] for i, name in enumerate(self.bench_names)}
+
+        # ---- Macro-Farbe fix: grau ----
         macro_color = "#444444"
 
+        # ---- gemeinsame Achsen + optionale 25%-Linie (mit Legendeneintrag) ----
         def _apply_common_axes(title: str, add_25: bool = False):
             plt.title(title)
             plt.xlabel("Episode")
@@ -245,11 +277,13 @@ class MetricsPlotter:
 
             ax = plt.gca()
             ax.set_xlim(left=0)
+
             ticks = ax.get_xticks()
             if 0.0 not in ticks:
                 ax.set_xticks(np.unique(np.concatenate(([0.0], ticks))))
 
             if add_25:
+                # dünne rote Referenzlinie + Label für Legende
                 plt.axhline(25, color="r", linewidth=1, label="25% Linie")
 
         def _plot_single(name: str, out_path: str, add_25: bool = False, title_override: str | None = None):
@@ -267,29 +301,39 @@ class MetricsPlotter:
             plt.savefig(out_path)
             plt.close()
 
+
+        # ---- Ausgaben gemäß Vorgaben ----
         os.makedirs(self.out_dir, exist_ok=True)
 
+        # 01: Heuristiken (alle Gegner, ohne Macro, ohne 25%-Linie)
         _plot_multi(
             out_path=os.path.join(self.out_dir, "01_Lernkurve_Heuristiken.png"),
             include_macro=False,
             add_25=False,
         )
+
+        # 02: Heuristiken inkl. avg (mit Macro, ohne 25%-Linie)
         _plot_multi(
             out_path=os.path.join(self.out_dir, "02_Lernkurve_Heuristiken_incl_avg.png"),
             include_macro=True,
             add_25=False,
         )
+
+        # 03: Heuristiken inkl. avg + 25%-Linie (rot, dünn) — Linie in Legende
         _plot_multi(
             out_path=os.path.join(self.out_dir, "03_Lernkurve_Heuristiken_incl_avg_25.png"),
             include_macro=True,
             add_25=True,
         )
+
+        # 04: Heuristiken + 25%-Linie (ohne Macro) — Linie in Legende
         _plot_multi(
             out_path=os.path.join(self.out_dir, "04_Lernkurve_Heuristiken_incl_25.png"),
             include_macro=False,
             add_25=True,
         )
 
+        # 05: Einzelplot Max Combo (Titel fix)
         if "max_combo" in self.bench_names:
             _plot_single(
                 "max_combo",
@@ -298,6 +342,7 @@ class MetricsPlotter:
                 title_override=_title_single(_pretty_opp("max_combo")),
             )
 
+        # 06: Einzelplot Random2 (Titel fix)
         if "random2" in self.bench_names:
             _plot_single(
                 "random2",
@@ -306,6 +351,7 @@ class MetricsPlotter:
                 title_override=_title_single(_pretty_opp("random2")),
             )
 
+        # 07: Einzelplot "single_only" → erster Gegner, Titel fix auf "Single Only"
         if self.bench_names:
             first_name = self.bench_names[0]
             _plot_single(
@@ -321,6 +367,7 @@ class MetricsPlotter:
             return
         title = title_prefix or filename_prefix
 
+        # Einzelplots pro Gegner (Reward)
         for name in self.bench_names:
             plt.figure(figsize=(10, 6))
             plt.plot(self.bench_episodes, self.bench_hist_reward[name], marker="o")
@@ -333,6 +380,7 @@ class MetricsPlotter:
             plt.savefig(out)
             plt.close()
 
+        # Gemeinsamer Plot (alle Gegner, Reward)
         plt.figure(figsize=(12, 8))
         for name in self.bench_names:
             plt.plot(self.bench_episodes, self.bench_hist_reward[name], marker="o", label=name)
@@ -355,19 +403,23 @@ class MetricsPlotter:
 
         Datei: <out_dir>/<filename_prefix>_latest.csv
         Spalten: opponent, episode, p0, p1, p2, p3  (Anteile, Summe ~ 1.0)
+        - Header wird nur einmal geschrieben.
+        - Bereits vorhandene (opponent, episode)-Kombinationen werden nicht doppelt angefügt.
         """
         if not self._bench_save_csv:
             return
+
         if not self.bench_episodes:
             return
 
         last_idx = len(self.bench_episodes) - 1
         ep = int(self.bench_episodes[last_idx])
 
+        # Zeilen aufbauen
         rows = []
         for name in self.bench_names:
             if self.bench_hist_places.get(name):
-                p0, p1, p2, p3 = self.bench_hist_places[name][last_idx]
+                p0, p1, p2, p3  = self.bench_hist_places[name][last_idx]
             else:
                 p0 = p1 = p2 = p3 = float("nan")
             rows.append({
@@ -380,11 +432,12 @@ class MetricsPlotter:
             })
 
         os.makedirs(self.out_dir, exist_ok=True)
-        out_csv = os.path.join(self.out_dir, f"{filename_prefix}_latest.csv")
+        out_csv = os.path.join(self.out_dir, f"{filename_prefix}.csv")
         fieldnames = ["opponent", "episode", "p0", "p1", "p2", "p3"]
 
         file_exists = os.path.isfile(out_csv) and os.path.getsize(out_csv) > 0
 
+        # existierende (opponent, episode) einlesen, um Duplikate zu vermeiden
         existing_keys = set()
         if file_exists:
             with open(out_csv, "r", newline="", encoding="utf-8") as f_in:
@@ -399,17 +452,21 @@ class MetricsPlotter:
                         if opp is not None and epi is not None:
                             existing_keys.add((opp, epi))
                 except csv.Error:
+                    # Falls die Datei korrupt ist, hängen wir trotzdem an.
                     pass
 
+        # nur neue Zeilen behalten
         rows_to_write = [r for r in rows if (r["opponent"], r["episode"]) not in existing_keys]
         if not rows_to_write:
-            return
+            return  # nichts Neues
 
+        # anhängen; Header nur schreiben, wenn Datei neu/leer
         with open(out_csv, "a", newline="", encoding="utf-8") as f_out:
             w = csv.DictWriter(f_out, fieldnames=fieldnames)
             if not file_exists:
                 w.writeheader()
             w.writerows(rows_to_write)
+
 
     # ---------- Train: add & plot ----------
     def add_train(self, episode: int, metrics: Dict[str, float]):
@@ -438,8 +495,7 @@ class MetricsPlotter:
         # Sonder-Keys, die nicht aus train_rows kommen, sondern aus Memory:
         special_keys = {
             "ep_return_raw", "ep_return_components",
-            "ep_return_env", "ep_return_shaping", "ep_return_final",
-            "ep_return_training",  # Alias für Gesamt-Reward
+            "ep_return_env", "ep_return_shaping", "ep_return_final"
         }
 
         wants_special = False
@@ -450,9 +506,12 @@ class MetricsPlotter:
         if (not self.train_rows or not self.train_keys) and not wants_special:
             return
 
+
         episodes = [r["episode"] for r in self.train_rows]
+        # alle möglichen Keys (ohne 'episode')
         all_keys = [k for k in self.train_keys if k != "episode"]
 
+        # Filter anwenden
         keys = all_keys
         if include_keys is not None:
             allow = set(include_keys)
@@ -461,13 +520,19 @@ class MetricsPlotter:
             deny = set(exclude_keys)
             keys = [k for k in keys if k not in deny]
 
+                # --- Sonderplots über PLOT_KEYS steuern ---
+        # Wenn "ep_return_raw" oder "ep_return_components" angefragt sind,
+        # zeichnen wir sie über plot_ep_returns() und entfernen die Pseudo-Keys
+        # aus der normalen Metrikenliste.
+        # --- Sonderplots über PLOT_KEYS steuern ---
         if include_keys is not None:
             req = set(include_keys)
 
-            # Gesamt + Komponenten-Mehrfachplot (Alias eingeschlossen)
-            if ("ep_return_raw" in req) or ("ep_return_components" in req) or ("ep_return_training" in req):
+            # Gesamt + Komponenten-Mehrfachplot
+            if ("ep_return_raw" in req) or ("ep_return_components" in req):
                 self.plot_ep_returns(window=self.smooth_window)
 
+            # Einzelplots je Komponente (Mapping Pseudo-Key -> Komponentenname)
             mapping = {
                 "ep_return_env":     "env_score",
                 "ep_return_shaping": "shaping",
@@ -477,12 +542,14 @@ class MetricsPlotter:
                 if pseudo in req:
                     self.plot_ep_return_component(comp, window=self.smooth_window)
 
+            # Pseudo-Keys aus der normalen Metrikenliste entfernen
             keys = [k for k in keys if k not in {"ep_return_raw", "ep_return_components",
-                                                 "ep_return_env", "ep_return_shaping",
-                                                 "ep_return_final", "ep_return_training"}]
+                                                 "ep_return_env", "ep_return_shaping", "ep_return_final"}]
+
+
 
         if not keys:
-            return
+            return  # nichts zu plotten
 
         if separate:
             for k in keys:
@@ -511,9 +578,10 @@ class MetricsPlotter:
         ep_returns: List[float],
         components: Optional[Dict[str, List[float]]] = None
     ):
+
         """
         Nimmt Episode-Return(s) entgegen und speichert sie NUR im Speicher.
-        - Keine CSV.
+        - Keine CSV, keine Pandas.
         - Üblicher Use-Case: genau 1 Return pro globaler Episode.
         """
         if not ep_returns:
@@ -535,13 +603,15 @@ class MetricsPlotter:
         """
         Plottet die Episode-Returns aus dem IN-MEMORY-Puffer.
         - Erzeugt:
-            - ep_return_raw.png (roh + Moving Avg)
+            - ep_return_raw.png (roh + Moving Avg, in 2 festen Farben)
             - ep_return_components.png (alle Komponenten gemeinsam)
             - ep_return_<komponente>.png (je Komponente einzeln)
         """
         if not self.ep_ret_eps or not self.ep_ret_vals:
             return
         window = self.smooth_window if (window is None) else int(window)
+
+
 
         x = np.asarray(self.ep_ret_eps, dtype=float)
         y = np.asarray(self.ep_ret_vals, dtype=float)
@@ -551,14 +621,16 @@ class MetricsPlotter:
                 return v
             w = max(1, int(w))
             c = np.cumsum(np.insert(v, 0, 0.0))
-            tail = (c[w:] - c[:-w]) / float(w)
+            tail = (c[w:] - c[:-w]) / float(w)                       # volle Fenster
             head = np.array([np.mean(v[:i+1]) for i in range(min(w-1, v.size))], dtype=float)
             return np.concatenate([head, tail])
 
         y_ma = _movavg(y, window)
 
-        # --- ep_return_raw.png ---
+        # --- ep_return_raw.png (2 feste Farben, konsistent) ---
         plt.figure(figsize=(12, 7))
+
+        # Punkte in dezentem Grau
         plt.scatter(
             x, y,
             s=self._ret_scatter_size,
@@ -567,6 +639,8 @@ class MetricsPlotter:
             color=self._ret_colors["total_scatter"],
             zorder=1,
         )
+
+        # Moving Average in Kontrastfarbe (über den Punkten)
         line_ma, = plt.plot(
             x, y_ma,
             linewidth=self._ret_line_width,
@@ -574,7 +648,10 @@ class MetricsPlotter:
             color=self._ret_colors["total_ma"],
             zorder=3,
         )
+
+        # optional weiße Outline für bessere Lesbarkeit
         if self._ret_use_outline:
+
             line_ma.set_path_effects([pe.Stroke(linewidth=self._ret_line_width+1.4, foreground="white"), pe.Normal()])
 
         plt.title("Training – Rewards (roh)")
@@ -584,7 +661,7 @@ class MetricsPlotter:
         plt.savefig(os.path.join(self.out_dir, "ep_return_raw.png"))
         plt.close()
 
-        # --- ep_return_components.png ---
+        # --- ep_return_components.png (alle Komponenten gemeinsam) ---
         comp_keys = [k for k in ("env_score", "shaping", "final_bonus") if k in self.ep_ret_components]
         if comp_keys:
             plt.figure(figsize=(12, 7))
@@ -595,11 +672,12 @@ class MetricsPlotter:
             plt.title("Training – Return-Komponenten (Moving Avg)")
             plt.xlabel("Trainings-Episode (global)")
             plt.ylabel("Rewards")
+
             plt.grid(True); plt.legend(); plt.tight_layout()
             plt.savefig(os.path.join(self.out_dir, "ep_return_components.png"))
             plt.close()
 
-            # Einzelplots pro Komponente
+            # --- Einzelplots pro Komponente (gleiche Farben) ---
             for k in comp_keys:
                 v  = np.asarray(self.ep_ret_components[k], dtype=float)
                 mv = _movavg(v, window)
@@ -607,6 +685,7 @@ class MetricsPlotter:
                 col_scatter = self._ret_colors["component_scatter"]
 
                 plt.figure(figsize=(10, 6))
+                # dezente Punkte
                 plt.scatter(
                     x, v,
                     s=self._ret_scatter_size,
@@ -615,6 +694,7 @@ class MetricsPlotter:
                     color=col_scatter,
                     zorder=1,
                 )
+                # farbige MA-Linie drüber
                 line_comp, = plt.plot(
                     x, mv,
                     linewidth=self._ret_line_width,
@@ -623,17 +703,21 @@ class MetricsPlotter:
                     zorder=3,
                 )
                 if self._ret_use_outline:
+                    
                     line_comp.set_path_effects([pe.Stroke(linewidth=self._ret_line_width+1.2, foreground="white"), pe.Normal()])
 
                 plt.title(f"Training – {k} (Moving Avg)")
                 plt.xlabel("Trainings-Episode (global)")
                 plt.ylabel("Rewards")
+
                 plt.grid(True); plt.legend(); plt.tight_layout()
                 plt.savefig(os.path.join(self.out_dir, f"ep_return_{k}.png"))
                 plt.close()
 
+
+
     def plot_ep_return_component(self, component_key: str, window: int | None = None,
-                                 filename: Optional[str] = None, title: Optional[str] = None):
+                                filename: Optional[str] = None, title: Optional[str] = None):
         """
         Einzelplot für eine Return-Komponente aus dem In-Memory-Puffer.
         component_key: "env_score" | "shaping" | "final_bonus"
@@ -641,6 +725,8 @@ class MetricsPlotter:
         """
         if not self.ep_ret_eps or component_key not in self.ep_ret_components:
             return
+
+        
 
         x = np.asarray(self.ep_ret_eps, dtype=float)
         v = np.asarray(self.ep_ret_components[component_key], dtype=float)
@@ -662,6 +748,8 @@ class MetricsPlotter:
         col = self._ret_colors.get(component_key, None)
 
         plt.figure(figsize=(12, 7))
+
+        # dezente, einheitliche Punkte
         plt.scatter(
             x, v,
             s=self._ret_scatter_size,
@@ -670,6 +758,8 @@ class MetricsPlotter:
             color=self._ret_colors["component_scatter"],
             zorder=1,
         )
+
+        # farbige MA-Linie
         line_comp, = plt.plot(
             x, mv,
             linewidth=self._ret_line_width,
@@ -678,6 +768,7 @@ class MetricsPlotter:
             zorder=3,
         )
         if self._ret_use_outline:
+            
             line_comp.set_path_effects([pe.Stroke(linewidth=self._ret_line_width+1.2, foreground="white"), pe.Normal()])
 
         plt.title(ttl)
@@ -687,7 +778,10 @@ class MetricsPlotter:
         plt.savefig(os.path.join(self.out_dir, out_name))
         plt.close()
 
-    # ---------- Logging ----------
+
+
+
+    # ---------- Logging (Konsole + run.log) ----------
     def log(self, msg: str, level: int = 1):
         if level > self.verbosity:
             return
@@ -738,11 +832,10 @@ class MetricsPlotter:
             rw_sum = rw_mean * eps if np.isfinite(rw_mean) else float("nan")
 
             places = val.get("places") or val.get("place_dist", [float('nan')]*4)
+            # absolute/relative sauber formatiert
             abs_places = [int(round(p * eps)) if np.isfinite(p) else 0 for p in places]
-            place_str = "[" + ", ".join(
-                f"{abs_places[i]} ({places[i]:.2f})" if np.isfinite(places[i]) else f"{abs_places[i]} (nan)"
-                for i in range(len(abs_places))
-            ) + "]"
+            place_str = "[" + ", ".join(f"{abs_places[i]} ({places[i]:.2f})" if np.isfinite(places[i]) else f"{abs_places[i]} (nan)"
+                                        for i in range(len(abs_places))) + "]"
 
             self.log(
                 f"Winrate vs {name:12s}: {wr:5.1f}% | "
@@ -750,6 +843,9 @@ class MetricsPlotter:
                 f"Ø-Reward: {rw_mean: .3f} | "
                 f"Places: {place_str}"
             )
+
+
+
 
     def log_timing(
         self,
@@ -767,7 +863,6 @@ class MetricsPlotter:
             f"plot {plot_seconds:0.1f}s | save {save_seconds:0.3f}s | "
             f"cum {cum_seconds/3600:0.2f}h"
         )
-
 
 class EvalPlotter:
     """
@@ -832,7 +927,7 @@ class EvalPlotter:
         plt.savefig(os.path.join(self.out_dir, f"{self.prefix}_alle_strategien.png"))
         plt.close()
 
-        # + Macro Average
+        # + Macro Average (Dateiname endet auf *_avg.png für Kompatibilität mit deinen Aliasen)
         macro = []
         for t in range(len(self.episodes)):
             vals = [self.hist[name][t] for name in self.opps]
@@ -847,3 +942,4 @@ class EvalPlotter:
         plt.tight_layout()
         plt.savefig(os.path.join(self.out_dir, f"{self.prefix}_alle_strategien_avg.png"))
         plt.close()
+

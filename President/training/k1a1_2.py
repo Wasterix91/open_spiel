@@ -28,15 +28,15 @@ CONFIG = {
 
     # PPO-Hyperparameter
     "PPO": {
-    "learning_rate": 3e-4,   # ↑
-    "num_epochs": 1,        # ↑
-    "batch_size": 256,        # ↓
-    "entropy_cost": 0.01,   # leicht ↑, um zu frühe Exploitation zu vermeiden
-    "gamma": 0.99,
-    "gae_lambda": 0.95,
-    "clip_eps": 0.2,         # erst so lassen; ggf. 0.3 testen, wenn KL zu klein bleibt
-    "value_coef": 0.5,
-    "max_grad_norm": 0.5,    # ↑ erlaubt größere Schritte
+        "learning_rate": 3e-4,
+        "num_epochs": 1,
+        "batch_size": 256,
+        "entropy_cost": 0.01,
+        "gamma": 0.99,
+        "gae_lambda": 0.95,
+        "clip_eps": 0.2,
+        "value_coef": 0.5,
+        "max_grad_norm": 0.5,
     },
 
     # ======= Rewards (NEUES System) =======
@@ -57,37 +57,23 @@ CONFIG = {
         "PLOT_METRICS": True,
         "SAVE_METRICS_TO_CSV": False,
         "RET_SMOOTH_WINDOW": 150,   # Fenstergröße für Moving Average der Rewards
-        "PLOT_KEYS": [               # steuert plot_train(); mögliche Keys:
+        "PLOT_KEYS": [
             # PPO-Metriken:
-            #   reward_mean, reward_std, return_mean,
-            #   adv_mean_raw, adv_std_raw,
-            #   policy_loss, value_loss,
-            #   entropy, approx_kl, clip_frac
-            # Trainings-/Umgebungsmetriken:
-            #   train_seconds, ep_env_score, ep_shaping_return,
-            #   ep_final_bonus, ep_length
-            # Sonderplots (aus Memory, nicht aus metrics):
-            #   ep_return_raw, ep_return_components,
-            #   ep_return_env, ep_return_shaping, ep_return_final
-            "return_mean",
-            "reward_mean",
-            "entropy",
-            "approx_kl",
-            "clip_frac",
-            "policy_loss",
-            "value_loss",
+            "return_mean", "reward_mean", "entropy", "approx_kl",
+            "clip_frac", "policy_loss", "value_loss",
+            # Rewards / Returns:
             "ep_return_raw",
             "ep_return_components",
-            "ep_return_env",         # Einzelplot env_score
-            "ep_return_shaping",     # Einzelplot shaping
-            "ep_return_final",       # Einzelplot final_bonus
-            "ep_return_training",
-            ],
-        },
+            "ep_return_env",
+            "ep_return_shaping",
+            "ep_return_final",
+            "ep_return_training",   # Alias: Gesamt-Reward (Buffersignal)
+        ],
+    },
 
     # Benchmark-Gegner
     "BENCH_OPPONENTS": ["single_only", "max_combo", "random2"],
-    }
+}
 
 
 # =========================== Training ===========================
@@ -110,9 +96,8 @@ def main():
         train_csv="training_metrics.csv",
         save_csv=CONFIG["FEATURES"]["SAVE_METRICS_TO_CSV"],
         verbosity=1,
-        smooth_window=CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 150),  # NEU
+        smooth_window=CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW"),  # <— aus Config
     )
-
 
     plotter.log("New Training (k1a1)")
     plotter.log(f"Deck_Size: {CONFIG['DECK_SIZE']}")
@@ -156,8 +141,8 @@ def main():
     # ---- Run-Metadaten & config ----
     save_config_csv({
         "script": family, "version": version,
-        "deck_size": CONFIG["DECK_SIZE"], "num_ranks": num_ranks, 
-        "use_history": CONFIG["FEATURES"]["USE_HISTORY"],      
+        "deck_size": CONFIG["DECK_SIZE"], "num_ranks": num_ranks,
+        "use_history": CONFIG["FEATURES"]["USE_HISTORY"],
         # Reward-Setup (neues System)
         "step_mode": shaper.step_mode,
         "delta_weight": shaper.dw,
@@ -173,6 +158,7 @@ def main():
         "observation_dim": expected_input_dim(feat_cfg),  # inkl. Seat-One-Hot, falls aktiv
         "num_actions": A,
         "seat_onehot": CONFIG["FEATURES"]["SEAT_ONEHOT"],
+        "ret_smooth_window": CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 150),
 
         "opponents": ",".join(CONFIG["OPPONENTS"]),
         "models_dir": paths["weights_dir"], "plots_dir": paths["plots_dir"],
@@ -201,7 +187,6 @@ def main():
 
         ts = env.reset()
         last_idx_p0 = None  # Index der letzten P0-Transition im Buffer
-
 
         while not ts.last():
             p = ts.observations["current_player"]
@@ -252,7 +237,7 @@ def main():
         train_start = time.perf_counter()
         train_metrics = agent.train()
         train_seconds = time.perf_counter() - train_start
-     
+
         # Trainingsmetriken
         if collect_metrics:
             metrics = train_metrics or {}
@@ -264,25 +249,27 @@ def main():
                 "ep_length":          ep_len,
             })
 
-            # Trainingsäquivalenter Return: genau das Signal, das im Buffer landet
-            ep_return_training = (
-                (ep_shaping_return if shaper.step_active() else 0.0)
-                + ep_final_bonus
-                + (ep_env_score if shaper.include_env_reward() else 0.0)
+            # --- Trainings-Reward exakt wie im Buffer (Step + ggf. Env + Final) ---
+            ep_return_train = (
+                (ep_shaping_return if shaper.step_active() else 0.0) +
+                (ep_env_score      if shaper.include_env_reward() else 0.0) +
+                ep_final_bonus
             )
-            metrics["ep_return_training"] = ep_return_training
 
-            # --- ECHTER Return pro Trainingsepisode (P0) ---
+            # Komponenten nur hinzufügen, wenn sie tatsächlich eingehen
+            components = {}
+            if shaper.include_env_reward():
+                components["env_score"] = [ep_env_score]
+            if shaper.step_active():
+                components["shaping"] = [ep_shaping_return]
+            if ep_final_bonus != 0.0 or shaper.final_mode in ("rank_only", "both"):
+                components["final_bonus"] = [ep_final_bonus]
+
             plotter.add_ep_returns(
                 global_episode=ep,
-                ep_returns=[ep_return_training],  # WICHTIG: genau das Trainingssignal
-                components={
-                    "env_score":  [ep_env_score],
-                    "shaping":    [ep_shaping_return],
-                    "final_bonus":[ep_final_bonus],
-                },
+                ep_returns=[ep_return_train],
+                components=components,
             )
-
 
             # Nur wenn in CSV gewünscht, wirklich persistieren
             if CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False):
@@ -313,7 +300,7 @@ def main():
             eval_seconds = time.perf_counter() - ev_start
 
             # --- Plot & CSV
-            plot_start = time.perf_counter()   # ← WIEDER EINFÜGEN
+            plot_start = time.perf_counter()
 
             plotter.add_benchmark(ep, per_opponent)
             plotter.plot_benchmark_rewards()
@@ -334,7 +321,6 @@ def main():
                 )
 
             plot_seconds = time.perf_counter() - plot_start
-
 
             # Save weights (PPO)
             save_start = time.perf_counter()
@@ -357,7 +343,7 @@ def main():
     # Ende
     total_seconds = time.perf_counter() - t0
     plotter.log("")
-    plotter.log(f"Gesamtzeit: {total_seconds/3600:0.2f}h (~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)")  
+    plotter.log(f"Gesamtzeit: {total_seconds/3600:0.2f}h (~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)")
     plotter.log(f"{family}, Single Agent vs Heuristiken (max_combo). Training abgeschlossen.")
     plotter.log(f"Path: {paths['run_dir']}")
 

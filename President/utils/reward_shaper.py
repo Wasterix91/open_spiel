@@ -7,7 +7,7 @@ class RewardShaper:
       DELTA_WEIGHT : float
       HAND_PENALTY_COEFF : float
 
-      FINAL_MODE : "none" | "env_only" | "rank_bonus" | "both"
+      FINAL_MODE : "none" | "env_only" | "rank_only" | "both"
       BONUS_WIN, BONUS_2ND, BONUS_3RD, BONUS_LAST : float
 
     Nutzung:
@@ -26,7 +26,7 @@ class RewardShaper:
     """
     # ---- erlaubte Modi ----
     _STEP_CHOICES  = {"none", "delta_weight_only", "hand_penalty_coeff_only", "combined"}
-    _FINAL_CHOICES = {"none", "env_only", "rank_bonus", "both"}
+    _FINAL_CHOICES = {"none", "env_only", "rank_only", "both"}
 
     def __init__(self, cfg: dict):
         # STEP
@@ -96,8 +96,8 @@ class RewardShaper:
         return self.final_mode in ("env_only", "both")
 
     def final_bonus(self, finals, pid: int) -> float:
-        """Benutzerdefinierter Platzierungsbonus (nur bei rank_bonus/both)."""
-        if self.final_mode not in ("rank_bonus", "both"):
+        """Benutzerdefinierter Platzierungsbonus (nur bei rank_only/both)."""
+        if self.final_mode not in ("rank_only", "both"):
             return 0.0
         order = sorted(range(len(finals)), key=lambda p: finals[p], reverse=True)
         place = order.index(pid) + 1  # 1..N
