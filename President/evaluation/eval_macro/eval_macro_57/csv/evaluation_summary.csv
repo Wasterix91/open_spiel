@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+57,P0,max_combo v,max_combo,,,,62.3,2.51,18679,7420
+57,P1,smart v,smart,,,,15.0,1.61,4494,7458
+57,P2,smart v,smart,,,,12.1,1.14,3617,7613
+57,P3,smart v,smart,,,,10.7,0.74,3210,7509

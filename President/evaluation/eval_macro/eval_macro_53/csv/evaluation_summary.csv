@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+53,P0,v_table v,v_table,,,,34.2,1.89,10274,7559
+53,P1,random2 v,random2,,,,15.4,1.11,4635,7509
+53,P2,v_table v,v_table,,,,34.0,1.88,10194,7434
+53,P3,random2 v,random2,,,,16.3,1.13,4897,7498

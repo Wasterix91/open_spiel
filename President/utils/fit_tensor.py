@@ -9,7 +9,7 @@ class FeatureConfig:
     num_ranks: int                     # kNumRanks aus dem Spiel
     add_seat_onehot: bool = False      # optional: Sitz-One-Hot anhängen
     include_history: bool = True       # True = mit Historie (Variante 2), False = ohne (Variante 1)
-    normalize: bool = True
+    normalize: bool = False
     max_combo_size: int = 4            # President: Singles/Pairs/Trips/Quads
     empty_top_rank_value: float = -1.0 # wie in C++: -1 wenn kein Stapel
 

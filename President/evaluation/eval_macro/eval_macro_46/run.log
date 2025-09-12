@@ -1,0 +1,32 @@
+[2025-09-12 10:52:02] New Evaluation (macro_46)
+[2025-09-12 10:52:02] Deck_Size: 16
+[2025-09-12 10:52:02] Episodes: 10.000
+[2025-09-12 10:52:02] Path: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_46
+[2025-09-12 10:52:02] 
+[2025-09-12 10:52:02] Player Configuration:
+[2025-09-12 10:52:02] Idx | Name | Type      | Family | Version | Episode | from_pid
+[2025-09-12 10:52:02] --------------------------------------------------------------
+[2025-09-12 10:52:02] 0   | P0   | max_combo |        |         |         |         
+[2025-09-12 10:52:02] 1   | P1   | max_combo |        |         |         |         
+[2025-09-12 10:52:02] 2   | P2   | max_combo |        |         |         |         
+[2025-09-12 10:52:02] 3   | P3   | dqn       | k1a2   | 05      | 1000000 | 0       
+[2025-09-12 10:52:09] 
+[2025-09-12 10:52:09] Benchmark @eval_ep    5000
+[2025-09-12 10:52:09] Winrates: P0 (max_combo v): 24.0% | P1 (max_combo v): 24.1% | P2 (max_combo v): 24.0% | P3 (dqn v05. ep1.000.000): 27.8%
+[2025-09-12 10:52:09] P0 (max_combo v) | winrate:  24.0% | avg_return:    1.50 | wins:   1201 | starts:   1266
+[2025-09-12 10:52:09] P1 (max_combo v) | winrate:  24.1% | avg_return:    1.52 | wins:   1207 | starts:   1245
+[2025-09-12 10:52:09] P2 (max_combo v) | winrate:  24.0% | avg_return:    1.57 | wins:   1200 | starts:   1238
+[2025-09-12 10:52:09] P3 (dqn v05 ep1.000.000) | winrate:  27.8% | avg_return:    1.42 | wins:   1392 | starts:   1251
+[2025-09-12 10:52:15] 
+[2025-09-12 10:52:15] Benchmark @eval_ep   10000
+[2025-09-12 10:52:15] Winrates: P0 (max_combo v): 24.0% | P1 (max_combo v): 23.8% | P2 (max_combo v): 23.7% | P3 (dqn v05. ep1.000.000): 28.6%
+[2025-09-12 10:52:15] P0 (max_combo v) | winrate:  24.0% | avg_return:    1.48 | wins:   2401 | starts:   2514
+[2025-09-12 10:52:15] P1 (max_combo v) | winrate:  23.8% | avg_return:    1.51 | wins:   2375 | starts:   2517
+[2025-09-12 10:52:15] P2 (max_combo v) | winrate:  23.7% | avg_return:    1.56 | wins:   2366 | starts:   2489
+[2025-09-12 10:52:15] P3 (dqn v05 ep1.000.000) | winrate:  28.6% | avg_return:    1.44 | wins:   2858 | starts:   2480
+[2025-09-12 10:52:15] Evaluation summary saved: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_46/csv/evaluation_summary.csv
+[2025-09-12 10:52:15] CSV_DIR: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_46/csv
+[2025-09-12 10:52:15] Plots directory: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_46/plots
+[2025-09-12 10:52:15] Table saved: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_46/csv/00_action_distribution.csv
+[2025-09-12 10:52:16] All plots saved.
+[2025-09-12 10:52:16] run.log: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_46/run.log

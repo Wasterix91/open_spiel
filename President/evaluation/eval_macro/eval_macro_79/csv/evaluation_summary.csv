@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+79,P0,ppo v11 ep20.000,ppo,k1a1,11,20000,58.4,2.19,17529,7591
+79,P1,single_only v,single_only,,,,13.8,1.27,4154,7503
+79,P2,single_only v,single_only,,,,13.4,1.27,4008,7391
+79,P3,single_only v,single_only,,,,14.4,1.27,4309,7515

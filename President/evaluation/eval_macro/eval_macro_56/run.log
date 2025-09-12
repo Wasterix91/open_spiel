@@ -1,0 +1,60 @@
+[2025-09-12 12:09:03] New Evaluation (macro_56)
+[2025-09-12 12:09:03] Deck_Size: 16
+[2025-09-12 12:09:03] Episodes: 30.000
+[2025-09-12 12:09:03] Path: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_56
+[2025-09-12 12:09:03] 
+[2025-09-12 12:09:03] Player Configuration:
+[2025-09-12 12:09:03] Idx | Name | Type      | Family | Version | Episode | from_pid
+[2025-09-12 12:09:03] --------------------------------------------------------------
+[2025-09-12 12:09:03] 0   | P0   | max_combo |        |         |         |         
+[2025-09-12 12:09:03] 1   | P1   | random2   |        |         |         |         
+[2025-09-12 12:09:03] 2   | P2   | random2   |        |         |         |         
+[2025-09-12 12:09:03] 3   | P3   | random2   |        |         |         |         
+[2025-09-12 12:09:04] 
+[2025-09-12 12:09:04] Benchmark @eval_ep    5000
+[2025-09-12 12:09:04] Winrates: P0 (max_combo v): 32.1% | P1 (random2 v): 22.8% | P2 (random2 v): 21.9% | P3 (random2 v): 23.2%
+[2025-09-12 12:09:04] P0 (max_combo v) | winrate:  32.1% | avg_return:    1.80 | wins:   1603 | starts:   1253
+[2025-09-12 12:09:04] P1 (random2 v) | winrate:  22.8% | avg_return:    1.46 | wins:   1142 | starts:   1267
+[2025-09-12 12:09:04] P2 (random2 v) | winrate:  21.9% | avg_return:    1.37 | wins:   1097 | starts:   1276
+[2025-09-12 12:09:04] P3 (random2 v) | winrate:  23.2% | avg_return:    1.37 | wins:   1158 | starts:   1204
+[2025-09-12 12:09:05] 
+[2025-09-12 12:09:05] Benchmark @eval_ep   10000
+[2025-09-12 12:09:05] Winrates: P0 (max_combo v): 31.3% | P1 (random2 v): 22.9% | P2 (random2 v): 22.1% | P3 (random2 v): 23.7%
+[2025-09-12 12:09:05] P0 (max_combo v) | winrate:  31.3% | avg_return:    1.79 | wins:   3134 | starts:   2547
+[2025-09-12 12:09:05] P1 (random2 v) | winrate:  22.9% | avg_return:    1.45 | wins:   2286 | starts:   2444
+[2025-09-12 12:09:05] P2 (random2 v) | winrate:  22.1% | avg_return:    1.38 | wins:   2210 | starts:   2535
+[2025-09-12 12:09:05] P3 (random2 v) | winrate:  23.7% | avg_return:    1.38 | wins:   2370 | starts:   2474
+[2025-09-12 12:09:06] 
+[2025-09-12 12:09:06] Benchmark @eval_ep   15000
+[2025-09-12 12:09:06] Winrates: P0 (max_combo v): 31.5% | P1 (random2 v): 22.7% | P2 (random2 v): 22.4% | P3 (random2 v): 23.4%
+[2025-09-12 12:09:06] P0 (max_combo v) | winrate:  31.5% | avg_return:    1.79 | wins:   4729 | starts:   3845
+[2025-09-12 12:09:06] P1 (random2 v) | winrate:  22.7% | avg_return:    1.46 | wins:   3403 | starts:   3665
+[2025-09-12 12:09:06] P2 (random2 v) | winrate:  22.4% | avg_return:    1.38 | wins:   3357 | starts:   3726
+[2025-09-12 12:09:06] P3 (random2 v) | winrate:  23.4% | avg_return:    1.37 | wins:   3511 | starts:   3764
+[2025-09-12 12:09:07] 
+[2025-09-12 12:09:07] Benchmark @eval_ep   20000
+[2025-09-12 12:09:07] Winrates: P0 (max_combo v): 31.4% | P1 (random2 v): 22.6% | P2 (random2 v): 22.4% | P3 (random2 v): 23.7%
+[2025-09-12 12:09:07] P0 (max_combo v) | winrate:  31.4% | avg_return:    1.78 | wins:   6271 | starts:   5050
+[2025-09-12 12:09:07] P1 (random2 v) | winrate:  22.6% | avg_return:    1.45 | wins:   4518 | starts:   4980
+[2025-09-12 12:09:07] P2 (random2 v) | winrate:  22.4% | avg_return:    1.38 | wins:   4480 | starts:   4969
+[2025-09-12 12:09:07] P3 (random2 v) | winrate:  23.7% | avg_return:    1.38 | wins:   4731 | starts:   5001
+[2025-09-12 12:09:08] 
+[2025-09-12 12:09:08] Benchmark @eval_ep   25000
+[2025-09-12 12:09:08] Winrates: P0 (max_combo v): 31.5% | P1 (random2 v): 22.5% | P2 (random2 v): 22.4% | P3 (random2 v): 23.6%
+[2025-09-12 12:09:08] P0 (max_combo v) | winrate:  31.5% | avg_return:    1.79 | wins:   7867 | starts:   6339
+[2025-09-12 12:09:08] P1 (random2 v) | winrate:  22.5% | avg_return:    1.46 | wins:   5632 | starts:   6154
+[2025-09-12 12:09:08] P2 (random2 v) | winrate:  22.4% | avg_return:    1.38 | wins:   5590 | starts:   6195
+[2025-09-12 12:09:08] P3 (random2 v) | winrate:  23.6% | avg_return:    1.38 | wins:   5911 | starts:   6312
+[2025-09-12 12:09:09] 
+[2025-09-12 12:09:09] Benchmark @eval_ep   30000
+[2025-09-12 12:09:09] Winrates: P0 (max_combo v): 31.4% | P1 (random2 v): 22.5% | P2 (random2 v): 22.4% | P3 (random2 v): 23.7%
+[2025-09-12 12:09:09] P0 (max_combo v) | winrate:  31.4% | avg_return:    1.79 | wins:   9419 | starts:   7576
+[2025-09-12 12:09:09] P1 (random2 v) | winrate:  22.5% | avg_return:    1.46 | wins:   6763 | starts:   7424
+[2025-09-12 12:09:09] P2 (random2 v) | winrate:  22.4% | avg_return:    1.38 | wins:   6711 | starts:   7387
+[2025-09-12 12:09:09] P3 (random2 v) | winrate:  23.7% | avg_return:    1.38 | wins:   7107 | starts:   7613
+[2025-09-12 12:09:09] Evaluation summary saved: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_56/csv/evaluation_summary.csv
+[2025-09-12 12:09:09] CSV_DIR: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_56/csv
+[2025-09-12 12:09:09] Plots directory: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_56/plots
+[2025-09-12 12:09:09] Table saved: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_56/csv/00_action_distribution.csv
+[2025-09-12 12:09:10] All plots saved.
+[2025-09-12 12:09:10] run.log: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_56/run.log

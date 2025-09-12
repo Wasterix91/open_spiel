@@ -18,10 +18,10 @@ from utils.reward_shaper import RewardShaper
 from collections import defaultdict
 
 CONFIG = {
-    "EPISODES":         20_000,
-    "BENCH_INTERVAL":   500,
+    "EPISODES":         100_000,
+    "BENCH_INTERVAL":   5_000,
     "BENCH_EPISODES":   2000,
-    "DECK_SIZE":        "64",
+    "DECK_SIZE":        "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
     # Pfadpräfix der Wertetabelle (ohne *_params.json/_index.bin/_data.bin)
@@ -35,48 +35,65 @@ CONFIG = {
     # Tabellengegner einfach als "v_table" referenzieren
     "OPPONENT_POOL": {
         "max_combo": 1.0,
-        "single_only": 1.0,
-        "random2": 1.0,
+        "single_only": 0.0,
+        "random2": 0.0,
         "v_table": 0.0
     },
 
-    # >0: Wechsel alle n Episoden; 0/negativ: nie wechseln
-    "SWITCH_INTERVAL": 100,
+        # >0: Wechsel alle n Episoden; 0/negativ: nie wechseln
+    "SWITCH_INTERVAL": 0,
 
-    # DQN
+    # DQN (kompatibel zu agents/dqn_agent.DQNConfig)
     "DQN": {
-        "learning_rate":     3e-4,
-        "batch_size":        128,
-        "gamma":             0.995,
-        "epsilon_start":     1.0,
-        "epsilon_end":       0.05,
-        "epsilon_decay":     0.9997,
-        "buffer_size":       200_000,
+        "learning_rate": 3e-4,
+        "batch_size": 128,
+        "gamma": 0.999,
+        "epsilon_start": 1.0,
+        "epsilon_end": 0.05,
+        "epsilon_decay_type": "multiplicative",   # "linear" | "multiplicative"
+        "epsilon_decay": 0.9997,      # für multiplicative
+        #"epsilon_decay_frames": 100_000,  # für linear
+        "buffer_size": 200_000,
         "target_update_freq": 5000,
-        "soft_target_tau":   0.0,
-        "max_grad_norm":     1.0,
-        "use_double_dqn":    True,
-        "loss_huber_delta":  1.0,
+        "soft_target_tau": 0.0,
+        "max_grad_norm": 1.0,
+        "use_double_dqn": True,
+        "loss_huber_delta": 1.0,
+        "optimizer": "adam"
     },
 
-    # Rewards
+
+    # ======= Rewards (neues System) =======
+    # STEP_MODE : "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
+    # FINAL_MODE: "none" | "env_only" | "rank_only" | "both"
     "REWARD": {
         "STEP_MODE": "none",
         "DELTA_WEIGHT": 0.0,
         "HAND_PENALTY_COEFF": 0.0,
+
         "FINAL_MODE": "env_only",
         "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
     },
 
-    # Features
+    # Feature-Toggles
     "FEATURES": {
-        "USE_HISTORY": False,
-        "SEAT_ONEHOT": False,
-        "PLOT_METRICS": False,
-        "SAVE_METRICS_TO_CSV": False,
+        "USE_HISTORY": True,     # Historie in Features einbetten?
+        "SEAT_ONEHOT": False,     # Sitz-One-Hot optional separat anhängen
+        "PLOT_METRICS": True,     # Trainingsplots erzeugen?
+        "SAVE_METRICS_TO_CSV": False,  # Trainingsmetriken persistent speichern?
+
+        # Steuert plot_train(); Sonder-Keys triggern In-Memory-Return-Plots.
+        "PLOT_KEYS": [
+            # DQN/Train (Beispiele):
+            "epsilon", "ep_length", "train_seconds",
+            # Sonderplots aus Memory (Episoden-Return):
+            "ep_return_raw", "ep_return_components",
+            "ep_return_env", "ep_return_shaping", "ep_return_final",
+            "ep_return_training",
+        ],
     },
 
-    # Benchmark-Gegner (nur Labels/Namen; "v_table" erlaubt)
+    # Benchmark-Gegner (für Plotter/Reports)
     "BENCH_OPPONENTS": ["single_only", "max_combo", "random2"],
 }
 

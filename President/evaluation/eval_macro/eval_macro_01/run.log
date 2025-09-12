@@ -1,0 +1,48 @@
+[2025-09-11 18:14:06] New Evaluation (macro_01)
+[2025-09-11 18:14:06] Deck_Size: 16
+[2025-09-11 18:14:06] Episodes: 40.000
+[2025-09-11 18:14:06] Path: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_01
+[2025-09-11 18:14:06] 
+[2025-09-11 18:14:06] Player Configuration:
+[2025-09-11 18:14:06] Idx | Name | Type      | Family | Version | Episode | from_pid
+[2025-09-11 18:14:06] --------------------------------------------------------------
+[2025-09-11 18:14:06] 0   | P0   | max_combo |        |         |         |         
+[2025-09-11 18:14:06] 1   | P1   | max_combo |        |         |         |         
+[2025-09-11 18:14:06] 2   | P2   | ppo       | k1a1   | 05      | 1000000 | 0       
+[2025-09-11 18:14:06] 3   | P3   | ppo       | k1a1   | 05      | 1000000 | 0       
+[2025-09-11 18:14:18] 
+[2025-09-11 18:14:18] Benchmark @eval_ep    5000
+[2025-09-11 18:14:18] Winrates: P0 (max_combo v): 23.4% | P1 (max_combo v): 22.9% | P2 (ppo v05. ep1.000.000): 27.0% | P3 (ppo v05. ep1.000.000): 26.7%
+[2025-09-11 18:14:31] 
+[2025-09-11 18:14:31] Benchmark @eval_ep   10000
+[2025-09-11 18:14:31] Winrates: P0 (max_combo v): 23.2% | P1 (max_combo v): 23.0% | P2 (ppo v05. ep1.000.000): 27.1% | P3 (ppo v05. ep1.000.000): 26.6%
+[2025-09-11 18:14:44] 
+[2025-09-11 18:14:44] Benchmark @eval_ep   15000
+[2025-09-11 18:14:44] Winrates: P0 (max_combo v): 23.2% | P1 (max_combo v): 22.7% | P2 (ppo v05. ep1.000.000): 27.4% | P3 (ppo v05. ep1.000.000): 26.6%
+[2025-09-11 18:14:56] 
+[2025-09-11 18:14:56] Benchmark @eval_ep   20000
+[2025-09-11 18:14:56] Winrates: P0 (max_combo v): 23.4% | P1 (max_combo v): 22.8% | P2 (ppo v05. ep1.000.000): 27.2% | P3 (ppo v05. ep1.000.000): 26.6%
+[2025-09-11 18:15:10] 
+[2025-09-11 18:15:10] Benchmark @eval_ep   25000
+[2025-09-11 18:15:10] Winrates: P0 (max_combo v): 23.4% | P1 (max_combo v): 22.9% | P2 (ppo v05. ep1.000.000): 27.2% | P3 (ppo v05. ep1.000.000): 26.6%
+[2025-09-11 18:15:23] 
+[2025-09-11 18:15:23] Benchmark @eval_ep   30000
+[2025-09-11 18:15:23] Winrates: P0 (max_combo v): 23.3% | P1 (max_combo v): 22.8% | P2 (ppo v05. ep1.000.000): 27.4% | P3 (ppo v05. ep1.000.000): 26.6%
+[2025-09-11 18:15:36] 
+[2025-09-11 18:15:36] Benchmark @eval_ep   35000
+[2025-09-11 18:15:36] Winrates: P0 (max_combo v): 23.2% | P1 (max_combo v): 22.7% | P2 (ppo v05. ep1.000.000): 27.6% | P3 (ppo v05. ep1.000.000): 26.6%
+[2025-09-11 18:15:49] 
+[2025-09-11 18:15:49] Benchmark @eval_ep   40000
+[2025-09-11 18:15:49] Winrates: P0 (max_combo v): 23.2% | P1 (max_combo v): 22.7% | P2 (ppo v05. ep1.000.000): 27.6% | P3 (ppo v05. ep1.000.000): 26.6%
+[2025-09-11 18:15:49] 
+[2025-09-11 18:15:49] Final Summary (N=40.000)
+[2025-09-11 18:15:49] P0 (max_combo v)        | winrate:  23.2% | avg_return:   1.43 | wins:   9266 | starts:   9930
+[2025-09-11 18:15:49] P1 (max_combo v)        | winrate:  22.7% | avg_return:   1.44 | wins:   9064 | starts:  10018
+[2025-09-11 18:15:49] P2 (ppo v05 ep1.000.000) | winrate:  27.6% | avg_return:   1.58 | wins:  11046 | starts:   9991
+[2025-09-11 18:15:49] P3 (ppo v05 ep1.000.000) | winrate:  26.6% | avg_return:   1.55 | wins:  10624 | starts:  10061
+[2025-09-11 18:15:49] Evaluation summary saved: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_01/csv/evaluation_summary.csv
+[2025-09-11 18:15:49] CSV_DIR: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_01/csv
+[2025-09-11 18:15:49] Plots directory: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_01/plots
+[2025-09-11 18:15:49] Table saved: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_01/csv/00_action_distribution.csv
+[2025-09-11 18:15:50] All plots saved.
+[2025-09-11 18:15:50] run.log: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_01/run.log

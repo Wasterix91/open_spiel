@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import collections
+import logging  # logging ergänzt
 
 import pyspiel
 import torch
@@ -20,73 +21,90 @@ from utils.deck import ranks_for_deck
 from utils.load_save_a1_ppo import load_checkpoint_ppo
 from utils.load_save_a2_dqn import load_checkpoint_dqn
 
+# Dedizierter Logger für die Evaluation
+logger = logging.getLogger("eval.macro")
+
+# Fallback-Console-Logging NUR wenn noch nichts konfiguriert ist
+if not logging.getLogger().handlers:
+    _console_fmt = logging.Formatter("[%(asctime)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+    _ch = logging.StreamHandler()
+    _ch.setLevel(logging.INFO)
+    _ch.setFormatter(_console_fmt)
+    logging.getLogger().addHandler(_ch)
+    logging.getLogger().setLevel(logging.INFO)
+
 # ===================== Konfiguration ===================== #
-NUM_EPISODES = 100_000
+NUM_EPISODES = 30_000
+EVAL_EPISODE = 5_000
 DECK = "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
 
 # Beispiel-Setup (anpassen):
-""" PLAYER_CONFIG = [
-    {"name": "P0", "type": "max_combo"},
-    {"name": "P1", "type": "max_combo"},
-    {"name": "P2", "type": "dqn", "family": "k1a2", "version": "38", "episode": 75_000, "from_pid": 0},
-    {"name": "P3", "type": "max_combo"},
-] """
 
-""" PLAYER_CONFIG = [
-    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "46", "episode": 40_000, "from_pid": 0},
-    {"name": "P1", "type": "v_table"},
-    {"name": "P2", "type": "dqn", "family": "k1a2", "version": "46", "episode": 40_000, "from_pid": 0},
-    {"name": "P3", "type": "v_table"},
-] """
-
+# 1v3 Gegen Max Combo
 PLAYER_CONFIG = [
-    {"name": "P0", "type": "v_table"},
+    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "04", "episode": 100_000, "from_pid": 0},
     {"name": "P1", "type": "max_combo"},
-    {"name": "P2", "type": "v_table"},
+    {"name": "P2", "type": "max_combo"},
     {"name": "P3", "type": "max_combo"},
-]
+] 
 
+# 1v3 Gegen V-Table
 """ PLAYER_CONFIG = [
-    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "46", "episode": 40_000, "from_pid": 0},
-    {"name": "P1", "type": "max_combo"},
-    {"name": "P1", "type": "max_combo"},
-    {"name": "P3", "type": "max_combo"},
+    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "04", "episode": 100_000, "from_pid": 0},
+    {"name": "P1", "type": "v_table"},
+    {"name": "P2", "type": "v_table"},
+    {"name": "P3", "type": "v_table"},
 ]  """
 
+# 1v3 Gegen Single Only
+
 """ PLAYER_CONFIG = [
-    {"name": "P0", "type": "ppo", "family": "k3a1", "version": "05", "episode": 20_000, "from_pid": 0},
-    {"name": "P1", "type": "ppo", "family": "k1a1", "version": "57", "episode": 200, "from_pid": 0},
-    {"name": "P2", "type": "ppo", "family": "k3a1", "version": "05", "episode": 20_000, "from_pid": 0},
-    {"name": "P3", "type": "ppo", "family": "k1a1", "version": "57", "episode": 200, "from_pid": 0},
-] """
-
-"""
-Weitere Beispiele:
-
-# Vier PPO (k2a1) gegeneinander (je eigener Seat-Checkpoint)
-PLAYER_CONFIG = [
-    {"name": "P0", "type": "ppo", "family": "k2a1", "version": "02", "episode": 20000, "from_pid": 0},
-    {"name": "P1", "type": "ppo", "family": "k2a1", "version": "02", "episode": 20000, "from_pid": 1},
-    {"name": "P2", "type": "ppo", "family": "k2a1", "version": "02", "episode": 20000, "from_pid": 2},
-    {"name": "P3", "type": "ppo", "family": "k2a1", "version": "02", "episode": 20000, "from_pid": 3},
-]
-
-# K4 (shared policy) – gleiche Policy auf allen Seats (wir laden p0 und setzen from_pid)
-PLAYER_CONFIG = [
-    {"name": "P0", "type": "ppo", "family": "k4a1", "version": "01", "episode": 12000, "from_pid": 0},
-    {"name": "P1", "type": "ppo", "family": "k4a1", "version": "01", "episode": 12000, "from_pid": 0},
-    {"name": "P2", "type": "ppo", "family": "k4a1", "version": "01", "episode": 12000, "from_pid": 0},
-    {"name": "P3", "type": "ppo", "family": "k4a1", "version": "01", "episode": 12000, "from_pid": 0},
-]
-
-# DQN vs Heuristiken
-PLAYER_CONFIG = [
-    {"name":"P0","type":"dqn","family":"k1a2","version":"03","episode":"150_000"},
-    {"name": "P1", "type": "max_combo"},
-    {"name": "P2", "type": "random2"},
+    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "04", "episode": 100_000, "from_pid": 0},
+    {"name": "P1", "type": "single_only"},
+    {"name": "P2", "type": "single_only"},
     {"name": "P3", "type": "single_only"},
-]
-"""
+]   """
+
+# 1v3 Gegen Random2
+""" PLAYER_CONFIG = [
+    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "04", "episode": 100_000, "from_pid": 0},
+    {"name": "P1", "type": "random2"},
+    {"name": "P2", "type": "random2"},
+    {"name": "P3", "type": "random2"},
+]   """
+
+# 2v2 über Kreuz vs Max Combo
+""" PLAYER_CONFIG = [ 
+    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "04", "episode": 100_000, "from_pid": 0},
+    {"name": "P1", "type": "max_combo"},
+    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "04", "episode": 100_000, "from_pid": 0},
+    {"name": "P3", "type": "max_combo"}
+]    """
+
+# 2v2 über Kreuz vs V-Table
+""" PLAYER_CONFIG = [ 
+    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "04", "episode": 100_000, "from_pid": 0},
+    {"name": "P1", "type": "v_table"},
+    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "04", "episode": 100_000, "from_pid": 0},
+    {"name": "P3", "type": "v_table"}
+]  """  
+
+# 2v2 über Kreuz vs Single Only
+""" PLAYER_CONFIG = [ 
+    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "04", "episode": 100_000, "from_pid": 0},
+    {"name": "P1", "type": "single_only"},
+    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "04", "episode": 100_000, "from_pid": 0},
+    {"name": "P3", "type": "single_only"}
+]   """ 
+
+# 2v2 über Kreuz vs Random2
+
+""" PLAYER_CONFIG = [ 
+    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "04", "episode": 100_000, "from_pid": 0},
+    {"name": "P1", "type": "random2"},
+    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "04", "episode": 100_000, "from_pid": 0},
+    {"name": "P3", "type": "random2"}
+]   """
 
 GENERATE_PLOTS = True
 EVAL_OUTPUT = True
@@ -118,6 +136,35 @@ BASE_OBS_DIM  = OBS_DIM - NUM_RANKS  # identisch zu BASE_INFO_DIM
 
 # Speicher-Root
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+def _log_player_config(cfg_list):
+    """Spielerkonfiguration tabellarisch loggen (Idx | Name | Type | Family | Version | Episode | from_pid)."""
+    headers = ["Idx", "Name", "Type", "Family", "Version", "Episode", "from_pid"]
+    rows = []
+    for i, c in enumerate(cfg_list):
+        rows.append([
+            i,
+            c.get("name", f"P{i}"),
+            c.get("type", ""),
+            c.get("family", ""),
+            c.get("version", ""),
+            str(c.get("episode", "")).replace("_", ""),
+            (c.get("from_pid", i) if c.get("type") in ("ppo", "dqn") else "")
+        ])
+
+    # Spaltenbreiten berechnen
+    cols = list(zip(*([headers] + rows))) if rows else [headers]
+    widths = [max(len(str(x)) for x in col) for col in cols]
+
+    def fmt_line(values):
+        return " | ".join(str(v).ljust(w) for v, w in zip(values, widths))
+
+    logger.info("Player Configuration:")
+    logger.info(fmt_line(headers))
+    logger.info("-" * (sum(widths) + 3 * (len(widths) - 1)))
+    for r in rows:
+        logger.info(fmt_line(r))
+
 
 # ===== Lesbare Labels (nur kosmetisch) =====
 def get_action_labels_readable(game, use_numbers=False):
@@ -383,6 +430,23 @@ def choose_policy_action(agent, state, player):
 
     raise ValueError("Unbekannter Agententyp bei choose_policy_action.")
 
+# ===================== Logging-Helfer ===================== #
+def _setup_eval_file_logging(run_dir: str):
+    """Schreibt eval-spezifische Logs in run.log des Makro-Ordners, ohne globale Config zu überschreiben."""
+    log_path = os.path.join(run_dir, "run.log")
+    fh = logging.FileHandler(log_path, encoding="utf-8")
+    fh.setLevel(logging.INFO)
+    fh.setFormatter(logging.Formatter("[%(asctime)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
+
+    # Doppelte Handler vermeiden
+    have_same = any(isinstance(h, logging.FileHandler) and getattr(h, 'baseFilename', None) == os.path.abspath(log_path)
+                    for h in logger.handlers)
+    if not have_same:
+        logger.addHandler(fh)
+    # Propagation beibehalten, damit Console-Handler (falls vorhanden) weiterhin ausgeben
+    logger.propagate = True
+    return log_path
+
 # ===================== Evaluation ===================== #
 def main():
     action_counts = defaultdict(lambda: defaultdict(int))       # alle Aktionen
@@ -391,16 +455,41 @@ def main():
 
     # --- Verzeichnisse jetzt (erst nach erfolgreichem Laden) anlegen ---
     EVAL_MACRO_ROOT = os.path.join(BASE_DIR, "eval_macro")
-    existing_macro_dirs = sorted([d for d in os.listdir(EVAL_MACRO_ROOT)] if os.path.isdir(EVAL_MACRO_ROOT) else [])
-    existing_macro_dirs = [d for d in existing_macro_dirs if d.startswith("eval_macro_")]
-    next_macro_num = int(existing_macro_dirs[-1].split("_")[-1]) + 1 if existing_macro_dirs else 1
 
-    MACRO_DIR = os.path.join(EVAL_MACRO_ROOT, f"eval_macro_{next_macro_num:02d}")
+    # nur echte Unterordner, die mit eval_macro_ beginnen
+    existing_macro_dirs = []
+    if os.path.isdir(EVAL_MACRO_ROOT):
+        for d in os.listdir(EVAL_MACRO_ROOT):
+            p = os.path.join(EVAL_MACRO_ROOT, d)
+            if os.path.isdir(p) and d.startswith("eval_macro_"):
+                existing_macro_dirs.append(d)
+
+    # Endnummern numerisch auswerten (nicht lexikografisch)
+    nums = []
+    for d in existing_macro_dirs:
+        tail = d.split("_")[-1]
+        if tail.isdigit():
+            nums.append(int(tail))
+
+    next_macro_num = (max(nums) + 1) if nums else 1
+
+    # 3-stelliges Padding verhindert Sortierprobleme über 99 hinaus
+    MACRO_DIR = os.path.join(EVAL_MACRO_ROOT, f"eval_macro_{next_macro_num:03d}")
     os.makedirs(MACRO_DIR, exist_ok=True)
     CSV_DIR = os.path.join(MACRO_DIR, "csv");  os.makedirs(CSV_DIR, exist_ok=True)
     PLOT_DIR = os.path.join(MACRO_DIR, "plots"); os.makedirs(PLOT_DIR, exist_ok=True)
 
-    # Konfiguration abspeichern (erst jetzt)
+
+    # File-Logging aktivieren + Header wie in den Trainingsläufen (EINMAL)
+    run_log_path = _setup_eval_file_logging(MACRO_DIR)
+    logger.info("New Evaluation (macro_%02d)", next_macro_num)
+    logger.info("Deck_Size: %s", GAME_PARAMS["deck_size"])
+    logger.info("Episodes: %s", f"{NUM_EPISODES:,}".replace(",", "."))
+    logger.info("Path: %s", MACRO_DIR)
+    logger.info("")  # optische Trennung
+    _log_player_config(PLAYER_CONFIG)
+
+    # Konfiguration abspeichern
     pd.DataFrame(PLAYER_CONFIG).to_csv(os.path.join(MACRO_DIR, "player_config.csv"), index=False)
 
     returns_total = np.zeros(NUM_PLAYERS, dtype=np.float64)
@@ -434,16 +523,40 @@ def main():
             returns_total[i] += ret
         win_counts[int(np.argmax(final_returns))] += 1
 
-        if episode % 1000 == 0 and EVAL_OUTPUT:
+        # Benchmark-Block alle 1000 Episoden
+        # Benchmark-Block alle 5000 Episoden (kumulativ 0..episode)
+        if episode % EVAL_EPISODE == 0 and EVAL_OUTPUT:
             current_winrates = [100 * win_counts[i] / episode for i in range(NUM_PLAYERS)]
-            def _fmt(i):
+
+            def _fmt_label(i):
                 cfg = PLAYER_CONFIG[i]
-                ver = cfg.get('version','')
+                ver = cfg.get('version', '')
                 epi = cfg.get('episode')
                 epi_s = f", ep{int(str(epi).replace('_','')):,}".replace(",", ".") if epi is not None else ""
                 return f"P{i} ({cfg['type']} v{ver}{epi_s})"
-            wr_str = " | ".join(f"{_fmt(i)}: {wr:.1f}%" for i, wr in enumerate(current_winrates))
-            print(f"✅ Episode {episode} abgeschlossen – Winrates: {wr_str}")
+
+            # kompakte Zeile wie bisher
+            wr_str = " | ".join(f"{_fmt_label(i)}: {wr:.1f}%" for i, wr in enumerate(current_winrates))
+            logger.info("")  # Leerzeile wie in Trainingslogs
+            logger.info("Benchmark @eval_ep %7d", episode)
+            logger.info("Winrates: %s", wr_str)
+
+            # NEU: Detailzeilen pro Spieler (kumulativ bis episode)
+            for i in range(NUM_PLAYERS):
+                cfg = PLAYER_CONFIG[i]
+                ver = cfg.get("version", "")
+                epi = cfg.get("episode")
+                epi_s = f" ep{int(str(epi).replace('_','')):,}".replace(",", ".") if epi is not None else ""
+                wr  = 100.0 * win_counts[i] / episode
+                avg = returns_total[i] / episode
+                wins_i   = int(win_counts[i])
+                starts_i = int(start_counts[i])
+                # Format analog zur Final Summary
+                logger.info(
+                    "P%d (%s v%s%s) | winrate: %5.1f%% | avg_return: %7.2f | wins: %6d | starts: %6d",
+                    i, cfg["type"], ver, epi_s, wr, avg, wins_i, starts_i
+                )
+
 
     # === Ergebnisse speichern ===
     summary_rows = []
@@ -461,11 +574,11 @@ def main():
             "player": cfg.get("name", f"P{i}"),
             "strategy": label,
             "type": cfg["type"],
-            "family": cfg.get("family",""),
+            "family": cfg.get("family", ""),
             "version": cfg.get("version", ""),
-            "episode": epi if epi is not None else "",
+            "episode": epi if epi is not None else "",         
+            "win_rate_percent": round(float(winrate), 1),
             "avg_return": round(float(avg_ret), 2),
-            "win_rate_percent": round(float(winrate), 2),
             "num_wins": int(win_counts[i]),
             "num_starts": int(start_counts[i]),
         }
@@ -474,12 +587,15 @@ def main():
     df = pd.DataFrame(summary_rows)
     summary_path = os.path.join(CSV_DIR, "evaluation_summary.csv")
     df.to_csv(summary_path, index=False)
-    print(f"📄 Evaluationsergebnisse gespeichert unter: {summary_path}")
+    logger.info("Evaluation summary saved: %s", summary_path)
+    logger.info("CSV_DIR: %s", CSV_DIR)
 
     if not GENERATE_PLOTS:
+        logger.info("Plots disabled.")
+        logger.info("run.log: %s", run_log_path)
         return
 
-    print(f"📁 Ergebnisse und Plots werden gespeichert in: {PLOT_DIR}")
+    logger.info("Plots directory: %s", PLOT_DIR)
     all_labels = get_action_labels_readable(game, use_numbers=READABLE_USE_NUMBERS) if USE_READABLE_LABELS \
                  else [f"Action {i}" for i in range(NUM_ACTIONS)]
 
@@ -495,7 +611,7 @@ def main():
 
     table_path = os.path.join(CSV_DIR, "00_action_distribution.csv")
     action_table.to_csv(table_path)
-    print(f"📄 Tabelle gespeichert unter: {table_path}")
+    logger.info("Table saved: %s", table_path)
 
     def legend_inside(ax, loc="upper right", font_size=10):
         return ax.legend(loc=loc, frameon=True, framealpha=0.9, borderaxespad=0.5, fontsize=font_size)
@@ -704,7 +820,9 @@ def main():
         filename = f"{combo_plot_index[combo]}_combo_{combo.lower().replace('-','_')}_detailed.jpg"
         plt.savefig(os.path.join(PLOT_DIR, filename))
 
-    print("✅ Alle Plots erfolgreich gespeichert!")
+    logger.info("All plots saved.")
+    logger.info("run.log: %s", run_log_path)
+
 
 if __name__ == "__main__":
     main()

@@ -21,10 +21,10 @@ from utils.strategies import STRATS
 from utils.reward_shaper import RewardShaper
 
 CONFIG = {
-    "EPISODES":         5000,
-    "BENCH_INTERVAL":   1000,
+    "EPISODES":         100_000,
+    "BENCH_INTERVAL":   5_000,
     "BENCH_EPISODES":   2000,
-    "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+    "DECK_SIZE":        "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
     # Training-Gegner (Heuristiken)
@@ -32,37 +32,38 @@ CONFIG = {
 
     # DQN (kompatibel zu agents/dqn_agent.DQNConfig)
     "DQN": {
-        "learning_rate": 1e-3,
-        "batch_size": 32,
-        "gamma": 0.99,
+        "learning_rate": 3e-4,
+        "batch_size": 128,
+        "gamma": 0.999,
         "epsilon_start": 1.0,
-        "epsilon_end": 0.1,
-        "epsilon_decay_type": "linear",   # "linear" | "multiplicative"
-        "epsilon_decay_frames": 1_000_000,
-        "buffer_size": 1_000_000,
-        "target_update_freq": 10_000,
+        "epsilon_end": 0.05,
+        "epsilon_decay_type": "multiplicative",   # "linear" | "multiplicative"
+        "epsilon_decay_frames": 0.9997,
+        "buffer_size": 200_000,
+        "target_update_freq": 5000,
         "soft_target_tau": 0.0,
-        "max_grad_norm": 0.0,
-        "use_double_dqn": False,
+        "max_grad_norm": 1.0,
+        "use_double_dqn": True,
         "loss_huber_delta": 1.0,
         "optimizer": "adam"
     },
+
 
     # ======= Rewards (neues System) =======
     # STEP_MODE : "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
     # FINAL_MODE: "none" | "env_only" | "rank_only" | "both"
     "REWARD": {
-        "STEP_MODE": "delta_weight_only",
+        "STEP_MODE": "none",
         "DELTA_WEIGHT": 0.5,
         "HAND_PENALTY_COEFF": 0.0,
 
-        "FINAL_MODE": "both",
+        "FINAL_MODE": "env_only",
         "BONUS_WIN": 10.0, "BONUS_2ND": 5.0, "BONUS_3RD": 2.0, "BONUS_LAST": -5.0,
     },
 
     # Feature-Toggles
     "FEATURES": {
-        "USE_HISTORY": False,     # Historie in Features einbetten?
+        "USE_HISTORY": True,     # Historie in Features einbetten?
         "SEAT_ONEHOT": False,     # Sitz-One-Hot optional separat anhängen
         "PLOT_METRICS": True,     # Trainingsplots erzeugen?
         "SAVE_METRICS_TO_CSV": False,  # Trainingsmetriken persistent speichern?

@@ -1,0 +1,60 @@
+[2025-09-12 13:40:28] New Evaluation (macro_63)
+[2025-09-12 13:40:28] Deck_Size: 16
+[2025-09-12 13:40:28] Episodes: 30.000
+[2025-09-12 13:40:28] Path: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_63
+[2025-09-12 13:40:28] 
+[2025-09-12 13:40:28] Player Configuration:
+[2025-09-12 13:40:28] Idx | Name | Type        | Family | Version | Episode | from_pid
+[2025-09-12 13:40:28] ----------------------------------------------------------------
+[2025-09-12 13:40:28] 0   | P0   | ppo         | k1a1   | 04      | 100000  | 0       
+[2025-09-12 13:40:28] 1   | P1   | single_only |        |         |         |         
+[2025-09-12 13:40:28] 2   | P2   | single_only |        |         |         |         
+[2025-09-12 13:40:28] 3   | P3   | single_only |        |         |         |         
+[2025-09-12 13:40:34] 
+[2025-09-12 13:40:34] Benchmark @eval_ep    5000
+[2025-09-12 13:40:34] Winrates: P0 (ppo v04. ep100.000): 55.1% | P1 (single_only v): 15.4% | P2 (single_only v): 14.8% | P3 (single_only v): 14.8%
+[2025-09-12 13:40:34] P0 (ppo v04 ep100.000) | winrate:  55.1% | avg_return:    2.12 | wins:   2753 | starts:   1245
+[2025-09-12 13:40:34] P1 (single_only v) | winrate:  15.4% | avg_return:    1.28 | wins:    768 | starts:   1194
+[2025-09-12 13:40:34] P2 (single_only v) | winrate:  14.8% | avg_return:    1.29 | wins:    741 | starts:   1250
+[2025-09-12 13:40:34] P3 (single_only v) | winrate:  14.8% | avg_return:    1.31 | wins:    738 | starts:   1311
+[2025-09-12 13:40:41] 
+[2025-09-12 13:40:41] Benchmark @eval_ep   10000
+[2025-09-12 13:40:41] Winrates: P0 (ppo v04. ep100.000): 55.3% | P1 (single_only v): 14.7% | P2 (single_only v): 14.8% | P3 (single_only v): 15.2%
+[2025-09-12 13:40:41] P0 (ppo v04 ep100.000) | winrate:  55.3% | avg_return:    2.13 | wins:   5534 | starts:   2493
+[2025-09-12 13:40:41] P1 (single_only v) | winrate:  14.7% | avg_return:    1.27 | wins:   1473 | starts:   2465
+[2025-09-12 13:40:41] P2 (single_only v) | winrate:  14.8% | avg_return:    1.28 | wins:   1477 | starts:   2412
+[2025-09-12 13:40:41] P3 (single_only v) | winrate:  15.2% | avg_return:    1.31 | wins:   1516 | starts:   2630
+[2025-09-12 13:40:48] 
+[2025-09-12 13:40:48] Benchmark @eval_ep   15000
+[2025-09-12 13:40:48] Winrates: P0 (ppo v04. ep100.000): 55.4% | P1 (single_only v): 14.6% | P2 (single_only v): 14.9% | P3 (single_only v): 15.1%
+[2025-09-12 13:40:48] P0 (ppo v04 ep100.000) | winrate:  55.4% | avg_return:    2.14 | wins:   8314 | starts:   3756
+[2025-09-12 13:40:48] P1 (single_only v) | winrate:  14.6% | avg_return:    1.27 | wins:   2184 | starts:   3697
+[2025-09-12 13:40:48] P2 (single_only v) | winrate:  14.9% | avg_return:    1.28 | wins:   2235 | starts:   3671
+[2025-09-12 13:40:48] P3 (single_only v) | winrate:  15.1% | avg_return:    1.31 | wins:   2267 | starts:   3876
+[2025-09-12 13:40:55] 
+[2025-09-12 13:40:55] Benchmark @eval_ep   20000
+[2025-09-12 13:40:55] Winrates: P0 (ppo v04. ep100.000): 55.5% | P1 (single_only v): 14.5% | P2 (single_only v): 14.8% | P3 (single_only v): 15.2%
+[2025-09-12 13:40:55] P0 (ppo v04 ep100.000) | winrate:  55.5% | avg_return:    2.14 | wins:  11102 | starts:   5009
+[2025-09-12 13:40:55] P1 (single_only v) | winrate:  14.5% | avg_return:    1.27 | wins:   2891 | starts:   4947
+[2025-09-12 13:40:55] P2 (single_only v) | winrate:  14.8% | avg_return:    1.27 | wins:   2958 | starts:   4882
+[2025-09-12 13:40:55] P3 (single_only v) | winrate:  15.2% | avg_return:    1.32 | wins:   3049 | starts:   5162
+[2025-09-12 13:41:02] 
+[2025-09-12 13:41:02] Benchmark @eval_ep   25000
+[2025-09-12 13:41:02] Winrates: P0 (ppo v04. ep100.000): 55.7% | P1 (single_only v): 14.4% | P2 (single_only v): 14.7% | P3 (single_only v): 15.2%
+[2025-09-12 13:41:02] P0 (ppo v04 ep100.000) | winrate:  55.7% | avg_return:    2.14 | wins:  13936 | starts:   6283
+[2025-09-12 13:41:02] P1 (single_only v) | winrate:  14.4% | avg_return:    1.27 | wins:   3600 | starts:   6194
+[2025-09-12 13:41:02] P2 (single_only v) | winrate:  14.7% | avg_return:    1.27 | wins:   3668 | starts:   6088
+[2025-09-12 13:41:02] P3 (single_only v) | winrate:  15.2% | avg_return:    1.32 | wins:   3796 | starts:   6435
+[2025-09-12 13:41:08] 
+[2025-09-12 13:41:08] Benchmark @eval_ep   30000
+[2025-09-12 13:41:08] Winrates: P0 (ppo v04. ep100.000): 55.6% | P1 (single_only v): 14.4% | P2 (single_only v): 14.8% | P3 (single_only v): 15.2%
+[2025-09-12 13:41:08] P0 (ppo v04 ep100.000) | winrate:  55.6% | avg_return:    2.14 | wins:  16687 | starts:   7542
+[2025-09-12 13:41:08] P1 (single_only v) | winrate:  14.4% | avg_return:    1.27 | wins:   4310 | starts:   7425
+[2025-09-12 13:41:08] P2 (single_only v) | winrate:  14.8% | avg_return:    1.27 | wins:   4438 | starts:   7397
+[2025-09-12 13:41:08] P3 (single_only v) | winrate:  15.2% | avg_return:    1.31 | wins:   4565 | starts:   7636
+[2025-09-12 13:41:08] Evaluation summary saved: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_63/csv/evaluation_summary.csv
+[2025-09-12 13:41:08] CSV_DIR: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_63/csv
+[2025-09-12 13:41:08] Plots directory: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_63/plots
+[2025-09-12 13:41:08] Table saved: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_63/csv/00_action_distribution.csv
+[2025-09-12 13:41:10] All plots saved.
+[2025-09-12 13:41:10] run.log: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_63/run.log

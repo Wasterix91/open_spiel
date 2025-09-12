@@ -1,0 +1,18 @@
+[2025-09-12 10:23:36] New Evaluation (macro_32)
+[2025-09-12 10:23:36] Deck_Size: 16
+[2025-09-12 10:23:36] Episodes: 10.000
+[2025-09-12 10:23:36] Path: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_32
+[2025-09-12 10:23:36] 
+[2025-09-12 10:23:36] Player Configuration:
+[2025-09-12 10:23:36] Idx | Name | Type      | Family | Version | Episode | from_pid
+[2025-09-12 10:23:36] --------------------------------------------------------------
+[2025-09-12 10:23:36] 0   | P0   | max_combo |        |         |         |         
+[2025-09-12 10:23:36] 1   | P1   | v_table   |        |         |         |         
+[2025-09-12 10:23:36] 2   | P2   | max_combo |        |         |         |         
+[2025-09-12 10:23:36] 3   | P3   | max_combo |        |         |         |         
+[2025-09-12 10:23:37] Evaluation summary saved: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_32/csv/evaluation_summary.csv
+[2025-09-12 10:23:37] CSV_DIR: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_32/csv
+[2025-09-12 10:23:37] Plots directory: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_32/plots
+[2025-09-12 10:23:37] Table saved: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_32/csv/00_action_distribution.csv
+[2025-09-12 10:23:38] All plots saved.
+[2025-09-12 10:23:38] run.log: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_32/run.log
