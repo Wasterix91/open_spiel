@@ -1,17 +1,13 @@
 # -*- coding: utf-8 -*-
-# k1a2.py — K1: Single-Agent DQN vs Heuristiken
-# Training: P0→P0-Transitions
-#
-# - benchmark_curves.csv wird immer persistiert.
-# - training_metrics.csv nur, wenn SAVE_METRICS_TO_CSV=True.
-# - Episoden-Return + Komponenten wie in k1a1, mit PLOT_KEYS gesteuert.
+# President/training/k1a2.py — K1: Single-Agent DQN vs Heuristiken/Population (P0→P0)
 
-import os, time, datetime
+import os, time, datetime, re, csv
 import numpy as np, torch
 import pyspiel
 from open_spiel.python import rl_environment
 
 from agents.dqn_agent import DQNAgent, DQNConfig
+from agents import v_table_agent
 from utils.fit_tensor import FeatureConfig, augment_observation, expected_feature_len
 from utils.deck import ranks_for_deck
 from utils.plotter import MetricsPlotter
@@ -19,6 +15,7 @@ from utils.load_save_common import find_next_version, prepare_run_dirs, save_con
 from utils.benchmark import run_benchmark
 from utils.strategies import STRATS
 from utils.reward_shaper import RewardShaper
+from collections import defaultdict
 
 CONFIG = {
     "EPISODES":         100_000,
@@ -27,8 +24,24 @@ CONFIG = {
     "DECK_SIZE":        "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
-    # Training-Gegner (Heuristiken)
-    "OPPONENTS":        ["max_combo", "max_combo", "max_combo"],
+    # Pfadpräfix der Wertetabelle (ohne *_params.json/_index.bin/_data.bin)
+    "V_TABLE_PATH": "agents/tables/v_table_4_4_4",
+
+    # --- Gegner ---
+    # Fixed (Fallback, wenn POOL leer oder alle Gewichte 0)
+    "OPPONENTS": ["max_combo", "single_only", "random2"],
+
+    # Population: aktiviert, sobald irgendein Gewicht > 0 ist
+    # Tabellengegner einfach als "v_table" referenzieren
+    "OPPONENT_POOL": {
+        "max_combo": 1.0,
+        "single_only": 0.0,
+        "random2": 0.0,
+        "v_table": 0.0
+    },
+
+        # >0: Wechsel alle n Episoden; 0/negativ: nie wechseln
+    "SWITCH_INTERVAL": 0,
 
     # DQN (kompatibel zu agents/dqn_agent.DQNConfig)
     "DQN": {
@@ -38,7 +51,8 @@ CONFIG = {
         "epsilon_start": 1.0,
         "epsilon_end": 0.05,
         "epsilon_decay_type": "multiplicative",   # "linear" | "multiplicative"
-        "epsilon_decay_frames": 0.9997,
+        "epsilon_decay": 0.9997,      # für multiplicative
+        #"epsilon_decay_frames": 100_000,  # für linear
         "buffer_size": 200_000,
         "target_update_freq": 5000,
         "soft_target_tau": 0.0,
@@ -54,11 +68,11 @@ CONFIG = {
     # FINAL_MODE: "none" | "env_only" | "rank_only" | "both"
     "REWARD": {
         "STEP_MODE": "none",
-        "DELTA_WEIGHT": 0.5,
+        "DELTA_WEIGHT": 0.0,
         "HAND_PENALTY_COEFF": 0.0,
 
         "FINAL_MODE": "env_only",
-        "BONUS_WIN": 10.0, "BONUS_2ND": 5.0, "BONUS_3RD": 2.0, "BONUS_LAST": -5.0,
+        "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
     },
 
     # Feature-Toggles
@@ -67,6 +81,7 @@ CONFIG = {
         "SEAT_ONEHOT": False,     # Sitz-One-Hot optional separat anhängen
         "PLOT_METRICS": True,     # Trainingsplots erzeugen?
         "SAVE_METRICS_TO_CSV": False,  # Trainingsmetriken persistent speichern?
+        "RET_SMOOTH_WINDOW": 150,
 
         # Steuert plot_train(); Sonder-Keys triggern In-Memory-Return-Plots.
         "PLOT_KEYS": [
@@ -83,6 +98,7 @@ CONFIG = {
     "BENCH_OPPONENTS": ["single_only", "max_combo", "random2"],
 }
 
+# ------------------------------ Helfer ------------------------------
 def _with_seat_onehot(vec: np.ndarray, p: int, num_players: int, enabled: bool) -> np.ndarray:
     if not enabled:
         return vec
@@ -90,6 +106,45 @@ def _with_seat_onehot(vec: np.ndarray, p: int, num_players: int, enabled: bool) 
     seat_oh[p] = 1.0
     return np.concatenate([vec, seat_oh], axis=0)
 
+def resolve_opponent(name: str):
+    """callable(state)->action. 'v_table' lädt die Wertetabelle via CONFIG['V_TABLE_PATH']."""
+    if name == "v_table":
+        path = CONFIG.get("V_TABLE_PATH")
+        if not path or not isinstance(path, str):
+            raise ValueError("CONFIG['V_TABLE_PATH'] ist nicht gesetzt oder ungültig.")
+        return v_table_agent.ValueTableAgent(path)
+    if name not in STRATS:
+        raise KeyError(f"Unbekannter Gegner-Name: {name}")
+    return STRATS[name]
+
+def sample_lineup_from_pool(pool_dict, n_seats=3, rng=np.random):
+    """Gewichtetes Sampling pro Seat (mit Zurücklegen). Erwartet >=1 Gewicht > 0."""
+    items = [(k, float(w)) for k, w in pool_dict.items() if float(w) > 0.0]
+    if not items:
+        raise ValueError("OPPONENT_POOL hat keine positiven Gewichte.")
+    names, weights = zip(*items)
+    probs = np.asarray(weights, dtype=np.float64); probs /= probs.sum()
+    chooser = getattr(rng, "choice", np.random.choice)
+    return [chooser(names, p=probs) for _ in range(n_seats)]
+
+def _safe_name(name: str) -> str:
+    return re.sub(r'[^A-Za-z0-9._-]+', '_', str(name))
+
+def _safe_token_for_col(token: str) -> str:
+    return token.replace(":", "_").replace("/", "_").replace("\\", "_")
+
+def _save_opponent_usage_csv(path_csv: str, counts: dict, total_seat_samples: int):
+    os.makedirs(os.path.dirname(path_csv), exist_ok=True)
+    rows = []
+    for token, c in sorted(counts.items(), key=lambda x: (-x[1], x[0])):
+        pct = (100.0 * c / total_seat_samples) if total_seat_samples > 0 else 0.0
+        rows.append({"token": token, "count": int(c), "percent": f"{pct:.4f}"})
+    with open(path_csv, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=["token", "count", "percent"])
+        w.writeheader()
+        w.writerows(rows)
+
+# ------------------------------ Training ------------------------------
 def main():
     np.random.seed(CONFIG["SEED"]); torch.manual_seed(CONFIG["SEED"])
     ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -100,19 +155,19 @@ def main():
     version = find_next_version(family_dir, prefix="model")
     paths = prepare_run_dirs(MODELS_ROOT, family, version, prefix="model")
 
-    # WICHTIG:
-    # - save_csv=True  -> Benchmark-CSV wird immer geschrieben.
-    # - Training-CSV nur via add_train() (rufen wir nur bei SAVE_METRICS_TO_CSV=True).
+    # Plotter (nur Labels weitergeben)
+    bench_tokens = list(CONFIG["BENCH_OPPONENTS"])
+    bench_labels = [_safe_name(n) for n in bench_tokens]
     plotter = MetricsPlotter(
         out_dir=paths["plots_dir"],
-        benchmark_opponents=list(CONFIG["BENCH_OPPONENTS"]),
+        benchmark_opponents=bench_labels,
         benchmark_csv="benchmark_curves.csv",
         train_csv="training_metrics.csv",
-        save_csv=CONFIG["FEATURES"]["SAVE_METRICS_TO_CSV"],                  # <— Benchmark-CSV immer
+        save_csv=CONFIG["FEATURES"]["SAVE_METRICS_TO_CSV"],
         verbosity=1,
         smooth_window=CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 150),
     )
-    plotter.log("New Training (k1a2): DQN Single-Agent vs Heuristiken (P0→P0)")
+    plotter.log("New Training (k1a2): DQN Single-Agent vs Heuristiken/Population (P0→P0)")
     plotter.log(f"Deck_Size: {CONFIG['DECK_SIZE']}")
     plotter.log(f"Episodes: {CONFIG['EPISODES']}")
     plotter.log(f"Path: {paths['run_dir']}")
@@ -126,7 +181,7 @@ def main():
     A = env.action_spec()["num_actions"]
     num_players = game.num_players()
 
-    # ---- Features (augment_observation ohne Seat-1hot; Seat-1hot extern anhängen) ----
+    # ---- Features ----
     deck_int = int(CONFIG["DECK_SIZE"])
     num_ranks = ranks_for_deck(deck_int)
     feat_cfg = FeatureConfig(
@@ -135,31 +190,55 @@ def main():
         add_seat_onehot=False,
         include_history=CONFIG["FEATURES"]["USE_HISTORY"]
     )
-
-    # State-Dimension (kompatibel zum Agenten):
     seat_id_dim = num_players if CONFIG["FEATURES"]["SEAT_ONEHOT"] else 0
     state_size = expected_feature_len(feat_cfg) + seat_id_dim
 
-    # ---- Agent, Gegner, Reward-Shaper ----
+    # ---- Agent, Reward-Shaper ----
     agent = DQNAgent(state_size, A, DQNConfig(**CONFIG["DQN"]))
-    opponents = [STRATS[name] for name in CONFIG["OPPONENTS"]]
     shaper = RewardShaper(CONFIG["REWARD"])
 
-    # ---- Config/Meta speichern ----
-    save_config_csv({
+    # ---- Gegner-Setup (Fixed vs Population) ----
+    pool = CONFIG.get("OPPONENT_POOL", {}) or {}
+    use_population = any(float(w) > 0.0 for w in pool.values())
+    val = int(CONFIG.get("SWITCH_INTERVAL", 1))
+    switch_interval = val if (use_population and val > 0) else None
+    rng = np.random.default_rng(CONFIG["SEED"])
+
+    if use_population:
+        opponents_names_current = sample_lineup_from_pool(pool, n_seats=3, rng=rng)
+        opponents = [resolve_opponent(n) for n in opponents_names_current]
+        plotter.log(f"[Population] Initiales Lineup: {[str(n) for n in opponents_names_current]}")
+    else:
+        fixed = CONFIG.get("OPPONENTS", ["max_combo"] * 3)
+        opponents_names_current = list(fixed)
+        opponents = [resolve_opponent(n) for n in opponents_names_current]
+
+    # ---- Zähler für realisierte Gegner ----
+    realized_counts = defaultdict(int)
+    seat_samples_total = 0
+
+    # ---- Config/Meta speichern (inkl. Pool-Spalten) ----
+    opp_pool_weights = {}
+    if use_population:
+        for k, v in pool.items():
+            opp_pool_weights[f"pool_w_{_safe_token_for_col(k)}"] = float(v)
+    else:
+        for i, name in enumerate(opponents_names_current, start=1):
+            opp_pool_weights[f"fixed_seat{i}"] = name
+
+    cfg_row = {
         "script": family, "version": version,
         "deck_size": CONFIG["DECK_SIZE"], "num_ranks": num_ranks,
         "use_history": CONFIG["FEATURES"]["USE_HISTORY"],
-
         "agent_type": "DQN", "num_episodes": CONFIG["EPISODES"],
         "bench_interval": CONFIG["BENCH_INTERVAL"], "bench_episodes": CONFIG["BENCH_EPISODES"],
         "observation_dim": state_size, "num_actions": A,
         "seat_onehot": CONFIG["FEATURES"]["SEAT_ONEHOT"],
-        "ret_smooth_window": CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 150),
-        "opponents": ",".join(CONFIG["OPPONENTS"]),
+        "use_population": use_population,
+        "opponents_switch_interval": CONFIG.get("SWITCH_INTERVAL", None),
+        "v_table_path": CONFIG.get("V_TABLE_PATH", ""),
         "models_dir": paths["weights_dir"], "plots_dir": paths["plots_dir"],
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-
         # Reward-Setup (neues System)
         "step_mode": getattr(shaper, "step_mode", "n/a"),
         "delta_weight": getattr(shaper, "dw", "n/a"),
@@ -169,13 +248,13 @@ def main():
         "bonus_2nd":   CONFIG["REWARD"]["BONUS_2ND"],
         "bonus_3rd":   CONFIG["REWARD"]["BONUS_3RD"],
         "bonus_last":  CONFIG["REWARD"]["BONUS_LAST"],
-    }, paths["config_csv"])
+        **opp_pool_weights,
+    }
+    save_config_csv(cfg_row, paths["config_csv"])
     save_run_meta({"family": family, "version": version, "algo": "dqn", "deck": CONFIG["DECK_SIZE"]}, paths["run_meta_json"])
 
     t0 = time.perf_counter()
     BINT, BEPS = CONFIG["BENCH_INTERVAL"], CONFIG["BENCH_EPISODES"]
-
-    # Sammeln nur, wenn wir es brauchen (CSV oder Plot)
     collect_metrics = (
         CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False)
         or CONFIG["FEATURES"].get("PLOT_METRICS", False)
@@ -188,33 +267,48 @@ def main():
         ep_final_bonus = 0.0
         train_seconds_accum = 0.0
 
+        # Timing-Teilmessungen
+        eval_seconds = 0.0
+        plot_seconds = 0.0
+        save_seconds = 0.0
+
+        # Gegnerwechsel (nur bei Population & Intervall>0)
+        if use_population and (switch_interval is not None) and ((ep - 1) % switch_interval == 0):
+            opponents_names_current = sample_lineup_from_pool(pool, n_seats=3, rng=rng)
+            opponents = [resolve_opponent(n) for n in opponents_names_current]
+            plotter.log(f"[Population] Episode {ep}: Lineup -> {[str(n) for n in opponents_names_current]}")
+
+        # --- realisierte Gegner dieser Episode zählen ---
+        for name in opponents_names_current:
+            realized_counts[name] += 1
+        seat_samples_total += len(opponents_names_current)  # i.d.R. 3
+
         ts = env.reset()
         last_p0_idx = None
 
         while not ts.last():
 
-            # 1) Vorspulen, bis P0 am Zug ist (Gegner spielen Heuristiken)
+            # 1) Vorspulen, bis P0 am Zug ist
             while not ts.last() and ts.observations["current_player"] != 0:
                 pid = ts.observations["current_player"]
-                a_opp = int(opponents[pid-1](env._state))  # Heuristiken erwarten pyspiel.State
+                a_opp = int(opponents[pid-1](env._state))
                 ts = env.step([a_opp])
                 ep_len += 1
 
             if ts.last():
-                break  # Episode vorbei
+                break
 
-            # 2) P0-Zug: s, a, r_step (Reward nur für diesen P0-Schritt)
+            # 2) P0-Zug
             legal0 = ts.observations["legal_actions"][0]
             s_base = np.array(env._state.observation_tensor(0), dtype=np.float32)
             s = augment_observation(s_base, player_id=0, cfg=feat_cfg)
             s = _with_seat_onehot(s, p=0, num_players=num_players, enabled=CONFIG["FEATURES"]["SEAT_ONEHOT"])
 
-            # Shaping-Step (falls aktiv)
             if hasattr(shaper, "step_active") and shaper.step_active():
                 hand_before = shaper.hand_size(ts, 0, deck_int)
 
             a0 = int(agent.select_action(s, legal0))
-            ts = env.step([a0])  # führt P0-Zug aus
+            ts = env.step([a0])
             ep_len += 1
 
             if hasattr(shaper, "step_active") and shaper.step_active():
@@ -231,10 +325,10 @@ def main():
                 ts = env.step([a_opp])
                 ep_len += 1
 
-            # 4) s' und next_legals für P0 definieren
+            # 4) s' / next_legals
             if ts.last():
                 s_next = s
-                next_legals = list(range(A))  # nie None im Buffer
+                next_legals = list(range(A))
                 done = True
             else:
                 next_legals = ts.observations["legal_actions"][0]
@@ -243,22 +337,19 @@ def main():
                 s_next = _with_seat_onehot(s_next, p=0, num_players=num_players, enabled=CONFIG["FEATURES"]["SEAT_ONEHOT"])
                 done = False
 
-            # 5) Transition speichern & lernen
+            # 5) Store & train step
             agent.buffer.add(s, a0, float(r_step), s_next, done, next_legal_actions=next_legals)
             last_p0_idx = len(agent.buffer.buffer) - 1
-
             tts = time.perf_counter()
             agent.train_step()
             train_seconds_accum += (time.perf_counter() - tts)
 
-        # 6) Terminal: ENV-Reward + Finalbonus auf letzte P0-Transition addieren
+        # 6) Terminal-Reward/Bonus auf letzte Transition
         ep_env_score = float(ts.rewards[0])
         ep_final_bonus = float(shaper.final_bonus(ts.rewards, 0)) if hasattr(shaper, "final_bonus") else 0.0
-
         if last_p0_idx is not None:
             add_env = ep_env_score if (hasattr(shaper, "include_env_reward") and shaper.include_env_reward()) else 0.0
             bonus = add_env + ep_final_bonus
-
             if abs(bonus) > 1e-8:
                 buf = agent.buffer
                 old = buf.buffer[last_p0_idx]
@@ -266,7 +357,7 @@ def main():
                                      old.next_state, old.done, old.next_legal_mask)
                 buf.buffer[last_p0_idx] = new
 
-        # ---- Train-Metriken
+        # Train-Metriken
         metrics = {
             "ep_length": ep_len,
             "train_seconds": train_seconds_accum,
@@ -276,14 +367,16 @@ def main():
             "epsilon": float(getattr(agent, "epsilon", np.nan)),
         }
 
-        # --- Trainingsäquivalenter Return exakt wie in k1a1 ---
+        # --- Trainingsäquivalenter Return exakt wie in k1a1/k1a2 ---
         env_part     = ep_env_score if (hasattr(shaper, "include_env_reward") and shaper.include_env_reward()) else 0.0
         shaping_part = ep_shaping_return if (hasattr(shaper, "step_active") and shaper.step_active()) else 0.0
         ep_return_training = shaping_part + env_part + ep_final_bonus
         metrics["ep_return_training"] = ep_return_training
+
+        # Sonderplot: Episoden-Return + Komponenten (mit Gating)
         plotter.add_ep_returns(
             global_episode=ep,
-            ep_returns=[ep_return_training],  # identisch zum Trainingssignal
+            ep_returns=[ep_return_training],
             components={
                 "env_score":   [env_part],      # 0.0, wenn nicht aktiv
                 "shaping":     [shaping_part],  # 0.0, wenn nicht aktiv
@@ -291,42 +384,39 @@ def main():
             },
         )
 
-        # Trainingsmetriken speichern/merken
+        # Trainingsmetriken speichern/merken (Parität zu k1a1/k1a2)
         if collect_metrics:
             if CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False):
-                # -> persistente CSV
                 plotter.add_train(ep, metrics)
             else:
-                # -> nur In-Memory für Plots
                 plotter.train_rows.append({"episode": int(ep), **metrics})
                 if plotter.train_keys is None:
                     plotter.train_keys = ["episode"] + list(metrics.keys())
 
-        # ---- Benchmark + Save in Intervallen
-        eval_seconds = plot_seconds = save_seconds = 0.0
+        # ---- Benchmark + Save in Intervallen ----
         if ep % BINT == 0:
             evs = time.perf_counter()
-            per_opponent = run_benchmark(
-                game=game, agent=agent, opponents_dict=STRATS,
-                opponent_names=CONFIG["BENCH_OPPONENTS"],
+            bench_map = dict(STRATS)
+            for tok in bench_tokens:
+                if tok == "v_table":
+                    bench_map[tok] = resolve_opponent(tok)
+
+            per_opponent_tokens = run_benchmark(
+                game=game, agent=agent, opponents_dict=bench_map,
+                opponent_names=bench_tokens,
                 episodes=BEPS, feat_cfg=feat_cfg, num_actions=A
             )
-            plotter.log_bench_summary(ep, per_opponent)
             eval_seconds = time.perf_counter() - evs
 
             ps = time.perf_counter()
+            per_opponent = {_safe_name(k): v for k, v in per_opponent_tokens.items()}
+            plotter.log_bench_summary(ep, per_opponent)
             plotter.add_benchmark(ep, per_opponent)
             plotter.plot_benchmark_rewards()
             plotter.plot_places_latest()
-
-            # Einheitliche Titel
             title_multi = f"Lernkurve - {family.upper()} vs feste Heuristiken"
-            plotter.plot_benchmark(
-                filename_prefix="lernkurve",
-                with_macro=True,
-                family_title=family.upper(),
-                multi_title=title_multi,
-            )
+            plotter.plot_benchmark(filename_prefix="lernkurve", with_macro=True,
+                                   family_title=family.upper(), multi_title=title_multi)
 
             if CONFIG["FEATURES"].get("PLOT_METRICS", False):
                 plotter.plot_train(
@@ -335,13 +425,11 @@ def main():
                 )
             plot_seconds = time.perf_counter() - ps
 
-            # Speichern des Agenten
             ss = time.perf_counter()
             tag = f"{family}_model_{version}_agent_p0_ep{ep:07d}"
             agent.save(os.path.join(paths["weights_dir"], tag))
             save_seconds = time.perf_counter() - ss
 
-            cum_seconds = time.perf_counter() - t0
             plotter.log_timing(
                 ep,
                 ep_seconds=(time.perf_counter() - ep_start),
@@ -349,13 +437,19 @@ def main():
                 eval_seconds=eval_seconds,
                 plot_seconds=plot_seconds,
                 save_seconds=save_seconds,
-                cum_seconds=cum_seconds,
+                cum_seconds=(time.perf_counter() - t0),
             )
 
+    # Ende
+    usage_csv = os.path.join(paths["plots_dir"], "opponent_usage.csv")
+    _save_opponent_usage_csv(usage_csv, realized_counts, seat_samples_total)
+    plotter.log(f"Opponent-Usage gespeichert: {usage_csv}")
+
     total_seconds = time.perf_counter() - t0
+    mode_txt = "Population" if use_population else "Fixed"
     plotter.log("")
     plotter.log(f"Gesamtzeit: {total_seconds/3600:0.2f}h (~ {CONFIG['EPISODES']/max(total_seconds,1e-9):0.2f} eps/s)")
-    plotter.log(f"{family}, Single Agent vs Heuristiken (max_combo). Training abgeschlossen.")
+    plotter.log(f"{family}, Single Agent vs {mode_txt}. Training abgeschlossen.")
     plotter.log(f"Path: {paths['run_dir']}")
 
 if __name__ == "__main__":
