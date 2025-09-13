@@ -1,0 +1,46 @@
+[2025-09-13 19:31:31] New Training (k1a2): DQN Single-Agent vs Heuristiken/Population (P0→P0)
+[2025-09-13 19:31:31] Deck_Size: 16
+[2025-09-13 19:31:31] Episodes: 20000
+[2025-09-13 19:31:31] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k1a2/model_37
+[2025-09-13 19:31:32] [Population] Initiales Lineup: ['v_table', 'v_table', 'v_table']
+[2025-09-13 19:32:53] 
+[2025-09-13 19:32:53] Benchmark @train_ep    5000 (bench_eps: 2000)
+[2025-09-13 19:32:53] Macro Winrate          :  41.1%
+[2025-09-13 19:32:53] Macro Ø-Reward         :  1.879
+[2025-09-13 19:32:53] Winrate vs max_combo   :  35.8% | Σ-Reward:  3543.0 | Ø-Reward:  1.772 | Places: [715 (0.36), 488 (0.24), 422 (0.21), 375 (0.19)]
+[2025-09-13 19:32:53] Winrate vs random2     :  39.7% | Σ-Reward:  3882.0 | Ø-Reward:  1.941 | Places: [794 (0.40), 539 (0.27), 422 (0.21), 245 (0.12)]
+[2025-09-13 19:32:53] Winrate vs single_only :  60.4% | Σ-Reward:  4532.0 | Ø-Reward:  2.266 | Places: [1208 (0.60), 291 (0.15), 326 (0.16), 175 (0.09)]
+[2025-09-13 19:32:53] Winrate vs v_table     :  28.4% | Σ-Reward:  3076.0 | Ø-Reward:  1.538 | Places: [567 (0.28), 475 (0.24), 425 (0.21), 533 (0.27)]
+[2025-09-13 19:32:56] Timing @ep 5000: episode 13.0s | train 0.019s | eval 10.4s | plot 2.6s | save 0.002s | cum 0.02h
+[2025-09-13 19:34:19] 
+[2025-09-13 19:34:19] Benchmark @train_ep   10000 (bench_eps: 2000)
+[2025-09-13 19:34:19] Macro Winrate          :  42.9%
+[2025-09-13 19:34:19] Macro Ø-Reward         :  1.927
+[2025-09-13 19:34:19] Winrate vs max_combo   :  38.5% | Σ-Reward:  3683.0 | Ø-Reward:  1.841 | Places: [769 (0.38), 469 (0.23), 438 (0.22), 324 (0.16)]
+[2025-09-13 19:34:19] Winrate vs random2     :  42.1% | Σ-Reward:  4015.0 | Ø-Reward:  2.007 | Places: [842 (0.42), 568 (0.28), 353 (0.18), 237 (0.12)]
+[2025-09-13 19:34:19] Winrate vs single_only :  63.6% | Σ-Reward:  4635.0 | Ø-Reward:  2.317 | Places: [1273 (0.64), 254 (0.13), 308 (0.15), 165 (0.08)]
+[2025-09-13 19:34:19] Winrate vs v_table     :  27.2% | Σ-Reward:  3085.0 | Ø-Reward:  1.542 | Places: [545 (0.27), 507 (0.25), 436 (0.22), 512 (0.26)]
+[2025-09-13 19:34:22] Timing @ep 10000: episode 13.0s | train 0.004s | eval 9.8s | plot 3.2s | save 0.002s | cum 0.05h
+[2025-09-13 19:35:50] 
+[2025-09-13 19:35:50] Benchmark @train_ep   15000 (bench_eps: 2000)
+[2025-09-13 19:35:50] Macro Winrate          :  41.9%
+[2025-09-13 19:35:50] Macro Ø-Reward         :  1.922
+[2025-09-13 19:35:50] Winrate vs max_combo   :  35.8% | Σ-Reward:  3590.0 | Ø-Reward:  1.795 | Places: [716 (0.36), 501 (0.25), 440 (0.22), 343 (0.17)]
+[2025-09-13 19:35:50] Winrate vs random2     :  42.8% | Σ-Reward:  4094.0 | Ø-Reward:  2.047 | Places: [856 (0.43), 577 (0.29), 372 (0.19), 195 (0.10)]
+[2025-09-13 19:35:50] Winrate vs single_only :  63.5% | Σ-Reward:  4659.0 | Ø-Reward:  2.329 | Places: [1271 (0.64), 265 (0.13), 316 (0.16), 148 (0.07)]
+[2025-09-13 19:35:50] Winrate vs v_table     :  25.5% | Σ-Reward:  3031.0 | Ø-Reward:  1.516 | Places: [510 (0.26), 506 (0.25), 489 (0.24), 495 (0.25)]
+[2025-09-13 19:35:54] Timing @ep 15000: episode 13.5s | train 0.011s | eval 10.0s | plot 3.5s | save 0.002s | cum 0.07h
+[2025-09-13 19:37:33] 
+[2025-09-13 19:37:33] Benchmark @train_ep   20000 (bench_eps: 2000)
+[2025-09-13 19:37:33] Macro Winrate          :  42.4%
+[2025-09-13 19:37:33] Macro Ø-Reward         :  1.920
+[2025-09-13 19:37:33] Winrate vs max_combo   :  36.8% | Σ-Reward:  3647.0 | Ø-Reward:  1.823 | Places: [736 (0.37), 510 (0.26), 419 (0.21), 335 (0.17)]
+[2025-09-13 19:37:33] Winrate vs random2     :  42.6% | Σ-Reward:  4042.0 | Ø-Reward:  2.021 | Places: [853 (0.43), 566 (0.28), 351 (0.18), 230 (0.12)]
+[2025-09-13 19:37:33] Winrate vs single_only :  64.0% | Σ-Reward:  4630.0 | Ø-Reward:  2.315 | Places: [1281 (0.64), 236 (0.12), 315 (0.16), 168 (0.08)]
+[2025-09-13 19:37:33] Winrate vs v_table     :  26.1% | Σ-Reward:  3045.0 | Ø-Reward:  1.522 | Places: [522 (0.26), 512 (0.26), 455 (0.23), 511 (0.26)]
+[2025-09-13 19:37:37] Timing @ep 20000: episode 14.3s | train 0.009s | eval 10.2s | plot 4.0s | save 0.001s | cum 0.10h
+[2025-09-13 19:37:37] Opponent-Usage gespeichert: /home/wasterix/OpenSpiel/open_spiel/President/models/k1a2/model_37/plots/opponent_usage.csv
+[2025-09-13 19:37:37] 
+[2025-09-13 19:37:37] Gesamtzeit: 0.10h (~ 54.91 eps/s)
+[2025-09-13 19:37:37] k1a2, Single Agent vs Population. Training abgeschlossen.
+[2025-09-13 19:37:37] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k1a2/model_37

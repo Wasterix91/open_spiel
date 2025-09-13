@@ -7,7 +7,7 @@ from open_spiel.python import rl_environment
 from agents import ppo_agent as ppo
 from agents import v_table_agent
 from utils.strategies import STRATS
-from utils.fit_tensor import FeatureConfig, augment_observation, expected_feature_len, expected_input_dim
+from utils.fit_tensor import FeatureConfig, augment_observation
 from utils.deck import ranks_for_deck
 from utils.plotter import MetricsPlotter
 from utils.reward_shaper import RewardShaper
@@ -68,6 +68,8 @@ CONFIG = {
     "FEATURES": {
         "USE_HISTORY": True,
         "SEAT_ONEHOT": False,
+        "NORMALIZE": False,
+        "DEBUG_FEATURES": True,
         "PLOT_METRICS": True,
         "SAVE_METRICS_TO_CSV": False,
         "RET_SMOOTH_WINDOW": 150,   # Fenstergröße für Moving Average der Rewards
@@ -146,6 +148,56 @@ def _save_opponent_usage_csv(path_csv: str, counts: dict, total_seat_samples: in
 
 # =============================== Training ===============================
 def main():
+        # ================== DEBUG: Feature-Vektor Check ==================
+    if CONFIG["FEATURES"].get("DEBUG_FEATURES", False):  # nur temporär!
+        for deck_size in [16, 64]:
+            for use_history in [True, False]:
+                for seat_onehot in [True, False]:
+                    for normalize in [True, False]:
+                        CONFIG["DECK_SIZE"] = str(deck_size)
+                        CONFIG["FEATURES"]["USE_HISTORY"] = use_history
+                        CONFIG["FEATURES"]["SEAT_ONEHOT"] = seat_onehot
+                        CONFIG["FEATURES"]["NORMALIZE"] = normalize
+
+                        # ---- Env / FeatureConfig bauen ----
+                        game = pyspiel.load_game("president", {
+                            "num_players": 4,
+                            "deck_size": CONFIG["DECK_SIZE"],
+                            "shuffle_cards": True,
+                            "single_card_mode": False,
+                        })
+                        env = rl_environment.Environment(game)
+                        num_players = game.num_players()
+                        deck_int = int(CONFIG["DECK_SIZE"])
+                        num_ranks = ranks_for_deck(deck_int)
+                        feat_cfg = FeatureConfig(
+                            num_players=num_players,
+                            num_ranks=num_ranks,
+                            add_seat_onehot=CONFIG["FEATURES"]["SEAT_ONEHOT"],
+                            include_history=CONFIG["FEATURES"]["USE_HISTORY"],
+                            normalize=CONFIG["FEATURES"]["NORMALIZE"],
+                            deck_size=deck_int,
+                        )
+                        state_size = feat_cfg.input_dim()  # KEIN zusätzliches + seat_id_dim
+
+                        ts = env.reset()
+                        p = ts.observations["current_player"]
+                        base_obs = env._state.observation_tensor(p)
+                        obs = augment_observation(base_obs, player_id=p, cfg=feat_cfg)
+
+
+
+                        print("Deck Size:  ", CONFIG["DECK_SIZE"])
+                        print("Use History:", CONFIG["FEATURES"]["USE_HISTORY"])
+                        print("Seat 1-Hot: ", CONFIG["FEATURES"]["SEAT_ONEHOT"])
+                        print("Normalize:  ", CONFIG["FEATURES"]["NORMALIZE"])
+                        print(f"Tensor length={len(obs)}  (model input_dim={feat_cfg.input_dim()})")
+                        print(f"Tensor: {np.round(obs, 3)}")
+                        print("-" * 60)
+
+        return
+    # ================== DEBUG Ende ==================
+
     np.random.seed(CONFIG["SEED"]); torch.manual_seed(CONFIG["SEED"])
     ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     MODELS_ROOT = os.path.join(ROOT, "models")
@@ -188,18 +240,21 @@ def main():
     # ---- Features ----
     deck_int  = int(CONFIG["DECK_SIZE"])
     num_ranks = ranks_for_deck(deck_int)
+
     feat_cfg = FeatureConfig(
         num_players=num_players,
         num_ranks=num_ranks,
-        add_seat_onehot=False,
+        add_seat_onehot=CONFIG["FEATURES"]["SEAT_ONEHOT"],
         include_history=CONFIG["FEATURES"]["USE_HISTORY"],
+        normalize=CONFIG["FEATURES"]["NORMALIZE"],
+        deck_size=deck_int,
     )
-    seat_id_dim = (num_players if CONFIG["FEATURES"]["SEAT_ONEHOT"] else 0)
-    info_dim = expected_feature_len(feat_cfg)
+
+    state_size = feat_cfg.input_dim()
 
     # ---- Agent & Reward ----
     ppo_cfg = ppo.PPOConfig(**CONFIG["PPO"])
-    agent   = ppo.PPOAgent(info_dim, A, seat_id_dim=seat_id_dim, config=ppo_cfg)
+    agent = ppo.PPOAgent(state_size, A, config=ppo_cfg)
     shaper  = RewardShaper(CONFIG["REWARD"])
 
     # ---- Gegner-Setup ----
@@ -213,7 +268,7 @@ def main():
     if use_population:
         opponents_names_current = sample_lineup_from_pool(pool, n_seats=3, rng=rng)
         opponents = [resolve_opponent(n) for n in opponents_names_current]
-        plotter.log(f"[Population] Initiales Lineup: {[str(n) for n in opponents_names_current]}")
+        #plotter.log(f"[Population] Initiales Lineup: {[str(n) for n in opponents_names_current]}")
     else:
         fixed = CONFIG.get("OPPONENTS", ["max_combo"] * 3)
         opponents_names_current = list(fixed)
@@ -244,8 +299,7 @@ def main():
         "bonus_last":  CONFIG["REWARD"]["BONUS_LAST"],
         "agent_type": "PPO", "num_episodes": CONFIG["EPISODES"],
         "bench_interval": CONFIG["BENCH_INTERVAL"], "bench_episodes": CONFIG["BENCH_EPISODES"],
-        "observation_dim": expected_input_dim(feat_cfg), "num_actions": A,
-        "seat_onehot": CONFIG["FEATURES"]["SEAT_ONEHOT"],
+        "observation_dim": feat_cfg.input_dim(),
         "use_population": use_population,
         "opponents_switch_interval": CONFIG.get("SWITCH_INTERVAL", None),
         "v_table_path": CONFIG.get("V_TABLE_PATH", ""),
@@ -292,12 +346,12 @@ def main():
             if p == 0:
                 if shaper.step_active():
                     hand_before = shaper.hand_size(ts, p, deck_int)
-                base_obs = ts.observations["info_state"][p]
+
+                # Beobachtung aufbereiten (Seat-1hot wird – falls aktiviert – in augment_observation gehandhabt)
+                base_obs = env._state.observation_tensor(p)
                 obs = augment_observation(base_obs, player_id=p, cfg=feat_cfg)
-                seat_oh = None
-                if CONFIG["FEATURES"]["SEAT_ONEHOT"]:
-                    seat_oh = np.zeros(num_players, dtype=np.float32); seat_oh[p] = 1.0
-                a = int(agent.step(obs, legal, seat_one_hot=seat_oh, player_id=0))
+
+                a = int(agent.step(obs, legal, player_id=0))  # kein seat_one_hot mehr
                 last_idx_p0 = len(agent._buffer.states) - 1
             else:
                 a = int(opponents[p - 1](env._state))
@@ -312,6 +366,7 @@ def main():
                 agent.post_step(r, done=ts_next.last())
 
             ts = ts_next
+
 
         # final env return / bonus
         ep_env_score = float(ts.rewards[0])

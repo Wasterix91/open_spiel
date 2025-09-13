@@ -1,0 +1,12 @@
+[2025-09-13 14:02:39] New Training (k3a1): Snapshot-Selfplay PPO
+[2025-09-13 14:02:39] Deck_Size: 16
+[2025-09-13 14:02:39] Episodes: 100000
+[2025-09-13 14:02:39] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k3a1/model_31
+[2025-09-13 14:03:25] 
+[2025-09-13 14:03:25] Benchmark @train_ep    2000 (bench_eps: 2000)
+[2025-09-13 14:03:25] Macro Winrate          :  36.6%
+[2025-09-13 14:03:25] Macro Ø-Reward         :  1.720
+[2025-09-13 14:03:25] Winrate vs max_combo   :  26.9% | Σ-Reward:  2937.0 | Ø-Reward:  1.468 | Places: [538 (0.27), 438 (0.22), 447 (0.22), 577 (0.29)]
+[2025-09-13 14:03:25] Winrate vs random2     :  32.4% | Σ-Reward:  3410.0 | Ø-Reward:  1.705 | Places: [648 (0.32), 511 (0.26), 444 (0.22), 397 (0.20)]
+[2025-09-13 14:03:25] Winrate vs single_only :  50.5% | Σ-Reward:  3973.0 | Ø-Reward:  1.986 | Places: [1009 (0.50), 282 (0.14), 382 (0.19), 327 (0.16)]
+[2025-09-13 14:03:28] Timing @ep 2000: episode 18.0s | train 0.003s | eval 15.0s | plot 3.0s | save 0.006s | cum 0.01h

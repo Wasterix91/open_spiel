@@ -3,47 +3,58 @@ from dataclasses import dataclass
 from typing import Sequence
 import numpy as np
 
+
 @dataclass
 class FeatureConfig:
     num_players: int
-    num_ranks: int                     # kNumRanks aus dem Spiel
-    add_seat_onehot: bool = False      # optional: Sitz-One-Hot anhängen
-    include_history: bool = True       # True = mit Historie (Variante 2), False = ohne (Variante 1)
+    num_ranks: int                      # kNumRanks aus dem Spiel
+    add_seat_onehot: bool = False       # optional: Sitz-One-Hot anhängen
+    include_history: bool = True        # True = mit Historie (Variante 2), False = ohne (Variante 1)
     normalize: bool = False
-    max_combo_size: int = 4            # President: Singles/Pairs/Trips/Quads
-    empty_top_rank_value: float = -1.0 # wie in C++: -1 wenn kein Stapel
+    deck_size: int = 0
+    max_combo_size: int = 4             # President: Singles/Pairs/Trips/Quads
+    empty_top_rank_value: float = -1.0  # wie in C++: -1 wenn kein Stapel
 
+    def __post_init__(self) -> None:
+        if self.num_players <= 0:
+            raise ValueError("num_players must be > 0")
+        if self.num_ranks <= 0:
+            raise ValueError("num_ranks must be > 0")
+        if self.max_combo_size < 0:
+            raise ValueError("max_combo_size must be >= 0")
+
+    # -------- Dimensionen (einzige Quelle der Wahrheit) -------- #
     def extra_dim(self) -> int:
         return self.num_players if self.add_seat_onehot else 0
+
+    def core_dim(self) -> int:
+        """
+        Länge der vom Agenten genutzten Features OHNE Sitz-One-Hot.
+        (Variante 1/2 über include_history)
+        """
+        base = self.num_ranks + (self.num_players - 1) + 3
+        if self.include_history:
+            base += self.num_ranks
+        return base
+
+    def input_dim(self) -> int:
+        """Länge des Agent-Inputs INKLUSIVE optionaler Sitz-One-Hot."""
+        return self.core_dim() + self.extra_dim()
+
+    def env_obs_len(self) -> int:
+        """
+        Länge des vom C++-Spiel gelieferten Vektors (immer Variante 2 = mit History):
+          [Hand k], [Opp (P-1)], [last_rel, combo, top], [History k]
+        """
+        return self.num_ranks + (self.num_players - 1) + 3 + self.num_ranks
 
 
 def seat_one_hot(player_id: int, num_players: int) -> np.ndarray:
     v = np.zeros((num_players,), dtype=np.float32)
+    if not (0 <= player_id < num_players):
+        raise ValueError(f"player_id {player_id} out of range [0,{num_players-1}]")
     v[player_id] = 1.0
     return v
-
-
-# ----------------- Längen-Helper ----------------- #
-def _env_obs_len(cfg: FeatureConfig) -> int:
-    """
-    Länge des vom C++-Spiel gelieferten Vektors (Variante 2 = mit History):
-      [Hand k], [Opp (P-1)], [last_rel, combo, top], [History k]
-    """
-    return cfg.num_ranks + (cfg.num_players - 1) + 3 + cfg.num_ranks
-
-def expected_feature_len(cfg: FeatureConfig) -> int:
-    """
-    Länge der vom Agenten genutzten Features OHNE Sitz-One-Hot.
-    (Variante 1/2 gesteuert über include_history)
-    """
-    base = cfg.num_ranks + (cfg.num_players - 1) + 3
-    if cfg.include_history:
-        base += cfg.num_ranks
-    return base
-
-def expected_input_dim(cfg: FeatureConfig) -> int:
-    """Länge des Agent-Inputs INKLUSIVE optionaler Sitz-One-Hot."""
-    return expected_feature_len(cfg) + cfg.extra_dim()
 
 
 # ----------------- Augmentierung ----------------- #
@@ -66,7 +77,7 @@ def augment_observation(
     Option cfg.include_history schneidet die Historie ab (Variante 1) oder behält sie (Variante 2).
     """
     x_full = np.asarray(base_obs, dtype=np.float32)
-    exp_len = _env_obs_len(cfg)
+    exp_len = cfg.env_obs_len()
     if x_full.ndim != 1 or len(x_full) != exp_len:
         raise ValueError(
             f"Observation length mismatch: got {len(x_full)}, expected {exp_len} "
@@ -91,7 +102,7 @@ def augment_observation(
     else:
         core = head.copy()  # head nicht aliasen
 
-    # Normalisierung nur auf die Kopf-Features (Indices bleiben gleich)
+    # Normalisierung nur auf die Kopf-Features (Indices bleiben gültig)
     if cfg.normalize:
         # last_rel in [0,1]
         if cfg.num_players > 1:
@@ -110,23 +121,14 @@ def augment_observation(
             denom = max(1, cfg.num_ranks - 1)
             core[i_top] = np.clip(core[i_top] / float(denom), 0.0, 1.0)
 
-        # (Optional) Hand- & Gegneranzahlen skalieren – bei Bedarf aktivieren:
-        # max_hand = max(1, deck_size // cfg.num_players)  # deck_size als zusätzlicher Parameter reichen
-        # core[:i_hand_end] = core[:i_hand_end] / float(max_hand)
-        # core[i_hand_end:i_opp_end] = core[i_hand_end:i_opp_end] / float(max_hand)
+        # Hand- & Gegneranzahlen skalieren (0..1)
+        if cfg.deck_size > 0:
+            max_hand = max(1, cfg.deck_size // cfg.num_players)
+            core[:i_hand_end] = core[:i_hand_end] / float(max_hand)
+            core[i_hand_end:i_opp_end] = core[i_hand_end:i_opp_end] / float(max_hand)
 
     # optional Sitz-One-Hot anhängen
     if cfg.add_seat_onehot:
         core = np.concatenate([core, seat_one_hot(player_id, cfg.num_players)], axis=0)
 
     return core.astype(np.float32, copy=False)
-
-
-# (Optional: legacy Helper für Kompatibilität)
-def augmented_dim(_base_dim: int, cfg: FeatureConfig) -> int:
-    """Bitte expected_input_dim(cfg) benutzen; bleibt für alte Imports bestehen."""
-    return expected_input_dim(cfg)
-
-def expected_base_dim(cfg: FeatureConfig) -> int:
-    """Variante-1-Featurelänge (ohne Sitz-One-Hot); für ältere Stellen, falls benötigt."""
-    return cfg.num_ranks + (cfg.num_players - 1) + 3

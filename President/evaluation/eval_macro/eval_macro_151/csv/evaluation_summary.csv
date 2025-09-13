@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+151,P0,dqn v05 ep20.000,dqn,k2a2,05,20000,61.6,2.3,18480,7406
+151,P1,single_only v,single_only,,,,12.3,1.23,3691,7527
+151,P2,single_only v,single_only,,,,13.1,1.24,3943,7579
+151,P3,single_only v,single_only,,,,13.0,1.24,3886,7488

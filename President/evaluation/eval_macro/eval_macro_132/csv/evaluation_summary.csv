@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+132,P0,dqn v37 ep20.000,dqn,k1a2,37,20000,34.4,1.85,10317,7551
+132,P1,random2 v,random2,,,,15.8,1.16,4733,7475
+132,P2,dqn v37 ep20.000,dqn,k1a2,37,20000,34.1,1.84,10236,7486
+132,P3,random2 v,random2,,,,15.7,1.16,4714,7488

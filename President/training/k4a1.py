@@ -7,7 +7,7 @@ import pyspiel
 from open_spiel.python import rl_environment
 
 from agents import ppo_agent as ppo
-from utils.fit_tensor import FeatureConfig, augment_observation, expected_feature_len
+from utils.fit_tensor import FeatureConfig, augment_observation
 from utils.plotter import MetricsPlotter
 from utils.reward_shaper import RewardShaper
 from utils.strategies import STRATS
@@ -60,17 +60,36 @@ CONFIG = {
     # Features
     "FEATURES": {
         "USE_HISTORY": True,
-        "SEAT_ONEHOT": True,
+        "SEAT_ONEHOT": False,
+        "NORMALIZE": False,
+        "DEBUG_FEATURES": True,
         "PLOT_METRICS": True,
-        "SAVE_METRICS_TO_CSV": False,          # steuert Trainings-CSV
-        "RET_SMOOTH_WINDOW": 150,              # für Plot-Smoothing
-        "PLOT_KEYS": [
-            # PPO/Train:
-            "return_mean", "reward_mean", "entropy", "approx_kl",
-            "clip_frac", "policy_loss", "value_loss",
-            # Episoden-Returns (Sonderplots aus Memory):
-            "ep_return_raw", "ep_return_components",
-            "ep_return_env", "ep_return_shaping", "ep_return_final",
+        "SAVE_METRICS_TO_CSV": False,
+        "RET_SMOOTH_WINDOW": 150,   # Fenstergröße für Moving Average der Rewards
+        "PLOT_KEYS": [              # steuert plot_train(); mögliche Keys:
+            # PPO-Metriken:
+            #   reward_mean, reward_std, return_mean,
+            #   adv_mean_raw, adv_std_raw,
+            #   policy_loss, value_loss,
+            #   entropy, approx_kl, clip_frac
+            # Trainings-/Umgebungsmetriken:
+            #   train_seconds, ep_env_score, ep_shaping_return,
+            #   ep_final_bonus, ep_length
+            # Sonderplots (aus Memory, nicht aus metrics):
+            #   ep_return_raw, ep_return_components,
+            #   ep_return_env, ep_return_shaping, ep_return_final
+            "return_mean",
+            "reward_mean",
+            "entropy",
+            "approx_kl",
+            "clip_frac",
+            "policy_loss",
+            "value_loss",
+            "ep_return_raw",
+            "ep_return_components",
+            "ep_return_env",         # Einzelplot env_score
+            "ep_return_shaping",     # Einzelplot shaping
+            "ep_return_final",       # Einzelplot final_bonus
             "ep_return_training",
         ],
     },
@@ -79,13 +98,57 @@ CONFIG = {
     "BENCH_OPPONENTS": ["single_only", "max_combo", "random2"],
 }
 
-def _with_seat_onehot(vec: np.ndarray, p: int, num_players: int, enabled: bool) -> np.ndarray:
-    if not enabled:
-        return vec
-    seat_oh = np.zeros(num_players, dtype=np.float32); seat_oh[p] = 1.0
-    return np.concatenate([vec, seat_oh], axis=0)
 
 def main():
+
+    # ================== DEBUG: Feature-Vektor Check ==================
+    if CONFIG["FEATURES"].get("DEBUG_FEATURES", False):  # nur temporär!
+        for deck_size in [16, 64]:
+            for use_history in [True, False]:
+                for seat_onehot in [True, False]:
+                    for normalize in [True, False]:
+                        CONFIG["DECK_SIZE"] = str(deck_size)
+                        CONFIG["FEATURES"]["USE_HISTORY"] = use_history
+                        CONFIG["FEATURES"]["SEAT_ONEHOT"] = seat_onehot
+                        CONFIG["FEATURES"]["NORMALIZE"] = normalize
+
+                        # ---- Env / FeatureConfig bauen ----
+                        game = pyspiel.load_game("president", {
+                            "num_players": 4,
+                            "deck_size": CONFIG["DECK_SIZE"],
+                            "shuffle_cards": True,
+                            "single_card_mode": False,
+                        })
+                        env = rl_environment.Environment(game)
+                        num_players = game.num_players()
+                        deck_int = int(CONFIG["DECK_SIZE"])
+                        num_ranks = ranks_for_deck(deck_int)
+                        feat_cfg = FeatureConfig(
+                            num_players=num_players,
+                            num_ranks=num_ranks,
+                            add_seat_onehot=CONFIG["FEATURES"]["SEAT_ONEHOT"],
+                            include_history=CONFIG["FEATURES"]["USE_HISTORY"],
+                            normalize=CONFIG["FEATURES"]["NORMALIZE"],
+                            deck_size=deck_int,
+                        )
+                        state_size = feat_cfg.input_dim()  # KEIN zusätzliches + seat_id_dim
+
+                        ts = env.reset()
+                        p = ts.observations["current_player"]
+                        base_obs = np.asarray(env._state.observation_tensor(p), dtype=np.float32)
+                        obs = augment_observation(base_obs, player_id=p, cfg=feat_cfg)
+
+                        print("Deck Size:  ", CONFIG["DECK_SIZE"])
+                        print("Use History:", CONFIG["FEATURES"]["USE_HISTORY"])
+                        print("Seat 1-Hot: ", CONFIG["FEATURES"]["SEAT_ONEHOT"])
+                        print("Normalize:  ", CONFIG["FEATURES"]["NORMALIZE"])
+                        print(f"Tensor length={len(obs)}  (model input_dim={feat_cfg.input_dim()})")
+                        print(f"Tensor: {np.round(obs, 3)}")
+                        print("-" * 60)
+
+        return  # Debug beendet, nicht trainieren
+    # ================== DEBUG Ende ==================
+
     np.random.seed(CONFIG["SEED"]); torch.manual_seed(CONFIG["SEED"])
     ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     MODELS_ROOT = os.path.join(ROOT, "models")
@@ -127,20 +190,22 @@ def main():
     feat_cfg = FeatureConfig(
         num_players=num_players,
         num_ranks=num_ranks,
-        add_seat_onehot=False,              # Seat-1hot NICHT in augment_observation
+        add_seat_onehot=False,  # Seat-1hot NICHT in augment_observation
         include_history=CONFIG["FEATURES"]["USE_HISTORY"],
+        normalize=CONFIG["FEATURES"]["NORMALIZE"],
+        deck_size=deck_int,
     )
     seat_id_dim = num_players if CONFIG["FEATURES"]["SEAT_ONEHOT"] else 0
-    observation_dim = expected_feature_len(feat_cfg) + seat_id_dim
+    observation_dim = feat_cfg.input_dim() + seat_id_dim
 
     # ---- Agent / Shaper ----
     ppo_cfg = ppo.PPOConfig(**CONFIG["PPO"])
     agent = ppo.PPOAgent(
-        info_state_size=expected_feature_len(feat_cfg),
+        info_state_size=feat_cfg.input_dim(),
         num_actions=A,
         seat_id_dim=seat_id_dim,
         config=ppo_cfg,
-        segmented_gae_mode="jump"
+        segmented_gae_mode="jump",
     )
     shaper = RewardShaper(CONFIG["REWARD"])
 

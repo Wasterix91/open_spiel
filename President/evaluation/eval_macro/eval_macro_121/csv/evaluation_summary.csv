@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+121,P0,dqn v36 ep20.000,dqn,k1a2,36,20000,32.4,1.71,9730,7391
+121,P1,max_combo v,max_combo,,,,17.5,1.29,5263,7651
+121,P2,dqn v36 ep20.000,dqn,k1a2,36,20000,32.8,1.72,9826,7421
+121,P3,max_combo v,max_combo,,,,17.3,1.28,5181,7537

@@ -1,0 +1,5 @@
+[2025-09-13 09:42:12] New Training (k1a1)
+[2025-09-13 09:42:12] Deck_Size: 16
+[2025-09-13 09:42:12] Episodes: 100000
+[2025-09-13 09:42:12] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k1a1/model_43
+[2025-09-13 09:42:12] [Population] Initiales Lineup: ['max_combo', 'max_combo', 'max_combo']

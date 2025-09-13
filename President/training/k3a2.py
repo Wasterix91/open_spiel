@@ -14,7 +14,8 @@ from open_spiel.python import rl_environment
 
 from agents.dqn_agent import DQNAgent, DQNConfig
 from utils.strategies import STRATS
-from utils.fit_tensor import FeatureConfig, augment_observation, expected_feature_len
+from agents import v_table_agent
+from utils.fit_tensor import FeatureConfig, augment_observation
 from utils.plotter import MetricsPlotter
 from utils.reward_shaper import RewardShaper
 from utils.load_save_common import find_next_version, prepare_run_dirs, save_config_csv, save_run_meta
@@ -22,26 +23,29 @@ from utils.benchmark import run_benchmark
 from utils.deck import ranks_for_deck
 
 CONFIG = {
-    "EPISODES":         100_000,
-    "BENCH_INTERVAL":   2_000,
+    "EPISODES":         40_000,
+    "BENCH_INTERVAL":   5_000,
     "BENCH_EPISODES":   2_000,
     "DECK_SIZE":        "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
-    # DQN
+    # DQN (kompatibel zu agents/dqn_agent.DQNConfig)
     "DQN": {
-        "learning_rate":     3e-4,
-        "batch_size":        128,
-        "gamma":             0.995,
-        "epsilon_start":     1.0,
-        "epsilon_end":       0.05,
-        "epsilon_decay":     0.9997,
-        "buffer_size":       200_000,
+        "learning_rate": 3e-4,
+        "batch_size": 128,
+        "gamma": 0.995,
+        "epsilon_start": 1.0,
+        "epsilon_end": 0.05,
+        "epsilon_decay_type": "multiplicative",   # "linear" | "multiplicative"
+        "epsilon_decay": 0.9997,      # für multiplicative
+        #"epsilon_decay_frames": 100_000,  # für linear
+        "buffer_size": 200_000,
         "target_update_freq": 5000,
-        "soft_target_tau":   0.0,
-        "max_grad_norm":     1.0,
-        "use_double_dqn":    True,
-        "loss_huber_delta":  1.0,
+        "soft_target_tau": 0.0,
+        "max_grad_norm": 1.0,
+        "use_double_dqn": True,
+        "loss_huber_delta": 1.0,
+        "optimizer": "adam"
     },
 
     # ======= Rewards (NEUES System) =======
@@ -56,17 +60,21 @@ CONFIG = {
         "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
     },
 
-    # Features (wie k1a2, für Plot-Parität erweitert)
+    # Feature-Toggles
     "FEATURES": {
-        "USE_HISTORY": True,
-        "SEAT_ONEHOT": False,
-        "PLOT_METRICS": True,
-        "SAVE_METRICS_TO_CSV": False,
+        "USE_HISTORY": True,     # Historie in Features einbetten?
+        "SEAT_ONEHOT": False,     # Sitz-One-Hot optional separat anhängen
+        "NORMALIZE": False,
+        "DEBUG_FEATURES": False,
+        "PLOT_METRICS": True,     # Trainingsplots erzeugen?
+        "SAVE_METRICS_TO_CSV": False,  # Trainingsmetriken persistent speichern?
         "RET_SMOOTH_WINDOW": 150,
+
+        # Steuert plot_train(); Sonder-Keys triggern In-Memory-Return-Plots.
         "PLOT_KEYS": [
-            # DQN/Train:
+            # DQN/Train (Beispiele):
             "epsilon", "ep_length", "train_seconds",
-            # Sonderplots (aus Memory; Episoden-Return und Komponenten):
+            # Sonderplots aus Memory (Episoden-Return):
             "ep_return_raw", "ep_return_components",
             "ep_return_env", "ep_return_shaping", "ep_return_final",
             "ep_return_training",
@@ -75,7 +83,9 @@ CONFIG = {
 
     "SNAPSHOT": { "LEARNER_SEAT": 0, "MIX_CURRENT": 0.8, "SNAPSHOT_INTERVAL": 200, "POOL_CAP": 20 },
 
-    "BENCH_OPPONENTS": ["single_only", "max_combo", "random2"],
+    "V_TABLE_PATH": "agents/tables/v_table_4_4_4",  # Pfadpräfix ohne *_params.json etc.
+
+    "BENCH_OPPONENTS": ["single_only", "max_combo", "random2", "v_table"],
 }
 
 @torch.no_grad()
@@ -94,12 +104,6 @@ def greedy_action(q_module: torch.nn.Module, obs_vec: np.ndarray, legal_actions,
     cands = np.flatnonzero(masked == maxv)
     return int(np.random.choice(cands))
 
-def _with_seat_onehot(vec: np.ndarray, p: int, num_players: int, enabled: bool) -> np.ndarray:
-    if not enabled:
-        return vec
-    seat_oh = np.zeros(num_players, dtype=np.float32); seat_oh[p] = 1.0
-    return np.concatenate([vec, seat_oh], axis=0)
-
 class SnapshotDQNA:
     def __init__(self, state_size, num_actions, dqn_cfg, q_state_dict):
         cfg = DQNConfig(**dqn_cfg) if isinstance(dqn_cfg, dict) else dqn_cfg
@@ -113,7 +117,81 @@ class SnapshotDQNA:
     def act(self, obs_vec: np.ndarray, legal_actions):
         return greedy_action(self.agent.q_network, obs_vec, legal_actions)
 
+def resolve_opponent(name: str):
+    """callable(state)->action. 'v_table' lädt die Wertetabelle via CONFIG['V_TABLE_PATH']."""
+    if name == "v_table":
+        path = CONFIG.get("V_TABLE_PATH")
+        if not path or not isinstance(path, str):
+            raise ValueError("CONFIG['V_TABLE_PATH'] ist nicht gesetzt oder ungültig.")
+        return v_table_agent.ValueTableAgent(path)
+    if name not in STRATS:
+        raise KeyError(f"Unbekannter Gegner-Name: {name}")
+    return STRATS[name]
+
 def main():
+    # ================== DEBUG: Feature-Vektor Check ==================
+    if CONFIG["FEATURES"].get("DEBUG_FEATURES", False):
+        for deck_size in [16, 64]:
+            for use_history in [True, False]:
+                for seat_onehot in [True, False]:
+                    for normalize in [True, False]:
+                        # Konfiguration temporär setzen
+                        CONFIG["DECK_SIZE"] = str(deck_size)
+                        CONFIG["FEATURES"]["USE_HISTORY"] = use_history
+                        CONFIG["FEATURES"]["SEAT_ONEHOT"] = seat_onehot
+                        CONFIG["FEATURES"]["NORMALIZE"] = normalize
+
+                        # Env + FeatureConfig
+                        game = pyspiel.load_game("president", {
+                            "num_players": 4,
+                            "deck_size": CONFIG["DECK_SIZE"],
+                            "shuffle_cards": True,
+                            "single_card_mode": False,
+                        })
+                        env = rl_environment.Environment(game)
+                        num_players = game.num_players()
+                        deck_int = int(CONFIG["DECK_SIZE"])
+                        num_ranks = ranks_for_deck(deck_int)
+
+                        feat_cfg = FeatureConfig(
+                            num_players=num_players,
+                            num_ranks=num_ranks,
+                            add_seat_onehot=CONFIG["FEATURES"]["SEAT_ONEHOT"],
+                            include_history=CONFIG["FEATURES"]["USE_HISTORY"],
+                            normalize=CONFIG["FEATURES"]["NORMALIZE"],
+                            deck_size=deck_int,
+                        )
+                        state_size = feat_cfg.input_dim()  # KEIN extra seat_id_dim mehr
+
+
+                        # Beobachtung genau wie im DQN-Training
+                        ts = env.reset()
+                        p = 0  # wir inspizieren P0
+                        base_obs = np.asarray(env._state.observation_tensor(p), dtype=np.float32)
+
+                        obs = augment_observation(base_obs, player_id=p, cfg=feat_cfg)
+
+
+                        print("Deck Size:  ", CONFIG["DECK_SIZE"])
+                        print("Use History:", CONFIG["FEATURES"]["USE_HISTORY"])
+                        print("Seat 1-Hot: ", CONFIG["FEATURES"]["SEAT_ONEHOT"])
+                        print("Normalize:  ", CONFIG["FEATURES"]["NORMALIZE"])
+                        print(f"Tensor length={len(obs)}  (model input_dim={feat_cfg.input_dim()})")
+                        print(f"Tensor: {np.round(obs, 3)}")
+                        print("-" * 60)
+
+
+        return  # Debug beendet, nicht trainieren
+    # ================== DEBUG Ende ==================
+
+        # --- Frühzeitige Validierung ---
+    if "v_table" in CONFIG["BENCH_OPPONENTS"]:
+        path = CONFIG.get("V_TABLE_PATH")
+        if not isinstance(path, str) or not path:
+            raise ValueError(
+                "BENCH_OPPONENTS enthält 'v_table', aber V_TABLE_PATH ist nicht gesetzt oder ungültig."
+            )
+
     np.random.seed(CONFIG["SEED"]); torch.manual_seed(CONFIG["SEED"])
     ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     MODELS_ROOT = os.path.join(ROOT, "models")
@@ -153,11 +231,13 @@ def main():
     feat_cfg = FeatureConfig(
         num_players=num_players,
         num_ranks=num_ranks,
-        add_seat_onehot=False,
+        add_seat_onehot=CONFIG["FEATURES"]["SEAT_ONEHOT"],
         include_history=CONFIG["FEATURES"]["USE_HISTORY"],
+        normalize=CONFIG["FEATURES"]["NORMALIZE"],
+        deck_size=deck_int,
     )
-    seat_id_dim = (num_players if CONFIG["FEATURES"]["SEAT_ONEHOT"] else 0)
-    state_size = expected_feature_len(feat_cfg) + seat_id_dim
+    state_size = feat_cfg.input_dim()   # KEIN extra seat_id_dim mehr
+
 
     # ---- Agent & Shaper ----
     dqn_cfg = DQNConfig(**CONFIG["DQN"])
@@ -227,24 +307,25 @@ def main():
         while not ts.last():
             p = ts.observations["current_player"]
             legal = ts.observations["legal_actions"][p]
+            base_obs = np.asarray(env._state.observation_tensor(p), dtype=np.float32)
+            obs = augment_observation(base_obs, player_id=p, cfg=feat_cfg)
+
 
             # Learner wieder dran? offene Transition schließen (decision-to-decision)
             if (p == LEARN) and (pending is not None):
                 base_now = np.asarray(env._state.observation_tensor(LEARN), dtype=np.float32)
                 s_now = augment_observation(base_now, player_id=LEARN, cfg=feat_cfg)
-                s_now = _with_seat_onehot(s_now, LEARN, num_players, CONFIG["FEATURES"]["SEAT_ONEHOT"])
                 learner.buffer.add(pending["s"], pending["a"], pending["r"], s_now, False,
-                                   next_legal_actions=legal)
+                                next_legal_actions=legal)
                 last_idx_learner = len(learner.buffer.buffer) - 1
+
                 tts = time.perf_counter()
                 learner.train_step()
                 train_seconds_accum += (time.perf_counter() - tts)
+
                 pending = None
 
-            # aktuelle Beobachtung
-            base_obs = np.asarray(env._state.observation_tensor(p), dtype=np.float32)
-            obs = augment_observation(base_obs, player_id=p, cfg=feat_cfg)
-            obs = _with_seat_onehot(obs, p, num_players, CONFIG["FEATURES"]["SEAT_ONEHOT"])
+
 
             # Step-Shaping Vorbereitung
             if shaper.step_active():
@@ -267,8 +348,6 @@ def main():
                     hand_after = shaper.hand_size(ts_next, p, deck_int)
                     r = float(shaper.step_reward(hand_before=hand_before, hand_after=hand_after))
                     ep_shaping_return += r
-
-                assert pending is None
                 pending = {"s": obs, "a": a, "r": r}
 
             ts = ts_next
@@ -343,11 +422,19 @@ def main():
         eval_seconds = plot_seconds = save_seconds = 0.0
         if CONFIG["BENCH_INTERVAL"] > 0 and (ep % BINT == 0):
             evs = time.perf_counter()
+            # STRATS kopieren und 'v_table' nur dann hinzufügen, wenn er im BENCH_OPPONENTS-Set steht
+            bench_map = dict(STRATS)
+            for tok in CONFIG["BENCH_OPPONENTS"]:
+                if tok == "v_table":
+                    bench_map[tok] = resolve_opponent(tok)
+
             per_opponent = run_benchmark(
-                game=game, agent=learner, opponents_dict=STRATS,
+                game=game, agent=learner, opponents_dict=bench_map,  # <-- RICHTIG
                 opponent_names=CONFIG["BENCH_OPPONENTS"], episodes=BEPS,
                 feat_cfg=feat_cfg, num_actions=A
             )
+
+
             plotter.log_bench_summary(ep, per_opponent)
             eval_seconds = time.perf_counter() - evs
 

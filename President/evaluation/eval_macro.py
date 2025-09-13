@@ -41,16 +41,16 @@ DECK = "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
 # Beispiel-Setup (anpassen):
 
 # 1v3 Gegen Max Combo
-PLAYER_CONFIG = [
-    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "04", "episode": 100_000, "from_pid": 0},
+""" PLAYER_CONFIG = [
+    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
     {"name": "P1", "type": "max_combo"},
     {"name": "P2", "type": "max_combo"},
     {"name": "P3", "type": "max_combo"},
-] 
+]  """
 
 # 1v3 Gegen V-Table
 """ PLAYER_CONFIG = [
-    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "04", "episode": 100_000, "from_pid": 0},
+    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
     {"name": "P1", "type": "v_table"},
     {"name": "P2", "type": "v_table"},
     {"name": "P3", "type": "v_table"},
@@ -59,7 +59,7 @@ PLAYER_CONFIG = [
 # 1v3 Gegen Single Only
 
 """ PLAYER_CONFIG = [
-    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "04", "episode": 100_000, "from_pid": 0},
+    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
     {"name": "P1", "type": "single_only"},
     {"name": "P2", "type": "single_only"},
     {"name": "P3", "type": "single_only"},
@@ -67,7 +67,7 @@ PLAYER_CONFIG = [
 
 # 1v3 Gegen Random2
 """ PLAYER_CONFIG = [
-    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "04", "episode": 100_000, "from_pid": 0},
+    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
     {"name": "P1", "type": "random2"},
     {"name": "P2", "type": "random2"},
     {"name": "P3", "type": "random2"},
@@ -75,36 +75,36 @@ PLAYER_CONFIG = [
 
 # 2v2 über Kreuz vs Max Combo
 """ PLAYER_CONFIG = [ 
-    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "04", "episode": 100_000, "from_pid": 0},
+    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
     {"name": "P1", "type": "max_combo"},
-    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "04", "episode": 100_000, "from_pid": 0},
+    {"name": "P2", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
     {"name": "P3", "type": "max_combo"}
 ]    """
 
 # 2v2 über Kreuz vs V-Table
 """ PLAYER_CONFIG = [ 
-    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "04", "episode": 100_000, "from_pid": 0},
+    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
     {"name": "P1", "type": "v_table"},
-    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "04", "episode": 100_000, "from_pid": 0},
+    {"name": "P2", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
     {"name": "P3", "type": "v_table"}
-]  """  
+]    """
 
 # 2v2 über Kreuz vs Single Only
 """ PLAYER_CONFIG = [ 
-    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "04", "episode": 100_000, "from_pid": 0},
+    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
     {"name": "P1", "type": "single_only"},
-    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "04", "episode": 100_000, "from_pid": 0},
+    {"name": "P2", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
     {"name": "P3", "type": "single_only"}
-]   """ 
+]    """
 
 # 2v2 über Kreuz vs Random2
 
-""" PLAYER_CONFIG = [ 
-    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "04", "episode": 100_000, "from_pid": 0},
+PLAYER_CONFIG = [ 
+    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
     {"name": "P1", "type": "random2"},
-    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "04", "episode": 100_000, "from_pid": 0},
+    {"name": "P2", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
     {"name": "P3", "type": "random2"}
-]   """
+]  
 
 GENERATE_PLOTS = True
 EVAL_OUTPUT = True

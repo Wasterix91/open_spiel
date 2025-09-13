@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 # President/training/k3a1.py — PPO (K3): Snapshot-Selfplay, 1 Learner + 3 Sparring
-# Hinweis: analog zu k1a1-Änderungen:
-#  - Metrics/Plots optional per Flags
-#  - FeatureConfig mit include_history; Seat-One-Hot nicht in augment_observation
-#  - Dimensionsberechnung über expected_feature_len/expected_input_dim
-#  - umfangreicheres Config-Logging
-#  - Plot-Parität zu k1a1: smooth_window, SAVE_METRICS_TO_CSV, ep_return_training, Komponenten-Gating, PLOT_KEYS
+# Angleichen an k1a1/k2a1:
+#  - FeatureConfig + augment_observation tragen (optional) Seat-One-Hot selbst
+#  - Keine seat_one_hot-Parameter an den Agent mehr
+#  - Dimensionen über feat_cfg.input_dim()
+#  - Metrics/Plots optional per Flags (RET_SMOOTH_WINDOW, PLOT_KEYS, SAVE_METRICS_TO_CSV)
+#  - Konsistente ep_return_training + Komponenten-Gating
 
 import os, datetime, time, copy, numpy as np, torch
 import pyspiel
@@ -13,7 +13,7 @@ from open_spiel.python import rl_environment
 
 from agents import ppo_agent as ppo
 from utils.strategies import STRATS
-from utils.fit_tensor import FeatureConfig, augment_observation, expected_feature_len, expected_input_dim
+from utils.fit_tensor import FeatureConfig, augment_observation
 from utils.plotter import MetricsPlotter
 from utils.reward_shaper import RewardShaper
 
@@ -44,7 +44,7 @@ CONFIG = {
         "max_grad_norm": 0.5,
     },
 
-    # ======= Rewards (NEUES System) =======
+    # ======= Rewards (neues System) =======
     # STEP_MODE : "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
     # FINAL_MODE: "none" | "env_only" | "rank_only" | "both"
     "REWARD": {
@@ -58,23 +58,37 @@ CONFIG = {
 
     # Features (analog k1a1/k1a2)
     "FEATURES": {
-        "USE_HISTORY": True,      # True = mit Historie
-        "SEAT_ONEHOT": False,     # optional: Sitz-One-Hot dem Agent geben
-        "PLOT_METRICS": True,     # Trainingsplots erzeugen?
-        "SAVE_METRICS_TO_CSV": False,  # Trainingsmetriken persistent speichern?
-        "RET_SMOOTH_WINDOW": 150,
-
-        # Steuert plot_train(); Sonder-Keys triggern In-Memory-Return-Plots.
-        "PLOT_KEYS": [
-            # PPO/Train-ähnliche Metriken (falls vorhanden):
-            "return_mean", "reward_mean", "entropy", "approx_kl",
-            "clip_frac", "policy_loss", "value_loss",
-            # Trainings-/Umgebungsmetriken (Learner-Seat):
-            "train_seconds", "ep_env_return", "ep_shaping_return",
-            "ep_final_bonus", "ep_length",
+        "USE_HISTORY": True,
+        "SEAT_ONEHOT": False,
+        "NORMALIZE": False,
+        "DEBUG_FEATURES": False,
+        "PLOT_METRICS": True,
+        "SAVE_METRICS_TO_CSV": False,
+        "RET_SMOOTH_WINDOW": 150,   # Fenstergröße für Moving Average der Rewards
+        "PLOT_KEYS": [              # steuert plot_train(); mögliche Keys:
+            # PPO-Metriken:
+            #   reward_mean, reward_std, return_mean,
+            #   adv_mean_raw, adv_std_raw,
+            #   policy_loss, value_loss,
+            #   entropy, approx_kl, clip_frac
+            # Trainings-/Umgebungsmetriken:
+            #   train_seconds, ep_env_score, ep_shaping_return,
+            #   ep_final_bonus, ep_length
             # Sonderplots (aus Memory, nicht aus metrics):
-            "ep_return_raw", "ep_return_components",
-            "ep_return_env", "ep_return_shaping", "ep_return_final",
+            #   ep_return_raw, ep_return_components,
+            #   ep_return_env, ep_return_shaping, ep_return_final
+            "return_mean",
+            "reward_mean",
+            "entropy",
+            "approx_kl",
+            "clip_frac",
+            "policy_loss",
+            "value_loss",
+            "ep_return_raw",
+            "ep_return_components",
+            "ep_return_env",         # Einzelplot env_score
+            "ep_return_shaping",     # Einzelplot shaping
+            "ep_return_final",       # Einzelplot final_bonus
             "ep_return_training",
         ],
     },
@@ -82,8 +96,8 @@ CONFIG = {
     # Snapshot-Selfplay
     "SNAPSHOT": {
         "LEARNER_SEAT": 0,
-        "MIX_CURRENT": 0.8,            # Wahrscheinlichkeit, Seats 1–3 mit aktueller Policy spielen zu lassen
-        "SNAPSHOT_INTERVAL": 200,      # relativ kurz, damit viele Snapshots entstehen
+        "MIX_CURRENT": 0.8,           # seats 1–3 spielen mit aktueller Policy mit dieser W'keit
+        "SNAPSHOT_INTERVAL": 200,     # häufige Snapshots
         "POOL_CAP": 20,
     },
 
@@ -93,7 +107,7 @@ CONFIG = {
 
 # ===== Helfer für Snapshot-Policies =====
 class SnapshotPolicy(torch.nn.Module):
-    """Eingefrorene Policy (nur Inferenz). Erwartet denselben Input wie PPOAgent._make_input."""
+    """Eingefrorene Policy (nur Inferenz). Erwartet denselben Inputvektor wie der Agent nach augment_observation."""
     def __init__(self, input_dim: int, num_actions: int, state_dict: dict):
         super().__init__()
         self.net = ppo.PolicyNetwork(input_dim, num_actions)
@@ -112,12 +126,58 @@ class SnapshotPolicy(torch.nn.Module):
         return int(torch.distributions.Categorical(probs=probs).sample().item())
 
 def main():
+
+    # ================== DEBUG: Feature-Vektor Check ==================
+    if CONFIG["FEATURES"].get("DEBUG_FEATURES", False):
+        for deck_size in [16, 64]:
+            for use_history in [True, False]:
+                for seat_onehot in [True, False]:
+                    for normalize in [True, False]:
+                        CONFIG["DECK_SIZE"] = str(deck_size)
+                        CONFIG["FEATURES"]["USE_HISTORY"] = use_history
+                        CONFIG["FEATURES"]["SEAT_ONEHOT"] = seat_onehot
+                        CONFIG["FEATURES"]["NORMALIZE"] = normalize
+
+                        game = pyspiel.load_game("president", {
+                            "num_players": 4,
+                            "deck_size": CONFIG["DECK_SIZE"],
+                            "shuffle_cards": True,
+                            "single_card_mode": False,
+                        })
+                        env = rl_environment.Environment(game)
+                        num_players = game.num_players()
+                        deck_int = int(CONFIG["DECK_SIZE"])
+                        num_ranks = ranks_for_deck(deck_int)
+
+                        feat_cfg = FeatureConfig(
+                            num_players=num_players,
+                            num_ranks=num_ranks,
+                            add_seat_onehot=CONFIG["FEATURES"]["SEAT_ONEHOT"],
+                            include_history=CONFIG["FEATURES"]["USE_HISTORY"],
+                            normalize=CONFIG["FEATURES"]["NORMALIZE"],
+                            deck_size=deck_int,
+                        )
+                        ts = env.reset()
+                        p = ts.observations["current_player"]
+                        base_obs = env._state.observation_tensor(p)
+                        obs = augment_observation(base_obs, player_id=p, cfg=feat_cfg)
+
+                        print("Deck Size:  ", CONFIG["DECK_SIZE"])
+                        print("Use History:", CONFIG["FEATURES"]["USE_HISTORY"])
+                        print("Seat 1-Hot: ", CONFIG["FEATURES"]["SEAT_ONEHOT"])
+                        print("Normalize:  ", CONFIG["FEATURES"]["NORMALIZE"])
+                        print(f"Tensor length={len(obs)}  (model input_dim={feat_cfg.input_dim()})")
+                        print(f"Tensor: {np.round(obs, 3)}")
+                        print("-" * 60)
+        return
+    # ================== DEBUG Ende ==================
+
     np.random.seed(CONFIG["SEED"]); torch.manual_seed(CONFIG["SEED"])
     ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     MODELS_ROOT = os.path.join(ROOT, "models")
 
     # ---- Verzeichnisse (k1a1-Stil) ----
-    family = "k3a1"  # eigene Familie für Snapshot-Selfplay
+    family = "k3a1"
     family_dir = os.path.join(MODELS_ROOT, family)
     version = find_next_version(family_dir, prefix="model")
     paths = prepare_run_dirs(MODELS_ROOT, family, version, prefix="model")
@@ -151,22 +211,19 @@ def main():
     # ---- Features ----
     deck_int  = int(CONFIG["DECK_SIZE"])
     num_ranks = ranks_for_deck(deck_int)
-
-    # Seat-One-Hot NICHT in augment_observation anhängen; optional separat über seat_one_hot
     feat_cfg = FeatureConfig(
         num_players=num_players,
         num_ranks=num_ranks,
-        add_seat_onehot=False,                          # <- immer False lassen
+        add_seat_onehot=CONFIG["FEATURES"]["SEAT_ONEHOT"],
         include_history=CONFIG["FEATURES"]["USE_HISTORY"],
+        normalize=CONFIG["FEATURES"]["NORMALIZE"],
+        deck_size=deck_int,
     )
-    seat_id_dim = (num_players if CONFIG["FEATURES"]["SEAT_ONEHOT"] else 0)
-
-    # ✅ Agent-Inputgrößen sauber bestimmen
-    info_dim = expected_feature_len(feat_cfg)  # Basis-Features (ohne Seat-One-Hot)
+    state_size = feat_cfg.input_dim()
 
     # ---- Agent / Shaper ----
     ppo_cfg = ppo.PPOConfig(**CONFIG["PPO"])
-    agent = ppo.PPOAgent(info_dim, A, seat_id_dim=seat_id_dim, config=ppo_cfg)
+    agent = ppo.PPOAgent(state_size, A, config=ppo_cfg)
     shaper = RewardShaper(CONFIG["REWARD"])
 
     # ---- Config & Meta speichern ----
@@ -174,23 +231,15 @@ def main():
         "script": family, "version": version,
         "deck_size": CONFIG["DECK_SIZE"], "num_ranks": num_ranks,
         "use_history": CONFIG["FEATURES"]["USE_HISTORY"],
-        # Reward-Setup (neues System)
-        "step_mode": shaper.step_mode,
-        "delta_weight": shaper.dw,
-        "hand_penalty_coeff": shaper.hp,
-        "final_mode": shaper.final_mode,
-        "bonus_win":   CONFIG["REWARD"]["BONUS_WIN"],
-        "bonus_2nd":   CONFIG["REWARD"]["BONUS_2ND"],
-        "bonus_3rd":   CONFIG["REWARD"]["BONUS_3RD"],
-        "bonus_last":  CONFIG["REWARD"]["BONUS_LAST"],
-
+        "step_mode": shaper.step_mode, "delta_weight": shaper.dw,
+        "hand_penalty_coeff": shaper.hp, "final_mode": shaper.final_mode,
+        "bonus_win": CONFIG["REWARD"]["BONUS_WIN"], "bonus_2nd": CONFIG["REWARD"]["BONUS_2ND"],
+        "bonus_3rd": CONFIG["REWARD"]["BONUS_3RD"], "bonus_last": CONFIG["REWARD"]["BONUS_LAST"],
         "agent_type": "PPO_snapshot", "num_episodes": CONFIG["EPISODES"],
         "bench_interval": CONFIG["BENCH_INTERVAL"], "bench_episodes": CONFIG["BENCH_EPISODES"],
-        "observation_dim": expected_input_dim(feat_cfg),  # inkl. Seat-One-Hot, falls aktiv
-        "num_actions": A,
+        "observation_dim": state_size, "num_actions": A,
         "seat_onehot": CONFIG["FEATURES"]["SEAT_ONEHOT"],
         "ret_smooth_window": CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 150),
-
         "models_dir": paths["weights_dir"], "plots_dir": paths["plots_dir"],
         "mix_current": CONFIG["SNAPSHOT"]["MIX_CURRENT"],
         "snapshot_interval": CONFIG["SNAPSHOT"]["SNAPSHOT_INTERVAL"],
@@ -199,7 +248,8 @@ def main():
         "benchmark_opponents": ",".join(CONFIG["BENCH_OPPONENTS"]),
         "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }, paths["config_csv"])
-    save_run_meta({"family": family, "version": version, "algo": "ppo_snapshot", "deck": CONFIG["DECK_SIZE"]}, paths["run_meta_json"])
+    save_run_meta({"family": family, "version": version, "algo": "ppo_snapshot", "deck": CONFIG["DECK_SIZE"]},
+                  paths["run_meta_json"])
 
     # ---- Snapshot-Pool ----
     pool: list[dict] = []
@@ -211,11 +261,7 @@ def main():
     t0 = time.perf_counter()
     BINT, BEPS = CONFIG["BENCH_INTERVAL"], CONFIG["BENCH_EPISODES"]
 
-    # Optionales Sammeln von Metriken (analog k1a1)
-    collect_metrics = (
-        CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False)
-        or CONFIG["FEATURES"].get("PLOT_METRICS", False)
-    )
+    collect_metrics = CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False) or CONFIG["FEATURES"].get("PLOT_METRICS", False)
 
     # ---- Training ----
     for ep in range(1, CONFIG["EPISODES"] + 1):
@@ -234,39 +280,34 @@ def main():
                 seat_actor[seat] = "current"
             else:
                 sd = pool[np.random.randint(len(pool))]
-                # Wichtig: Eingabedimension = expected_input_dim(feat_cfg)
-                seat_actor[seat] = SnapshotPolicy(expected_input_dim(feat_cfg), A, sd)
+                seat_actor[seat] = SnapshotPolicy(state_size, A, sd)
 
         while not ts.last():
             p = ts.observations["current_player"]
             legal = ts.observations["legal_actions"][p]
 
-            base_obs = ts.observations["info_state"][p]
+            base_obs = env._state.observation_tensor(p)
             obs = augment_observation(base_obs, player_id=p, cfg=feat_cfg)
-
-            seat_oh = None
-            if CONFIG["FEATURES"]["SEAT_ONEHOT"]:
-                seat_oh = np.zeros(num_players, dtype=np.float32); seat_oh[p] = 1.0
 
             # Step-Reward-Prep
             if shaper.step_active():
                 hand_before = shaper.hand_size(ts, p, deck_int)
 
             if p == LEARNER_SEAT:
-                a = int(agent.step(obs, legal, seat_one_hot=seat_oh, player_id=p))
+                a = int(agent.step(obs, legal, player_id=p))
                 last_idx_learner = len(agent._buffer.states) - 1
             else:
                 actor = seat_actor[p]
                 if actor == "current":
-                    x = agent._make_input(obs, seat_one_hot=seat_oh)
                     with torch.no_grad():
+                        x = torch.tensor(obs, dtype=torch.float32).unsqueeze(0)
                         logits = agent._policy(x)
-                        mask = torch.zeros(A, device=logits.device); mask[legal] = 1.0
-                        probs = ppo.masked_softmax(logits, mask)
-                    a = int(torch.distributions.Categorical(probs=probs).sample().item())
+                        mask = torch.zeros(A, dtype=torch.float32, device=logits.device)
+                        mask[legal] = 1.0
+                        probs = ppo.masked_softmax(logits.squeeze(0), mask)
+                        a = int(torch.distributions.Categorical(probs=probs).sample().item())
                 else:
-                    x = agent._make_input(obs, seat_one_hot=seat_oh).cpu().numpy()
-                    a = int(actor.act(x, legal))
+                    a = int(actor.act(obs, legal))
 
             ts_next = env.step([a])
             ep_len += 1
@@ -299,7 +340,6 @@ def main():
         shaping_part = ep_shaping_return if shaper.step_active() else 0.0
         ep_return_training = shaping_part + env_part + ep_final_bonus
 
-        # Trainingsmetriken sammeln / speichern analog k1a1
         metrics = train_metrics or {}
         metrics.update({
             "train_seconds":      train_seconds,
@@ -315,8 +355,8 @@ def main():
             global_episode=ep,
             ep_returns=[ep_return_training],
             components={
-                "env_score":   [env_part],      # 0.0, wenn nicht aktiv
-                "shaping":     [shaping_part],  # 0.0, wenn nicht aktiv
+                "env_score":   [env_part],
+                "shaping":     [shaping_part],
                 "final_bonus": [ep_final_bonus],
             },
         )
@@ -356,8 +396,6 @@ def main():
             plotter.add_benchmark(ep, per_opponent)
             plotter.plot_benchmark_rewards()
             plotter.plot_places_latest()
-
-            # Einheitliche Titel:
             title_multi = f"Lernkurve - {family.upper()} vs feste Heuristiken"
             plotter.plot_benchmark(
                 filename_prefix="lernkurve",
@@ -365,13 +403,11 @@ def main():
                 family_title=family.upper(),
                 multi_title=title_multi,
             )
-
             if CONFIG["FEATURES"].get("PLOT_METRICS", False):
                 plotter.plot_train(
                     include_keys=CONFIG["FEATURES"].get("PLOT_KEYS"),
                     separate=True,
                 )
-
             plot_seconds = time.perf_counter() - plot_start
 
             save_start = time.perf_counter()

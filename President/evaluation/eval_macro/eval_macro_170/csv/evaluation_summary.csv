@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+170,P0,dqn v32 ep100.000,dqn,k4a2,32,100000,25.5,1.5,7649,7601
+170,P1,v_table v,v_table,,,,24.4,1.5,7335,7544
+170,P2,dqn v32 ep100.000,dqn,k4a2,32,100000,25.5,1.5,7662,7480
+170,P3,v_table v,v_table,,,,24.5,1.5,7354,7375
