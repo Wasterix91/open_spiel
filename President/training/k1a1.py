@@ -34,8 +34,8 @@ CONFIG = {
     # Population: aktiviert, sobald irgendein Gewicht > 0 ist
     # Tabellengegner einfach als "v_table" referenzieren
     "OPPONENT_POOL": {
-        "max_combo": 1.0,
-        "single_only": 0.0,
+        "max_combo": 0.0,
+        "single_only": 1.0,
         "random2": 0.0,
         "v_table": 0.0
     },
@@ -268,7 +268,7 @@ def main():
     if use_population:
         opponents_names_current = sample_lineup_from_pool(pool, n_seats=3, rng=rng)
         opponents = [resolve_opponent(n) for n in opponents_names_current]
-        #plotter.log(f"[Population] Initiales Lineup: {[str(n) for n in opponents_names_current]}")
+        plotter.log(f"[Population] Initiales Lineup: {[str(n) for n in opponents_names_current]}")
     else:
         fixed = CONFIG.get("OPPONENTS", ["max_combo"] * 3)
         opponents_names_current = list(fixed)
