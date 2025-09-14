@@ -36,17 +36,17 @@ if not logging.getLogger().handlers:
 # ===================== Konfiguration ===================== #
 NUM_EPISODES = 30_000
 EVAL_EPISODE = 5_000
-DECK = "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+DECK = "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
 
 # Beispiel-Setup (anpassen):
 
 # 1v3 Gegen Max Combo
-""" PLAYER_CONFIG = [
-    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
+PLAYER_CONFIG = [
+    {"name": "P0", "type": "ppo", "family": "k1a1", "version": "13", "episode": 20_000, "from_pid": 0},
     {"name": "P1", "type": "max_combo"},
     {"name": "P2", "type": "max_combo"},
     {"name": "P3", "type": "max_combo"},
-]  """
+] 
 
 # 1v3 Gegen V-Table
 """ PLAYER_CONFIG = [
@@ -99,12 +99,12 @@ DECK = "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
 
 # 2v2 über Kreuz vs Random2
 
-PLAYER_CONFIG = [ 
+""" PLAYER_CONFIG = [ 
     {"name": "P0", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
     {"name": "P1", "type": "random2"},
     {"name": "P2", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
     {"name": "P3", "type": "random2"}
-]  
+]   """
 
 GENERATE_PLOTS = True
 EVAL_OUTPUT = True

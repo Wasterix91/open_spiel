@@ -1,0 +1,33 @@
+[2025-09-14 08:21:09] New Evaluation (macro_173)
+[2025-09-14 08:21:09] Deck_Size: 64
+[2025-09-14 08:21:09] Episodes: 30.000
+[2025-09-14 08:21:09] Path: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_173
+[2025-09-14 08:21:09] 
+[2025-09-14 08:21:09] Player Configuration:
+[2025-09-14 08:21:09] Idx | Name | Type      | Family | Version | Episode | from_pid
+[2025-09-14 08:21:09] --------------------------------------------------------------
+[2025-09-14 08:21:09] 0   | P0   | ppo       | k1a1   | 13      | 20000   | 0       
+[2025-09-14 08:21:09] 1   | P1   | max_combo |        |         |         |         
+[2025-09-14 08:21:09] 2   | P2   | max_combo |        |         |         |         
+[2025-09-14 08:21:09] 3   | P3   | max_combo |        |         |         |         
+[2025-09-14 08:21:35] 
+[2025-09-14 08:21:35] Benchmark @eval_ep    5000
+[2025-09-14 08:21:35] Winrates: P0 (ppo v13. ep20.000): 32.7% | P1 (max_combo v): 24.5% | P2 (max_combo v): 21.4% | P3 (max_combo v): 21.4%
+[2025-09-14 08:21:35] P0 (ppo v13 ep20.000) | winrate:  32.7% | avg_return:    1.78 | wins:   1633 | starts:   1288
+[2025-09-14 08:21:35] P1 (max_combo v) | winrate:  24.5% | avg_return:    1.55 | wins:   1226 | starts:   1241
+[2025-09-14 08:21:35] P2 (max_combo v) | winrate:  21.4% | avg_return:    1.38 | wins:   1072 | starts:   1221
+[2025-09-14 08:21:35] P3 (max_combo v) | winrate:  21.4% | avg_return:    1.29 | wins:   1069 | starts:   1250
+[2025-09-14 08:22:02] 
+[2025-09-14 08:22:02] Benchmark @eval_ep   10000
+[2025-09-14 08:22:02] Winrates: P0 (ppo v13. ep20.000): 33.0% | P1 (max_combo v): 24.9% | P2 (max_combo v): 21.1% | P3 (max_combo v): 20.9%
+[2025-09-14 08:22:02] P0 (ppo v13 ep20.000) | winrate:  33.0% | avg_return:    1.78 | wins:   3303 | starts:   2553
+[2025-09-14 08:22:02] P1 (max_combo v) | winrate:  24.9% | avg_return:    1.56 | wins:   2494 | starts:   2530
+[2025-09-14 08:22:02] P2 (max_combo v) | winrate:  21.1% | avg_return:    1.37 | wins:   2111 | starts:   2384
+[2025-09-14 08:22:02] P3 (max_combo v) | winrate:  20.9% | avg_return:    1.30 | wins:   2092 | starts:   2533
+[2025-09-14 08:22:27] 
+[2025-09-14 08:22:28] Benchmark @eval_ep   15000
+[2025-09-14 08:22:28] Winrates: P0 (ppo v13. ep20.000): 32.9% | P1 (max_combo v): 25.2% | P2 (max_combo v): 21.4% | P3 (max_combo v): 20.5%
+[2025-09-14 08:22:28] P0 (ppo v13 ep20.000) | winrate:  32.9% | avg_return:    1.78 | wins:   4935 | starts:   3727
+[2025-09-14 08:22:28] P1 (max_combo v) | winrate:  25.2% | avg_return:    1.56 | wins:   3781 | starts:   3884
+[2025-09-14 08:22:28] P2 (max_combo v) | winrate:  21.4% | avg_return:    1.38 | wins:   3204 | starts:   3621
+[2025-09-14 08:22:28] P3 (max_combo v) | winrate:  20.5% | avg_return:    1.29 | wins:   3080 | starts:   3768

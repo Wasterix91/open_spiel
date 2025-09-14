@@ -157,16 +157,6 @@ def run_benchmark(game, agent, opponents_dict, opponent_names, episodes, feat_cf
                         agent, x_vec, seat_id=0, num_players=num_players, feat_cfg=feat_cfg
                     )
 
-                    # optionales Debug (nur 1x je Gegner)
-                    if not did_log_shape:
-                        try:
-                            exp_in = _expected_in_features(_get_policy_module(agent), agent)
-                        except Exception:
-                            exp_in = None
-                        print(f"[benchmark] opponent={name} exp_in={exp_in}, x_dim={len(x_vec)}, "
-                              f"raw={len(st.observation_tensor(pid))}, info={len(st.information_state_tensor(pid))}")
-                        did_log_shape = True
-
                     # Maske der legalen Aktionen
                     mask = torch.zeros(num_actions, dtype=torch.float32, device=logits.device)
                     if len(legal) > 0:

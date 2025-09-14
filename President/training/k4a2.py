@@ -19,10 +19,10 @@ from utils.load_save_common import find_next_version, prepare_run_dirs, save_con
 
 # ============== CONFIG ==============
 CONFIG = {
-    "EPISODES":         100_000,
-    "BENCH_INTERVAL":   5_000,
+    "EPISODES":         1_000_000,
+    "BENCH_INTERVAL":   10_000,
     "BENCH_EPISODES":   2_000,
-    "DECK_SIZE":        "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+    "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
     # DQN (kompatibel zu agents/dqn_agent.DQNConfig)
@@ -66,7 +66,7 @@ CONFIG = {
     # Feature-Toggles
     "FEATURES": {
         "USE_HISTORY": True,     # Historie in Features einbetten?
-        "SEAT_ONEHOT": False,     # Sitz-One-Hot optional separat anhängen
+        "SEAT_ONEHOT": True,     # Sitz-One-Hot optional separat anhängen
         "NORMALIZE": False,
         "DEBUG_FEATURES": False,
         "PLOT_METRICS": True,     # Trainingsplots erzeugen?
@@ -85,7 +85,7 @@ CONFIG = {
     },
 
     "V_TABLE_PATH": "agents/tables/v_table_4_4_4",
-    "BENCH_OPPONENTS": ["single_only", "max_combo", "random2", "v_table"],
+    "BENCH_OPPONENTS": ["single_only", "max_combo", "random2"],
 }
 
 def resolve_opponent(name: str):

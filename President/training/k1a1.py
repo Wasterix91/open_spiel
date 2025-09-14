@@ -18,10 +18,10 @@ from collections import defaultdict
 
 # ============================ CONFIG ============================
 CONFIG = {
-    "EPISODES":         100_000,
-    "BENCH_INTERVAL":   5_000,
-    "BENCH_EPISODES":   2000,
-    "DECK_SIZE":        "16",
+    "EPISODES":         1_000_000,
+    "BENCH_INTERVAL":   10_000,
+    "BENCH_EPISODES":   2_000,
+    "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
     # Pfadpräfix der Wertetabelle (ohne *_params.json/_index.bin/_data.bin)
@@ -69,7 +69,7 @@ CONFIG = {
         "USE_HISTORY": True,
         "SEAT_ONEHOT": False,
         "NORMALIZE": False,
-        "DEBUG_FEATURES": True,
+        "DEBUG_FEATURES": False,
         "PLOT_METRICS": True,
         "SAVE_METRICS_TO_CSV": False,
         "RET_SMOOTH_WINDOW": 150,   # Fenstergröße für Moving Average der Rewards
