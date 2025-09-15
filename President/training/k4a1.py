@@ -62,7 +62,7 @@ CONFIG = {
         "USE_HISTORY": True,
         "SEAT_ONEHOT": True,
         "NORMALIZE": False,
-        "DEBUG_FEATURES": True,
+        "DEBUG_FEATURES": False,
         "PLOT_METRICS": True,
         "SAVE_METRICS_TO_CSV": False,
         "RET_SMOOTH_WINDOW": 150,   # Fenstergröße für Moving Average der Rewards
