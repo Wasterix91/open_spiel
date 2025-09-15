@@ -1,0 +1,4 @@
+[2025-09-14 18:16:07] New Training (k2a2): 4 getrennte DQN-Agents — simultanes Lernen
+[2025-09-14 18:16:07] Deck_Size: 64
+[2025-09-14 18:16:07] Episodes: 1000000
+[2025-09-14 18:16:07] Path: /home/wasterix/Multiagent/OpenSpiel_neu/open_spiel/President/models/k2a2/model_06
