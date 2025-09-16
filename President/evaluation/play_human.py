@@ -33,9 +33,9 @@ GAME_SETTINGS = {
 
 # Gegner: Heuristiken oder Policies; für Policies sind family/version/episode Pflicht!
 OPPONENTS = [
-    {"name": "max_combo", "type": "max_combo"},
-    {"name": "v_table", "type": "v_table"},
-    {"name": "max_combo", "type": "max_combo"},
+    {"name": "P1", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
+    {"name": "P2", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
+    {"name": "P3", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
 ]
 
 # ===== Pfade & kleine Utils =====

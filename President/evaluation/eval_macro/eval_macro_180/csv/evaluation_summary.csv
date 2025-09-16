@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+180,P0,dqn v40 ep400.000,dqn,k1a2,40,400000,84.4,2.8,25333,7439
+180,P1,single_only v,single_only,,,,3.3,0.88,981,7560
+180,P2,single_only v,single_only,,,,4.8,1.08,1448,7641
+180,P3,single_only v,single_only,,,,7.5,1.24,2238,7360

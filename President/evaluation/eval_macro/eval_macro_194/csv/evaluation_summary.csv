@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+194,P0: K1 (vs POP),dqn v38 ep20.000,dqn,k1a2,38,20000,25.3,1.49,7582,7522
+194,P1: K2 (Independent),dqn v05 ep20.000,dqn,k2a2,05,20000,25.1,1.51,7521,7454
+194,P2: K3 (Snapshot SP),dqn v31 ep20.000,dqn,k3a2,31,20000,24.0,1.49,7200,7512
+194,P3: K4 (Shared Policy Sp),dqn v32 ep100.000,dqn,k4a2,32,100000,25.7,1.51,7697,7512

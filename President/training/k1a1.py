@@ -34,14 +34,14 @@ CONFIG = {
     # Population: aktiviert, sobald irgendein Gewicht > 0 ist
     # Tabellengegner einfach als "v_table" referenzieren
     "OPPONENT_POOL": {
-        "max_combo": 0.0,
+        "max_combo": 1.0,
         "single_only": 1.0,
-        "random2": 0.0,
+        "random2": 1.0,
         "v_table": 0.0
     },
 
     # >0: Wechsel alle n Episoden; 0/negativ: nie wechseln
-    "SWITCH_INTERVAL": 0,
+    "SWITCH_INTERVAL": 1,
 
     # PPO-Hyperparameter
     "PPO": {
@@ -268,7 +268,7 @@ def main():
     if use_population:
         opponents_names_current = sample_lineup_from_pool(pool, n_seats=3, rng=rng)
         opponents = [resolve_opponent(n) for n in opponents_names_current]
-        plotter.log(f"[Population] Initiales Lineup: {[str(n) for n in opponents_names_current]}")
+        #plotter.log(f"[Population] Initiales Lineup: {[str(n) for n in opponents_names_current]}")
     else:
         fixed = CONFIG.get("OPPONENTS", ["max_combo"] * 3)
         opponents_names_current = list(fixed)
@@ -329,7 +329,7 @@ def main():
         if use_population and (switch_interval is not None) and ((ep - 1) % switch_interval == 0):
             opponents_names_current = sample_lineup_from_pool(pool, n_seats=3, rng=rng)
             opponents = [resolve_opponent(n) for n in opponents_names_current]
-            plotter.log(f"[Population] Episode {ep}: Lineup -> {[str(n) for n in opponents_names_current]}")
+            #plotter.log(f"[Population] Episode {ep}: Lineup -> {[str(n) for n in opponents_names_current]}")
 
         # --- realisierte Gegner dieser Episode zählen ---
         for name in opponents_names_current:

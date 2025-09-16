@@ -1,0 +1,2 @@
+game_settings,players
+"{""num_players"": 4, ""deck_size"": ""16"", ""shuffle_cards"": true, ""single_card_mode"": false}","[{""name"": ""P0"", ""type"": ""human""}, {""name"": ""P1"", ""type"": ""dqn"", ""family"": ""k4a2"", ""version"": ""32"", ""episode"": 100000, ""from_pid"": 0}, {""name"": ""P2"", ""type"": ""dqn"", ""family"": ""k4a2"", ""version"": ""32"", ""episode"": 100000, ""from_pid"": 0}, {""name"": ""P3"", ""type"": ""dqn"", ""family"": ""k4a2"", ""version"": ""32"", ""episode"": 100000, ""from_pid"": 0}]"

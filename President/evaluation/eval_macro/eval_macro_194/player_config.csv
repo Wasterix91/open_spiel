@@ -1,0 +1,5 @@
+name,type,family,version,episode,from_pid
+P0: K1 (vs POP),dqn,k1a2,38,20000,0
+P1: K2 (Independent),dqn,k2a2,05,20000,0
+P2: K3 (Snapshot SP),dqn,k3a2,31,20000,0
+P3: K4 (Shared Policy Sp),dqn,k4a2,32,100000,0

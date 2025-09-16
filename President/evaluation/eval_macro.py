@@ -36,30 +36,22 @@ if not logging.getLogger().handlers:
 # ===================== Konfiguration ===================== #
 NUM_EPISODES = 30_000
 EVAL_EPISODE = 5_000
-DECK = "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+DECK = "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
 
 # Beispiel-Setup (anpassen):
 
 # 1v3 Gegen Max Combo
-PLAYER_CONFIG = [
-    {"name": "P0", "type": "ppo", "family": "k1a1", "version": "13", "episode": 20_000, "from_pid": 0},
+""" PLAYER_CONFIG = [
+    {"name": "P0", "type": "ppo", "family": "k2a1", "version": "06", "episode": 400_000, "from_pid": 0},
     {"name": "P1", "type": "max_combo"},
     {"name": "P2", "type": "max_combo"},
     {"name": "P3", "type": "max_combo"},
-] 
-
-# 1v3 Gegen V-Table
-""" PLAYER_CONFIG = [
-    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
-    {"name": "P1", "type": "v_table"},
-    {"name": "P2", "type": "v_table"},
-    {"name": "P3", "type": "v_table"},
 ]  """
 
 # 1v3 Gegen Single Only
 
 """ PLAYER_CONFIG = [
-    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
+    {"name": "P0", "type": "ppo", "family": "k2a1", "version": "06", "episode": 400_000, "from_pid": 0},
     {"name": "P1", "type": "single_only"},
     {"name": "P2", "type": "single_only"},
     {"name": "P3", "type": "single_only"},
@@ -67,7 +59,7 @@ PLAYER_CONFIG = [
 
 # 1v3 Gegen Random2
 """ PLAYER_CONFIG = [
-    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
+    {"name": "P0", "type": "ppo", "family": "k2a1", "version": "06", "episode": 400_000, "from_pid": 0},
     {"name": "P1", "type": "random2"},
     {"name": "P2", "type": "random2"},
     {"name": "P3", "type": "random2"},
@@ -75,13 +67,38 @@ PLAYER_CONFIG = [
 
 # 2v2 über Kreuz vs Max Combo
 """ PLAYER_CONFIG = [ 
-    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
+    {"name": "P0", "type": "ppo", "family": "k2a1", "version": "06", "episode": 400_000, "from_pid": 0},
     {"name": "P1", "type": "max_combo"},
-    {"name": "P2", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
+    {"name": "P2", "type": "ppo", "family": "k2a1", "version": "06", "episode": 400_000, "from_pid": 0},
     {"name": "P3", "type": "max_combo"}
 ]    """
 
-# 2v2 über Kreuz vs V-Table
+# 2v2 über Kreuz vs Single Only
+""" PLAYER_CONFIG = [ 
+    {"name": "P0", "type": "ppo", "family": "k2a1", "version": "06", "episode": 400_000, "from_pid": 0},
+    {"name": "P1", "type": "single_only"},
+    {"name": "P2", "type": "ppo", "family": "k2a1", "version": "06", "episode": 400_000, "from_pid": 0},
+    {"name": "P3", "type": "single_only"}
+]    """
+
+# 2v2 über Kreuz vs Random2
+
+""" PLAYER_CONFIG = [ 
+    {"name": "P0", "type": "ppo", "family": "k2a1", "version": "06", "episode": 400_000, "from_pid": 0},
+    {"name": "P1", "type": "random2"},
+    {"name": "P2", "type": "ppo", "family": "k2a1", "version": "06", "episode": 400_000, "from_pid": 0},
+    {"name": "P3", "type": "random2"}
+]   """
+
+# 1v3 Gegen V-Table (nur für 16 Karten)
+""" PLAYER_CONFIG = [
+    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
+    {"name": "P1", "type": "v_table"},
+    {"name": "P2", "type": "v_table"},
+    {"name": "P3", "type": "v_table"},
+]  """
+
+# 2v2 über Kreuz vs V-Table (nur für 16 Karten)
 """ PLAYER_CONFIG = [ 
     {"name": "P0", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
     {"name": "P1", "type": "v_table"},
@@ -89,22 +106,30 @@ PLAYER_CONFIG = [
     {"name": "P3", "type": "v_table"}
 ]    """
 
-# 2v2 über Kreuz vs Single Only
-""" PLAYER_CONFIG = [ 
-    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
-    {"name": "P1", "type": "single_only"},
-    {"name": "P2", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
-    {"name": "P3", "type": "single_only"}
-]    """
+# Vier Heuristiken
+PLAYER_CONFIG = [ 
+    {"name": "P0", "type": "max_combo"},
+    {"name": "P1", "type": "single_only"}, 
+    {"name": "P2", "type": "random2"},
+    {"name": "P3", "type": "v_table"}
+]
 
-# 2v2 über Kreuz vs Random2
 
+# Vier verschiedene Spieler (Agents)
 """ PLAYER_CONFIG = [ 
-    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
-    {"name": "P1", "type": "random2"},
-    {"name": "P2", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
-    {"name": "P3", "type": "random2"}
-]   """
+    {"name": "P0: K1 (vs Max Combo)", "type": "dqn", "family": "k1a2", "version": "36", "episode": 20_000, "from_pid": 0},
+    {"name": "P1: K1 (vs Single Only)", "type": "dqn", "family": "k1a2", "version": "39", "episode": 20_000, "from_pid": 0},
+    {"name": "P2: K3 (vs Tabelle)", "type": "dqn", "family": "k1a2", "version": "37", "episode": 20_000, "from_pid": 0},
+    {"name": "P3: K4 (vs POP2)", "type": "dqn", "family": "k1a2", "version": "38", "episode": 20_000, "from_pid": 0}
+] """
+
+# Vier verschiedene Agents: 
+""" PLAYER_CONFIG = [ 
+    {"name": "P0: K1 (vs POP)", "type": "dqn", "family": "k1a2", "version": "38", "episode": 20_000, "from_pid": 0},
+    {"name": "P1: K2 (Independent)", "type": "dqn", "family": "k2a2", "version": "05", "episode": 20_000, "from_pid": 0},
+    {"name": "P2: K3 (Snapshot SP)", "type": "dqn", "family": "k3a2", "version": "31", "episode": 20_000, "from_pid": 0},
+    {"name": "P3: K4 (Shared Policy Sp)", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0}
+]   """ 
 
 GENERATE_PLOTS = True
 EVAL_OUTPUT = True
@@ -640,6 +665,84 @@ def main():
     legend_inside(ax, font_size=12)
     fig.tight_layout()
     plt.savefig(os.path.join(PLOT_DIR, "01_first_action_distribution_startplayer.jpg"))
+
+    # --- CSV: First Action Distribution (Startspieler) ---
+    first_action_table = pd.DataFrame(
+        index=[f"Player {pid}" for pid in range(NUM_PLAYERS)],
+        columns=action_labels
+    )
+
+    for pid in range(NUM_PLAYERS):
+        total_first = sum(first_action_counts[pid].values()) or 1
+        for aid, label in zip(action_ids, action_labels):
+            count = first_action_counts[pid].get(aid, 0)
+            percent = 100 * count / total_first if total_first > 0 else 0.0
+            first_action_table.loc[f"Player {pid}", label] = f"{count} ({percent:.1f}%)"
+
+    first_action_csv_path = os.path.join(CSV_DIR, "01_first_action_distribution.csv")
+    first_action_table.to_csv(first_action_csv_path)
+    logger.info("First action distribution saved: %s", first_action_csv_path)
+
+    # === CSV: First-Action Combo-Buckets (Single/Pair/Triple/Quad/N-of-a-kind) ===
+    dummy_state = game.new_initial_state()
+
+    def _bucket_for_action_id(aid: int) -> str | None:
+        """Mappe Action-ID auf Bucket. Pass -> None, unbekannt -> None."""
+        try:
+            label = dummy_state.action_to_string(0, aid)
+        except Exception:
+            return None
+        if "Pass" in label:
+            return None
+        if "Single" in label:
+            return "Single"
+        if "Pair" in label:
+            return "Pair"
+        if "Triple" in label:
+            return "Triple"
+        if "Quad" in label:
+            return "Quad"
+        m = re.search(r"(\d+)-of-a-kind", label)
+        if m and int(m.group(1)) >= 5:
+            return "N-of-a-kind"
+        return None
+
+    BUCKETS = ["Single", "Pair", "Triple", "Quad", "N-of-a-kind"]
+
+    # Aggregation nur über die ersten Aktionen des Startspielers
+    first_combo_counts = {pid: {b: 0 for b in BUCKETS} for pid in range(NUM_PLAYERS)}
+    first_totals = {pid: 0 for pid in range(NUM_PLAYERS)}
+    for pid in range(NUM_PLAYERS):
+        for aid, c in first_action_counts[pid].items():
+            bucket = _bucket_for_action_id(aid)
+            if bucket is None:
+                continue
+            first_combo_counts[pid][bucket] += c
+            first_totals[pid] += c
+
+    # DataFrames: Counts und Prozent
+    idx = [f"Player {pid}" for pid in range(NUM_PLAYERS)]
+    df_first_counts = pd.DataFrame.from_dict(first_combo_counts, orient="index")[BUCKETS]
+    df_first_counts.index = idx
+    df_first_counts.index.name = "Player"
+    df_first_counts["__TOTAL__"] = [first_totals[pid] for pid in range(NUM_PLAYERS)]
+
+    df_first_percent = df_first_counts[BUCKETS].div(
+        [max(first_totals[pid], 1) for pid in range(NUM_PLAYERS)], axis=0
+    ) * 100.0
+    df_first_percent = df_first_percent.round(1)
+    df_first_percent.index = idx
+    df_first_percent.index.name = "Player"
+    df_first_percent["__TOTAL__"] = [first_totals[pid] for pid in range(NUM_PLAYERS)]
+
+    # Speichern
+    p_counts = os.path.join(CSV_DIR, "01_first_action_combo_buckets_counts.csv")
+    p_percent = os.path.join(CSV_DIR, "01_first_action_combo_buckets_percent.csv")
+    df_first_counts.to_csv(p_counts, encoding="utf-8")
+    df_first_percent.to_csv(p_percent, encoding="utf-8")
+    logger.info("First-action combo buckets (counts) saved: %s", p_counts)
+    logger.info("First-action combo buckets (percent) saved: %s", p_percent)
+
 
     # 02 - Gesamte Aktionsverteilung (ohne Pass)
     action_ids_no_pass = make_action_id_range(NUM_ACTIONS, start_id=1, include_pass=False)
