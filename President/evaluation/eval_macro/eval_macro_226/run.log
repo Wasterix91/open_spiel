@@ -1,0 +1,63 @@
+[2025-09-16 15:06:23] New Evaluation (macro_226)
+[2025-09-16 15:06:23] Deck_Size: 64
+[2025-09-16 15:06:23] Episodes: 30.000
+[2025-09-16 15:06:23] Path: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_226
+[2025-09-16 15:06:23] 
+[2025-09-16 15:06:23] Player Configuration:
+[2025-09-16 15:06:23] Idx | Name | Type      | Family | Version | Episode | from_pid
+[2025-09-16 15:06:23] --------------------------------------------------------------
+[2025-09-16 15:06:23] 0   | P0   | dqn       | k1a2   | 42      | 1000000 | 0       
+[2025-09-16 15:06:23] 1   | P1   | max_combo |        |         |         |         
+[2025-09-16 15:06:23] 2   | P2   | max_combo |        |         |         |         
+[2025-09-16 15:06:23] 3   | P3   | max_combo |        |         |         |         
+[2025-09-16 15:06:40] 
+[2025-09-16 15:06:40] Benchmark @eval_ep    5000
+[2025-09-16 15:06:40] Winrates: P0 (dqn v42. ep1.000.000): 55.0% | P1 (max_combo v): 14.5% | P2 (max_combo v): 14.2% | P3 (max_combo v): 16.3%
+[2025-09-16 15:06:40] P0 (dqn v42 ep1.000.000) | winrate:  55.0% | avg_return:    2.29 | wins:   2748 | starts:   1227
+[2025-09-16 15:06:40] P1 (max_combo v) | winrate:  14.5% | avg_return:    1.29 | wins:    726 | starts:   1254
+[2025-09-16 15:06:40] P2 (max_combo v) | winrate:  14.2% | avg_return:    1.20 | wins:    710 | starts:   1235
+[2025-09-16 15:06:40] P3 (max_combo v) | winrate:  16.3% | avg_return:    1.22 | wins:    816 | starts:   1284
+[2025-09-16 15:06:57] 
+[2025-09-16 15:06:57] Benchmark @eval_ep   10000
+[2025-09-16 15:06:57] Winrates: P0 (dqn v42. ep1.000.000): 54.9% | P1 (max_combo v): 14.1% | P2 (max_combo v): 14.7% | P3 (max_combo v): 16.3%
+[2025-09-16 15:06:57] P0 (dqn v42 ep1.000.000) | winrate:  54.9% | avg_return:    2.29 | wins:   5494 | starts:   2426
+[2025-09-16 15:06:57] P1 (max_combo v) | winrate:  14.1% | avg_return:    1.28 | wins:   1408 | starts:   2504
+[2025-09-16 15:06:57] P2 (max_combo v) | winrate:  14.7% | avg_return:    1.21 | wins:   1469 | starts:   2504
+[2025-09-16 15:06:57] P3 (max_combo v) | winrate:  16.3% | avg_return:    1.22 | wins:   1629 | starts:   2566
+[2025-09-16 15:07:14] 
+[2025-09-16 15:07:14] Benchmark @eval_ep   15000
+[2025-09-16 15:07:14] Winrates: P0 (dqn v42. ep1.000.000): 54.7% | P1 (max_combo v): 13.9% | P2 (max_combo v): 14.9% | P3 (max_combo v): 16.5%
+[2025-09-16 15:07:14] P0 (dqn v42 ep1.000.000) | winrate:  54.7% | avg_return:    2.29 | wins:   8205 | starts:   3682
+[2025-09-16 15:07:14] P1 (max_combo v) | winrate:  13.9% | avg_return:    1.28 | wins:   2079 | starts:   3735
+[2025-09-16 15:07:14] P2 (max_combo v) | winrate:  14.9% | avg_return:    1.22 | wins:   2241 | starts:   3768
+[2025-09-16 15:07:14] P3 (max_combo v) | winrate:  16.5% | avg_return:    1.22 | wins:   2475 | starts:   3815
+[2025-09-16 15:07:31] 
+[2025-09-16 15:07:31] Benchmark @eval_ep   20000
+[2025-09-16 15:07:31] Winrates: P0 (dqn v42. ep1.000.000): 54.9% | P1 (max_combo v): 13.8% | P2 (max_combo v): 15.1% | P3 (max_combo v): 16.2%
+[2025-09-16 15:07:31] P0 (dqn v42 ep1.000.000) | winrate:  54.9% | avg_return:    2.29 | wins:  10983 | starts:   4937
+[2025-09-16 15:07:31] P1 (max_combo v) | winrate:  13.8% | avg_return:    1.28 | wins:   2756 | starts:   4976
+[2025-09-16 15:07:31] P2 (max_combo v) | winrate:  15.1% | avg_return:    1.22 | wins:   3013 | starts:   5078
+[2025-09-16 15:07:31] P3 (max_combo v) | winrate:  16.2% | avg_return:    1.21 | wins:   3248 | starts:   5009
+[2025-09-16 15:07:47] 
+[2025-09-16 15:07:47] Benchmark @eval_ep   25000
+[2025-09-16 15:07:47] Winrates: P0 (dqn v42. ep1.000.000): 54.9% | P1 (max_combo v): 13.8% | P2 (max_combo v): 15.1% | P3 (max_combo v): 16.2%
+[2025-09-16 15:07:47] P0 (dqn v42 ep1.000.000) | winrate:  54.9% | avg_return:    2.29 | wins:  13729 | starts:   6165
+[2025-09-16 15:07:47] P1 (max_combo v) | winrate:  13.8% | avg_return:    1.28 | wins:   3453 | starts:   6255
+[2025-09-16 15:07:47] P2 (max_combo v) | winrate:  15.1% | avg_return:    1.22 | wins:   3764 | starts:   6364
+[2025-09-16 15:07:47] P3 (max_combo v) | winrate:  16.2% | avg_return:    1.21 | wins:   4054 | starts:   6216
+[2025-09-16 15:08:04] 
+[2025-09-16 15:08:04] Benchmark @eval_ep   30000
+[2025-09-16 15:08:04] Winrates: P0 (dqn v42. ep1.000.000): 54.9% | P1 (max_combo v): 13.6% | P2 (max_combo v): 15.1% | P3 (max_combo v): 16.3%
+[2025-09-16 15:08:04] P0 (dqn v42 ep1.000.000) | winrate:  54.9% | avg_return:    2.29 | wins:  16483 | starts:   7389
+[2025-09-16 15:08:04] P1 (max_combo v) | winrate:  13.6% | avg_return:    1.28 | wins:   4091 | starts:   7545
+[2025-09-16 15:08:04] P2 (max_combo v) | winrate:  15.1% | avg_return:    1.22 | wins:   4537 | starts:   7630
+[2025-09-16 15:08:04] P3 (max_combo v) | winrate:  16.3% | avg_return:    1.21 | wins:   4889 | starts:   7436
+[2025-09-16 15:08:04] Evaluation summary saved: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_226/csv/evaluation_summary.csv
+[2025-09-16 15:08:04] CSV_DIR: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_226/csv
+[2025-09-16 15:08:04] Plots directory: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_226/plots
+[2025-09-16 15:08:04] Table saved: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_226/csv/00_action_distribution.csv
+[2025-09-16 15:08:04] First action distribution saved: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_226/csv/01_first_action_distribution.csv
+[2025-09-16 15:08:04] First-action combo buckets (counts) saved: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_226/csv/01_first_action_combo_buckets_counts.csv
+[2025-09-16 15:08:04] First-action combo buckets (percent) saved: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_226/csv/01_first_action_combo_buckets_percent.csv
+[2025-09-16 15:08:06] All plots saved.
+[2025-09-16 15:08:06] run.log: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_226/run.log

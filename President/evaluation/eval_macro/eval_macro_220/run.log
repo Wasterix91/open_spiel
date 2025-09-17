@@ -1,0 +1,63 @@
+[2025-09-16 14:44:28] New Evaluation (macro_220)
+[2025-09-16 14:44:28] Deck_Size: 64
+[2025-09-16 14:44:28] Episodes: 30.000
+[2025-09-16 14:44:28] Path: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_220
+[2025-09-16 14:44:28] 
+[2025-09-16 14:44:28] Player Configuration:
+[2025-09-16 14:44:28] Idx | Name | Type      | Family | Version | Episode | from_pid
+[2025-09-16 14:44:28] --------------------------------------------------------------
+[2025-09-16 14:44:28] 0   | P0   | dqn       | k1a2   | 41      | 250000  | 0       
+[2025-09-16 14:44:28] 1   | P1   | max_combo |        |         |         |         
+[2025-09-16 14:44:28] 2   | P2   | max_combo |        |         |         |         
+[2025-09-16 14:44:28] 3   | P3   | max_combo |        |         |         |         
+[2025-09-16 14:44:48] 
+[2025-09-16 14:44:48] Benchmark @eval_ep    5000
+[2025-09-16 14:44:48] Winrates: P0 (dqn v41. ep250.000): 19.6% | P1 (max_combo v): 25.9% | P2 (max_combo v): 27.2% | P3 (max_combo v): 27.3%
+[2025-09-16 14:44:48] P0 (dqn v41 ep250.000) | winrate:  19.6% | avg_return:    1.29 | wins:    978 | starts:   1209
+[2025-09-16 14:44:48] P1 (max_combo v) | winrate:  25.9% | avg_return:    1.53 | wins:   1295 | starts:   1239
+[2025-09-16 14:44:48] P2 (max_combo v) | winrate:  27.2% | avg_return:    1.60 | wins:   1361 | starts:   1204
+[2025-09-16 14:44:48] P3 (max_combo v) | winrate:  27.3% | avg_return:    1.59 | wins:   1366 | starts:   1348
+[2025-09-16 14:45:08] 
+[2025-09-16 14:45:08] Benchmark @eval_ep   10000
+[2025-09-16 14:45:08] Winrates: P0 (dqn v41. ep250.000): 19.4% | P1 (max_combo v): 26.1% | P2 (max_combo v): 27.5% | P3 (max_combo v): 27.0%
+[2025-09-16 14:45:08] P0 (dqn v41 ep250.000) | winrate:  19.4% | avg_return:    1.28 | wins:   1937 | starts:   2410
+[2025-09-16 14:45:08] P1 (max_combo v) | winrate:  26.1% | avg_return:    1.53 | wins:   2614 | starts:   2467
+[2025-09-16 14:45:08] P2 (max_combo v) | winrate:  27.5% | avg_return:    1.61 | wins:   2751 | starts:   2466
+[2025-09-16 14:45:08] P3 (max_combo v) | winrate:  27.0% | avg_return:    1.59 | wins:   2698 | starts:   2657
+[2025-09-16 14:45:29] 
+[2025-09-16 14:45:29] Benchmark @eval_ep   15000
+[2025-09-16 14:45:29] Winrates: P0 (dqn v41. ep250.000): 19.6% | P1 (max_combo v): 26.1% | P2 (max_combo v): 27.3% | P3 (max_combo v): 27.0%
+[2025-09-16 14:45:29] P0 (dqn v41 ep250.000) | winrate:  19.6% | avg_return:    1.29 | wins:   2938 | starts:   3700
+[2025-09-16 14:45:29] P1 (max_combo v) | winrate:  26.1% | avg_return:    1.53 | wins:   3916 | starts:   3696
+[2025-09-16 14:45:29] P2 (max_combo v) | winrate:  27.3% | avg_return:    1.60 | wins:   4097 | starts:   3696
+[2025-09-16 14:45:29] P3 (max_combo v) | winrate:  27.0% | avg_return:    1.59 | wins:   4049 | starts:   3908
+[2025-09-16 14:45:47] 
+[2025-09-16 14:45:47] Benchmark @eval_ep   20000
+[2025-09-16 14:45:47] Winrates: P0 (dqn v41. ep250.000): 19.8% | P1 (max_combo v): 25.8% | P2 (max_combo v): 27.4% | P3 (max_combo v): 27.0%
+[2025-09-16 14:45:47] P0 (dqn v41 ep250.000) | winrate:  19.8% | avg_return:    1.30 | wins:   3968 | starts:   4924
+[2025-09-16 14:45:47] P1 (max_combo v) | winrate:  25.8% | avg_return:    1.53 | wins:   5169 | starts:   4961
+[2025-09-16 14:45:47] P2 (max_combo v) | winrate:  27.4% | avg_return:    1.60 | wins:   5472 | starts:   4915
+[2025-09-16 14:45:47] P3 (max_combo v) | winrate:  27.0% | avg_return:    1.58 | wins:   5391 | starts:   5200
+[2025-09-16 14:46:07] 
+[2025-09-16 14:46:07] Benchmark @eval_ep   25000
+[2025-09-16 14:46:07] Winrates: P0 (dqn v41. ep250.000): 20.1% | P1 (max_combo v): 25.6% | P2 (max_combo v): 27.2% | P3 (max_combo v): 27.1%
+[2025-09-16 14:46:07] P0 (dqn v41 ep250.000) | winrate:  20.1% | avg_return:    1.30 | wins:   5016 | starts:   6209
+[2025-09-16 14:46:07] P1 (max_combo v) | winrate:  25.6% | avg_return:    1.52 | wins:   6408 | starts:   6210
+[2025-09-16 14:46:07] P2 (max_combo v) | winrate:  27.2% | avg_return:    1.59 | wins:   6803 | starts:   6221
+[2025-09-16 14:46:07] P3 (max_combo v) | winrate:  27.1% | avg_return:    1.59 | wins:   6773 | starts:   6360
+[2025-09-16 14:46:26] 
+[2025-09-16 14:46:26] Benchmark @eval_ep   30000
+[2025-09-16 14:46:26] Winrates: P0 (dqn v41. ep250.000): 20.2% | P1 (max_combo v): 25.6% | P2 (max_combo v): 26.9% | P3 (max_combo v): 27.2%
+[2025-09-16 14:46:26] P0 (dqn v41 ep250.000) | winrate:  20.2% | avg_return:    1.31 | wins:   6049 | starts:   7434
+[2025-09-16 14:46:26] P1 (max_combo v) | winrate:  25.6% | avg_return:    1.52 | wins:   7692 | starts:   7488
+[2025-09-16 14:46:26] P2 (max_combo v) | winrate:  26.9% | avg_return:    1.58 | wins:   8085 | starts:   7473
+[2025-09-16 14:46:26] P3 (max_combo v) | winrate:  27.2% | avg_return:    1.59 | wins:   8174 | starts:   7605
+[2025-09-16 14:46:26] Evaluation summary saved: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_220/csv/evaluation_summary.csv
+[2025-09-16 14:46:26] CSV_DIR: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_220/csv
+[2025-09-16 14:46:26] Plots directory: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_220/plots
+[2025-09-16 14:46:26] Table saved: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_220/csv/00_action_distribution.csv
+[2025-09-16 14:46:26] First action distribution saved: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_220/csv/01_first_action_distribution.csv
+[2025-09-16 14:46:26] First-action combo buckets (counts) saved: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_220/csv/01_first_action_combo_buckets_counts.csv
+[2025-09-16 14:46:26] First-action combo buckets (percent) saved: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_220/csv/01_first_action_combo_buckets_percent.csv
+[2025-09-16 14:46:27] All plots saved.
+[2025-09-16 14:46:27] run.log: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_220/run.log

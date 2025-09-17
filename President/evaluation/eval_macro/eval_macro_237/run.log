@@ -1,0 +1,63 @@
+[2025-09-16 15:36:50] New Evaluation (macro_237)
+[2025-09-16 15:36:50] Deck_Size: 64
+[2025-09-16 15:36:50] Episodes: 30.000
+[2025-09-16 15:36:50] Path: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_237
+[2025-09-16 15:36:50] 
+[2025-09-16 15:36:50] Player Configuration:
+[2025-09-16 15:36:50] Idx | Name | Type    | Family | Version | Episode | from_pid
+[2025-09-16 15:36:50] ------------------------------------------------------------
+[2025-09-16 15:36:50] 0   | P0   | dqn     | k2a2   | 08      | 220000  | 0       
+[2025-09-16 15:36:50] 1   | P1   | random2 |        |         |         |         
+[2025-09-16 15:36:50] 2   | P2   | dqn     | k2a2   | 08      | 220000  | 0       
+[2025-09-16 15:36:50] 3   | P3   | random2 |        |         |         |         
+[2025-09-16 15:37:49] 
+[2025-09-16 15:37:49] Benchmark @eval_ep    5000
+[2025-09-16 15:37:49] Winrates: P0 (dqn v08. ep220.000): 48.6% | P1 (random2 v): 2.2% | P2 (dqn v08. ep220.000): 46.7% | P3 (random2 v): 2.4%
+[2025-09-16 15:37:49] P0 (dqn v08 ep220.000) | winrate:  48.6% | avg_return:    2.32 | wins:   2431 | starts:   1251
+[2025-09-16 15:37:49] P1 (random2 v) | winrate:   2.2% | avg_return:    0.67 | wins:    112 | starts:   1191
+[2025-09-16 15:37:49] P2 (dqn v08 ep220.000) | winrate:  46.7% | avg_return:    2.31 | wins:   2336 | starts:   1267
+[2025-09-16 15:37:49] P3 (random2 v) | winrate:   2.4% | avg_return:    0.69 | wins:    121 | starts:   1291
+[2025-09-16 15:38:40] 
+[2025-09-16 15:38:40] Benchmark @eval_ep   10000
+[2025-09-16 15:38:40] Winrates: P0 (dqn v08. ep220.000): 48.4% | P1 (random2 v): 2.3% | P2 (dqn v08. ep220.000): 46.9% | P3 (random2 v): 2.4%
+[2025-09-16 15:38:40] P0 (dqn v08 ep220.000) | winrate:  48.4% | avg_return:    2.32 | wins:   4841 | starts:   2488
+[2025-09-16 15:38:40] P1 (random2 v) | winrate:   2.3% | avg_return:    0.68 | wins:    233 | starts:   2420
+[2025-09-16 15:38:40] P2 (dqn v08 ep220.000) | winrate:  46.9% | avg_return:    2.31 | wins:   4690 | starts:   2494
+[2025-09-16 15:38:40] P3 (random2 v) | winrate:   2.4% | avg_return:    0.69 | wins:    236 | starts:   2598
+[2025-09-16 15:39:33] 
+[2025-09-16 15:39:33] Benchmark @eval_ep   15000
+[2025-09-16 15:39:33] Winrates: P0 (dqn v08. ep220.000): 48.3% | P1 (random2 v): 2.3% | P2 (dqn v08. ep220.000): 47.1% | P3 (random2 v): 2.4%
+[2025-09-16 15:39:33] P0 (dqn v08 ep220.000) | winrate:  48.3% | avg_return:    2.32 | wins:   7242 | starts:   3744
+[2025-09-16 15:39:33] P1 (random2 v) | winrate:   2.3% | avg_return:    0.68 | wins:    341 | starts:   3637
+[2025-09-16 15:39:33] P2 (dqn v08 ep220.000) | winrate:  47.1% | avg_return:    2.31 | wins:   7063 | starts:   3785
+[2025-09-16 15:39:33] P3 (random2 v) | winrate:   2.4% | avg_return:    0.69 | wins:    354 | starts:   3834
+[2025-09-16 15:40:27] 
+[2025-09-16 15:40:27] Benchmark @eval_ep   20000
+[2025-09-16 15:40:27] Winrates: P0 (dqn v08. ep220.000): 48.1% | P1 (random2 v): 2.3% | P2 (dqn v08. ep220.000): 47.3% | P3 (random2 v): 2.3%
+[2025-09-16 15:40:27] P0 (dqn v08 ep220.000) | winrate:  48.1% | avg_return:    2.32 | wins:   9614 | starts:   4974
+[2025-09-16 15:40:27] P1 (random2 v) | winrate:   2.3% | avg_return:    0.68 | wins:    457 | starts:   4886
+[2025-09-16 15:40:27] P2 (dqn v08 ep220.000) | winrate:  47.3% | avg_return:    2.31 | wins:   9466 | starts:   5041
+[2025-09-16 15:40:27] P3 (random2 v) | winrate:   2.3% | avg_return:    0.69 | wins:    463 | starts:   5099
+[2025-09-16 15:41:06] 
+[2025-09-16 15:41:06] Benchmark @eval_ep   25000
+[2025-09-16 15:41:06] Winrates: P0 (dqn v08. ep220.000): 47.9% | P1 (random2 v): 2.4% | P2 (dqn v08. ep220.000): 47.4% | P3 (random2 v): 2.3%
+[2025-09-16 15:41:06] P0 (dqn v08 ep220.000) | winrate:  47.9% | avg_return:    2.31 | wins:  11978 | starts:   6207
+[2025-09-16 15:41:06] P1 (random2 v) | winrate:   2.4% | avg_return:    0.69 | wins:    591 | starts:   6124
+[2025-09-16 15:41:06] P2 (dqn v08 ep220.000) | winrate:  47.4% | avg_return:    2.31 | wins:  11849 | starts:   6334
+[2025-09-16 15:41:06] P3 (random2 v) | winrate:   2.3% | avg_return:    0.69 | wins:    582 | starts:   6335
+[2025-09-16 15:41:45] 
+[2025-09-16 15:41:45] Benchmark @eval_ep   30000
+[2025-09-16 15:41:45] Winrates: P0 (dqn v08. ep220.000): 47.9% | P1 (random2 v): 2.4% | P2 (dqn v08. ep220.000): 47.4% | P3 (random2 v): 2.3%
+[2025-09-16 15:41:45] P0 (dqn v08 ep220.000) | winrate:  47.9% | avg_return:    2.31 | wins:  14377 | starts:   7462
+[2025-09-16 15:41:45] P1 (random2 v) | winrate:   2.4% | avg_return:    0.69 | wins:    709 | starts:   7421
+[2025-09-16 15:41:45] P2 (dqn v08 ep220.000) | winrate:  47.4% | avg_return:    2.31 | wins:  14216 | starts:   7520
+[2025-09-16 15:41:45] P3 (random2 v) | winrate:   2.3% | avg_return:    0.69 | wins:    698 | starts:   7597
+[2025-09-16 15:41:45] Evaluation summary saved: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_237/csv/evaluation_summary.csv
+[2025-09-16 15:41:45] CSV_DIR: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_237/csv
+[2025-09-16 15:41:45] Plots directory: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_237/plots
+[2025-09-16 15:41:45] Table saved: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_237/csv/00_action_distribution.csv
+[2025-09-16 15:41:46] First action distribution saved: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_237/csv/01_first_action_distribution.csv
+[2025-09-16 15:41:46] First-action combo buckets (counts) saved: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_237/csv/01_first_action_combo_buckets_counts.csv
+[2025-09-16 15:41:46] First-action combo buckets (percent) saved: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_237/csv/01_first_action_combo_buckets_percent.csv
+[2025-09-16 15:41:47] All plots saved.
+[2025-09-16 15:41:47] run.log: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_237/run.log

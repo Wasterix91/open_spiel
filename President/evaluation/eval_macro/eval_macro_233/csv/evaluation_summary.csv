@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+233,P0,dqn v08 ep220.000,dqn,k2a2,08,220000,81.2,2.74,24366,7550
+233,P1,single_only v,single_only,,,,5.1,1.03,1532,7419
+233,P2,single_only v,single_only,,,,6.2,1.09,1850,7529
+233,P3,single_only v,single_only,,,,7.5,1.14,2252,7502

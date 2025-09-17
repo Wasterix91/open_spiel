@@ -36,13 +36,13 @@ if not logging.getLogger().handlers:
 # ===================== Konfiguration ===================== #
 NUM_EPISODES = 30_000
 EVAL_EPISODE = 5_000
-DECK = "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+DECK = "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
 
 # Beispiel-Setup (anpassen):
 
 # 1v3 Gegen Max Combo
 """ PLAYER_CONFIG = [
-    {"name": "P0", "type": "ppo", "family": "k2a1", "version": "06", "episode": 400_000, "from_pid": 0},
+    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "34", "episode": 1_000_000, "from_pid": 0},
     {"name": "P1", "type": "max_combo"},
     {"name": "P2", "type": "max_combo"},
     {"name": "P3", "type": "max_combo"},
@@ -51,7 +51,7 @@ DECK = "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
 # 1v3 Gegen Single Only
 
 """ PLAYER_CONFIG = [
-    {"name": "P0", "type": "ppo", "family": "k2a1", "version": "06", "episode": 400_000, "from_pid": 0},
+    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "34", "episode": 1_000_000, "from_pid": 0},
     {"name": "P1", "type": "single_only"},
     {"name": "P2", "type": "single_only"},
     {"name": "P3", "type": "single_only"},
@@ -59,7 +59,7 @@ DECK = "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
 
 # 1v3 Gegen Random2
 """ PLAYER_CONFIG = [
-    {"name": "P0", "type": "ppo", "family": "k2a1", "version": "06", "episode": 400_000, "from_pid": 0},
+    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "34", "episode": 1_000_000, "from_pid": 0},
     {"name": "P1", "type": "random2"},
     {"name": "P2", "type": "random2"},
     {"name": "P3", "type": "random2"},
@@ -67,28 +67,33 @@ DECK = "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
 
 # 2v2 über Kreuz vs Max Combo
 """ PLAYER_CONFIG = [ 
-    {"name": "P0", "type": "ppo", "family": "k2a1", "version": "06", "episode": 400_000, "from_pid": 0},
+    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "34", "episode": 1_000_000, "from_pid": 0},
     {"name": "P1", "type": "max_combo"},
-    {"name": "P2", "type": "ppo", "family": "k2a1", "version": "06", "episode": 400_000, "from_pid": 0},
+    {"name": "P2", "type": "dqn", "family": "k4a2", "version": "34", "episode": 1_000_000, "from_pid": 0},
     {"name": "P3", "type": "max_combo"}
 ]    """
 
 # 2v2 über Kreuz vs Single Only
 """ PLAYER_CONFIG = [ 
-    {"name": "P0", "type": "ppo", "family": "k2a1", "version": "06", "episode": 400_000, "from_pid": 0},
+    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "34", "episode": 1_000_000, "from_pid": 0},
     {"name": "P1", "type": "single_only"},
-    {"name": "P2", "type": "ppo", "family": "k2a1", "version": "06", "episode": 400_000, "from_pid": 0},
+    {"name": "P2", "type": "dqn", "family": "k4a2", "version": "34", "episode": 1_000_000, "from_pid": 0},
     {"name": "P3", "type": "single_only"}
 ]    """
 
 # 2v2 über Kreuz vs Random2
 
-""" PLAYER_CONFIG = [ 
-    {"name": "P0", "type": "ppo", "family": "k2a1", "version": "06", "episode": 400_000, "from_pid": 0},
+PLAYER_CONFIG = [ 
+    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "34", "episode": 1_000_000, "from_pid": 0},
     {"name": "P1", "type": "random2"},
-    {"name": "P2", "type": "ppo", "family": "k2a1", "version": "06", "episode": 400_000, "from_pid": 0},
+    {"name": "P2", "type": "dqn", "family": "k4a2", "version": "34", "episode": 1_000_000, "from_pid": 0},
     {"name": "P3", "type": "random2"}
-]   """
+]  
+
+###############
+###############
+###############
+
 
 # 1v3 Gegen V-Table (nur für 16 Karten)
 """ PLAYER_CONFIG = [
@@ -106,13 +111,13 @@ DECK = "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     {"name": "P3", "type": "v_table"}
 ]    """
 
-# Vier Heuristiken
+""" # Vier Heuristiken
 PLAYER_CONFIG = [ 
     {"name": "P0", "type": "max_combo"},
     {"name": "P1", "type": "single_only"}, 
     {"name": "P2", "type": "random2"},
     {"name": "P3", "type": "v_table"}
-]
+] """
 
 
 # Vier verschiedene Spieler (Agents)
