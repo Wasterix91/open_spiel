@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+256,P0: K1 (vs Max),ppo v04 ep100.000,ppo,k1a1,04,100000,27.6,1.58,137961,125775
+256,P1: K1 (vs Single Only),ppo v07 ep20.000,ppo,k1a1,07,20000,24.5,1.45,122733,124337
+256,P2: K1 (vs POP2),ppo v11 ep20.000,ppo,k1a1,11,20000,24.1,1.42,120452,124711
+256,P3: K1 vs Tabelle,ppo v05 ep1.000.000,ppo,k1a1,05,1000000,23.8,1.55,118854,125177

@@ -37,7 +37,7 @@ if not logging.getLogger().handlers:
 # ===================== Konfiguration ===================== #
 NUM_EPISODES = 500_000
 EVAL_EPISODE = 100_000
-DECK = "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+DECK = "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
 
 # Beispiel-Setup (anpassen):
 
@@ -131,10 +131,10 @@ PLAYER_CONFIG = [
 
 # Vier verschiedene Agents: 
 PLAYER_CONFIG = [ 
-    {"name": "P0: K1 (vs Max)", "type": "dqn", "family": "k1a2", "version": "40", "episode": 400_000, "from_pid": 0},
-    {"name": "P1: K1 (vs Single Only)", "type": "dqn", "family": "k1a2", "version": "41", "episode": 250_000, "from_pid": 0},
-    {"name": "P2: K1 (vs POP2)", "type": "dqn", "family": "k1a2", "version": "42", "episode": 1_000_000, "from_pid": 0},
-    {"name": "P3: K2", "type": "dqn", "family": "k2a2", "version": "08", "episode": 220_000, "from_pid": 0},
+    {"name": "P0: K1 (vs Max)", "type": "ppo", "family": "k1a1", "version": "04", "episode": 100_000, "from_pid": 0},
+    {"name": "P1: K1 (vs Single Only)", "type": "ppo", "family": "k1a1", "version": "07", "episode": 20_000, "from_pid": 0},
+    {"name": "P2: K1 (vs POP2)", "type": "ppo", "family": "k1a1", "version": "11", "episode": 20_000, "from_pid": 0},
+    {"name": "P3: K1 vs Tabelle", "type": "ppo", "family": "k1a1", "version": "05", "episode": 1_000_000, "from_pid": 0},
 ]   
 
 GENERATE_PLOTS = True
