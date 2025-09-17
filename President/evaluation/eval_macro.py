@@ -37,7 +37,7 @@ if not logging.getLogger().handlers:
 # ===================== Konfiguration ===================== #
 NUM_EPISODES = 500_000
 EVAL_EPISODE = 100_000
-DECK = "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+DECK = "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
 
 # Beispiel-Setup (anpassen):
 
@@ -131,10 +131,10 @@ PLAYER_CONFIG = [
 
 # Vier verschiedene Agents: 
 PLAYER_CONFIG = [ 
-    {"name": "P0: K2", "type": "ppo", "family": "k2a1", "version": "04", "episode": 100_000, "from_pid": 0},
-    {"name": "P1: K3", "type": "ppo", "family": "k3a1", "version": "04", "episode": 100_000, "from_pid": 0},
-    {"name": "P2: K4", "type": "ppo", "family": "k4a1", "version": "04", "episode": 100_000, "from_pid": 0},
-    {"name": "P3: Max Combo", "type": "max_combo"},
+    {"name": "P0: K3 (PPO Snapshot SP)", "type": "ppo", "family": "k3a1", "version": "32", "episode": 1_000_000, "from_pid": 0},
+    {"name": "P1: K4 (PPO Shared Policy SP)", "type": "ppo", "family": "k4a1", "version": "05", "episode": 500_000, "from_pid": 0},
+    {"name": "P2: K3 (DQN Snapshot SP)", "type": "dqn", "family": "k3a2", "version": "32", "episode": 210_000, "from_pid": 0},
+    {"name": "P3: K4 (DQN Shared Policy SP)", "type": "dqn", "family": "k4a2", "version": "34", "episode": 1_000_000, "from_pid": 0},
 ]   
 
 GENERATE_PLOTS = True
