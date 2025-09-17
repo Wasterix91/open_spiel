@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+255,P0: K1 (vs Max),dqn v40 ep400.000,dqn,k1a2,40,400000,24.3,1.8,121372,125003
+255,P1: K1 (vs Single Only),dqn v41 ep250.000,dqn,k1a2,41,250000,4.3,0.49,21295,124525
+255,P2: K1 (vs POP2),dqn v42 ep1.000.000,dqn,k1a2,42,1000000,26.7,1.59,133450,125243
+255,P3: K2,dqn v08 ep220.000,dqn,k2a2,08,220000,44.8,2.13,223883,125229
