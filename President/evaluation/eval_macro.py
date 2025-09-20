@@ -35,15 +35,15 @@ if not logging.getLogger().handlers:
     logging.getLogger().setLevel(logging.INFO)
 
 # ===================== Konfiguration ===================== #
-NUM_EPISODES = 500_000
-EVAL_EPISODE = 100_000
+NUM_EPISODES = 30_000
+EVAL_EPISODE = 5000
 DECK = "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
 
 # Beispiel-Setup (anpassen):
 
 # 1v3 Gegen Max Combo
 """ PLAYER_CONFIG = [
-    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "34", "episode": 1_000_000, "from_pid": 0},
+    {"name": "P0", "type": "random2"},
     {"name": "P1", "type": "max_combo"},
     {"name": "P2", "type": "max_combo"},
     {"name": "P3", "type": "max_combo"},
@@ -52,7 +52,7 @@ DECK = "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
 # 1v3 Gegen Single Only
 
 """ PLAYER_CONFIG = [
-    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "34", "episode": 1_000_000, "from_pid": 0},
+    {"name": "P0", "type": "random2"},
     {"name": "P1", "type": "single_only"},
     {"name": "P2", "type": "single_only"},
     {"name": "P3", "type": "single_only"},
@@ -60,60 +60,67 @@ DECK = "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
 
 # 1v3 Gegen Random2
 """ PLAYER_CONFIG = [
-    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "34", "episode": 1_000_000, "from_pid": 0},
+    {"name": "P0", "type": "random2"},
     {"name": "P1", "type": "random2"},
     {"name": "P2", "type": "random2"},
     {"name": "P3", "type": "random2"},
 ]   """
 
+
+
 # 2v2 über Kreuz vs Max Combo
 """ PLAYER_CONFIG = [ 
-    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "34", "episode": 1_000_000, "from_pid": 0},
+    {"name": "P0", "type": "random2"},
     {"name": "P1", "type": "max_combo"},
-    {"name": "P2", "type": "dqn", "family": "k4a2", "version": "34", "episode": 1_000_000, "from_pid": 0},
+    {"name": "P2", "type": "random2"},
     {"name": "P3", "type": "max_combo"}
 ]    """
 
 # 2v2 über Kreuz vs Single Only
 """ PLAYER_CONFIG = [ 
-    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "34", "episode": 1_000_000, "from_pid": 0},
+    {"name": "P0", "type": "random2"},
     {"name": "P1", "type": "single_only"},
-    {"name": "P2", "type": "dqn", "family": "k4a2", "version": "34", "episode": 1_000_000, "from_pid": 0},
+    {"name": "P2", "type": "random2"},
     {"name": "P3", "type": "single_only"}
 ]    """
 
 # 2v2 über Kreuz vs Random2
 
-""" PLAYER_CONFIG = [ 
-    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "34", "episode": 1_000_000, "from_pid": 0},
+PLAYER_CONFIG = [ 
+    {"name": "P0", "type": "random2"},
     {"name": "P1", "type": "random2"},
-    {"name": "P2", "type": "dqn", "family": "k4a2", "version": "34", "episode": 1_000_000, "from_pid": 0},
+    {"name": "P2", "type": "random2"},
     {"name": "P3", "type": "random2"}
-]   """
+]  
 
+#########################
 ###############
 ###############
-###############
-
 
 # 1v3 Gegen V-Table (nur für 16 Karten)
 """ PLAYER_CONFIG = [
-    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
+    {"name": "P0", "type": "v_table"},
     {"name": "P1", "type": "v_table"},
     {"name": "P2", "type": "v_table"},
     {"name": "P3", "type": "v_table"},
 ]  """
 
-# 2v2 über Kreuz vs V-Table (nur für 16 Karten)
-""" PLAYER_CONFIG = [ 
-    {"name": "P0", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
+""" # 2v2 über Kreuz vs V-Table (nur für 16 Karten)
+PLAYER_CONFIG = [ 
+    {"name": "P0", "type": "v_table"},
     {"name": "P1", "type": "v_table"},
-    {"name": "P2", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
+    {"name": "P2", "type": "v_table"},
     {"name": "P3", "type": "v_table"}
 ]    """
 
-""" # Vier Heuristiken
-PLAYER_CONFIG = [ 
+###############
+###############
+###############
+
+
+
+# Vier Heuristiken
+""" PLAYER_CONFIG = [ 
     {"name": "P0", "type": "max_combo"},
     {"name": "P1", "type": "single_only"}, 
     {"name": "P2", "type": "random2"},
@@ -130,12 +137,12 @@ PLAYER_CONFIG = [
 ] """
 
 # Vier verschiedene Agents: 
-PLAYER_CONFIG = [ 
+""" PLAYER_CONFIG = [ 
     {"name": "P0: K3 (PPO Snapshot SP)", "type": "ppo", "family": "k3a1", "version": "32", "episode": 1_000_000, "from_pid": 0},
     {"name": "P1: K4 (PPO Shared Policy SP)", "type": "ppo", "family": "k4a1", "version": "05", "episode": 500_000, "from_pid": 0},
     {"name": "P2: K3 (DQN Snapshot SP)", "type": "dqn", "family": "k3a2", "version": "32", "episode": 210_000, "from_pid": 0},
     {"name": "P3: K4 (DQN Shared Policy SP)", "type": "dqn", "family": "k4a2", "version": "34", "episode": 1_000_000, "from_pid": 0},
-]   
+]    """
 
 GENERATE_PLOTS = True
 EVAL_OUTPUT = True

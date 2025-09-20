@@ -34,14 +34,14 @@ CONFIG = {
     # Population: aktiviert, sobald irgendein Gewicht > 0 ist
     # Tabellengegner einfach als "v_table" referenzieren
     "OPPONENT_POOL": {
-        "max_combo": 1.0,
+        "max_combo": 0.0,
         "single_only": 1.0,
-        "random2": 1.0,
+        "random2": 0.0,
         "v_table": 0.0
     },
 
         # >0: Wechsel alle n Episoden; 0/negativ: nie wechseln
-    "SWITCH_INTERVAL": 1,
+    "SWITCH_INTERVAL": 0,
 
     # DQN (kompatibel zu agents/dqn_agent.DQNConfig)
     "DQN": {
