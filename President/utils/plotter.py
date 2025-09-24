@@ -93,8 +93,8 @@ class MetricsPlotter:
         }
 
         # Plot-Styling (zentral)
-        self._ret_line_width   = 3.2      # dicker: MA-Linie
-        self._ret_outline_add  = 1.5      # weißer Rand um Linie (Kontrast)
+        self._ret_line_width   = 1.4      # dicker: MA-Linie
+        self._ret_outline_add  = 0.5      # weißer Rand um Linie (Kontrast)
         self._sc_total_size    = 14.0     # Punkte im Rohplot
         self._sc_comp_size     = 8.0      # Punkte in Komponentenplots
         self._sc_marker        = "o"      # skalierbar
@@ -251,6 +251,7 @@ class MetricsPlotter:
         smooth_window: int = 1,
         show_ci: bool = True,
         ci_z: float = 1.96,
+        variants: Optional[List[str]] = None,   # <--- NEU
     ):
         """Winrate-Kurven (ggf. geglättet) + optionale Konfidenzbänder."""
         if not self.bench_episodes:
@@ -426,29 +427,32 @@ class MetricsPlotter:
             plt.close()
 
         os.makedirs(self.out_dir, exist_ok=True)
+        variants = set(variants or ("03",))  # Default: nur 02 rendern
 
-        _plot_multi(
-            out_path=os.path.join(self.out_dir, "01_Lernkurve_Heuristiken.png"),
-            include_macro=False,
-            add_25=False,
-        )
-        _plot_multi(
-            out_path=os.path.join(self.out_dir, "02_Lernkurve_Heuristiken_incl_avg.png"),
-            include_macro=True,
-            add_25=False,
-        )
-        _plot_multi(
-            out_path=os.path.join(self.out_dir, "03_Lernkurve_Heuristiken_incl_avg_25.png"),
-            include_macro=True,
-            add_25=True,
-        )
-        _plot_multi(
-            out_path=os.path.join(self.out_dir, "04_Lernkurve_Heuristiken_incl_25.png"),
-            include_macro=False,
-            add_25=True,
-        )
+        # --- Multi-Plots nach Variante ---
+        if "01" in variants:
+            _plot_multi(
+                out_path=os.path.join(self.out_dir, "01_Lernkurve_Heuristiken.png"),
+                include_macro=False, add_25=False,
+            )
+        if "02" in variants:
+            _plot_multi(
+                out_path=os.path.join(self.out_dir, "02_Lernkurve_Heuristiken_incl_avg.png"),
+                include_macro=True, add_25=False,
+            )
+        if "03" in variants:
+            _plot_multi(
+                out_path=os.path.join(self.out_dir, "03_Lernkurve_Heuristiken_incl_avg_25.png"),
+                include_macro=True, add_25=True,
+            )
+        if "04" in variants:
+            _plot_multi(
+                out_path=os.path.join(self.out_dir, "04_Lernkurve_Heuristiken_incl_25.png"),
+                include_macro=False, add_25=True,
+            )
 
-        if "max_combo" in self.bench_names:
+        # --- Einzelplots nur wenn explizit angefordert ---
+        if "05" in variants and "max_combo" in self.bench_names:
             _plot_single(
                 "max_combo",
                 os.path.join(self.out_dir, "05_Lernkurve_max_combo.png"),
@@ -456,7 +460,7 @@ class MetricsPlotter:
                 title_override=_title_single(_pretty_opp("max_combo")),
             )
 
-        if "random2" in self.bench_names:
+        if "06" in variants and "random2" in self.bench_names:
             _plot_single(
                 "random2",
                 os.path.join(self.out_dir, "06_Lernkurve_random2.png"),
@@ -464,7 +468,7 @@ class MetricsPlotter:
                 title_override=_title_single(_pretty_opp("random2")),
             )
 
-        if self.bench_names:
+        if "07" in variants and self.bench_names:
             first_name = self.bench_names[0]
             _plot_single(
                 first_name,

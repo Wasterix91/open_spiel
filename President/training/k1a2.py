@@ -18,9 +18,9 @@ from utils.reward_shaper import RewardShaper
 from collections import defaultdict
 
 CONFIG = {
-    "EPISODES":         1_000_000,
-    "BENCH_INTERVAL":   10_000,
-    "BENCH_EPISODES":   2_000,
+    "EPISODES":         100_000,
+    "BENCH_INTERVAL":   500,
+    "BENCH_EPISODES":   200,
     "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
@@ -35,13 +35,13 @@ CONFIG = {
     # Tabellengegner einfach als "v_table" referenzieren
     "OPPONENT_POOL": {
         "max_combo": 1.0,
-        "single_only": 1.0,
-        "random2": 1.0,
+        "single_only": 0.0,
+        "random2": 0.0,
         "v_table": 0.0
     },
 
         # >0: Wechsel alle n Episoden; 0/negativ: nie wechseln
-    "SWITCH_INTERVAL": 1,
+    "SWITCH_INTERVAL": 0,
 
     # DQN (kompatibel zu agents/dqn_agent.DQNConfig)
     "DQN": {
@@ -67,12 +67,12 @@ CONFIG = {
     # STEP_MODE : "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
     # FINAL_MODE: "none" | "env_only" | "rank_only" | "both"
     "REWARD": {
-        "STEP_MODE": "none",
-        "DELTA_WEIGHT": 0.0,
-        "HAND_PENALTY_COEFF": 0.0,
+        "STEP_MODE": "combined",
+        "DELTA_WEIGHT": 1.0,
+        "HAND_PENALTY_COEFF": 0.05,
 
-        "FINAL_MODE": "rank_only",
-        "BONUS_WIN": 30.0, "BONUS_2ND": 20.0, "BONUS_3RD": 10.0, "BONUS_LAST": 0.0,
+        "FINAL_MODE": "both",
+        "BONUS_WIN": 20.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
     },
 
     # Feature-Toggles
@@ -83,32 +83,26 @@ CONFIG = {
         "DEBUG_FEATURES": False,
         "PLOT_METRICS": True,
         "SAVE_METRICS_TO_CSV": False,
-        "RET_SMOOTH_WINDOW": 150,   # Fenstergröße für Moving Average der Rewards
-        "PLOT_KEYS": [              # steuert plot_train(); mögliche Keys:
-            # PPO-Metriken:
-            #   reward_mean, reward_std, return_mean,
-            #   adv_mean_raw, adv_std_raw,
-            #   policy_loss, value_loss,
-            #   entropy, approx_kl, clip_frac
-            # Trainings-/Umgebungsmetriken:
-            #   train_seconds, ep_env_score, ep_shaping_return,
-            #   ep_final_bonus, ep_length
-            # Sonderplots (aus Memory, nicht aus metrics):
-            #   ep_return_raw, ep_return_components,
-            #   ep_return_env, ep_return_shaping, ep_return_final
-            "return_mean",
-            "reward_mean",
-            "entropy",
-            "approx_kl",
-            "clip_frac",
-            "policy_loss",
-            "value_loss",
-            "ep_return_raw",
-            "ep_return_components",
-            "ep_return_env",         # Einzelplot env_score
-            "ep_return_shaping",     # Einzelplot shaping
-            "ep_return_final",       # Einzelplot final_bonus
-            "ep_return_training",
+
+        # Fenstergröße für Moving Average der Episode-Returns
+        "RET_SMOOTH_WINDOW": 150,
+
+        # Winrate-Plot (wie k4a2): Rolling-Window & Konfidenzintervall
+        "WR_SMOOTH_WINDOW": 5,
+        "WR_SHOW_CI": True,
+        "WR_CI_Z": 1.96,
+
+        # Ausgabeformate für alle Plots
+        "PLOT_FORMATS": ["png", "svg"],
+
+        # Steuert plot_train(); ep_return_* triggert die In-Memory-Return-Plots
+        "PLOT_KEYS": [
+            #"return_mean", "reward_mean", "entropy", "approx_kl",
+            "epsilon", "ep_length", "train_seconds",
+            #"clip_frac", "policy_loss", "value_loss",
+            #"ep_return_raw", "ep_return_components",
+            #"ep_return_env", "ep_return_shaping", "ep_return_final",
+            #"ep_return_training",
         ],
     },
 
@@ -231,7 +225,9 @@ def main():
         save_csv=CONFIG["FEATURES"]["SAVE_METRICS_TO_CSV"],
         verbosity=1,
         smooth_window=CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 150),
+        out_formats=CONFIG["FEATURES"].get("PLOT_FORMATS", ["png"]),  # <— NEU
     )
+
     plotter.log("New Training (k1a2): DQN Single-Agent vs Heuristiken/Population (P0→P0)")
     plotter.log(f"Deck_Size: {CONFIG['DECK_SIZE']}")
     plotter.log(f"Episodes: {CONFIG['EPISODES']}")
@@ -333,6 +329,9 @@ def main():
         ep_len = 0
         ep_shaping_return = 0.0
         ep_final_bonus = 0.0
+        ep_step_delta_return = 0.0   # <— NEU
+        ep_step_penalty_return = 0.0 # <— NEU
+
         train_seconds_accum = 0.0
 
         # Timing-Teilmessungen
@@ -381,8 +380,13 @@ def main():
 
             if hasattr(shaper, "step_active") and shaper.step_active():
                 hand_after = shaper.hand_size(ts, 0, deck_int)
-                r_step = float(shaper.step_reward(hand_before=hand_before, hand_after=hand_after))
-                ep_shaping_return += r_step
+                # wie in k4a2: Komponenten separat
+                delta_r, penalty_r, r_step = shaper.step_reward_components(
+                    hand_before=hand_before, hand_after=hand_after
+                )
+                ep_shaping_return       += float(r_step)
+                ep_step_delta_return    += float(delta_r)
+                ep_step_penalty_return  += float(penalty_r)
             else:
                 r_step = 0.0
 
@@ -445,11 +449,14 @@ def main():
             global_episode=ep,
             ep_returns=[ep_return_training],
             components={
-                "env_score":   [env_part],      # 0.0, wenn nicht aktiv
-                "shaping":     [shaping_part],  # 0.0, wenn nicht aktiv
+                "env_score":   [env_part],
+                "shaping":     [shaping_part],
                 "final_bonus": [ep_final_bonus],
+                "step_delta":  [ep_step_delta_return],   # <— NEU
+                "step_penalty":[ep_step_penalty_return], # <— NEU
             },
         )
+
 
         # Trainingsmetriken speichern/merken (Parität zu k1a1/k1a2)
         if collect_metrics:
@@ -479,11 +486,25 @@ def main():
             per_opponent = {_safe_name(k): v for k, v in per_opponent_tokens.items()}
             plotter.log_bench_summary(ep, per_opponent)
             plotter.add_benchmark(ep, per_opponent)
-            plotter.plot_benchmark_rewards()
+
+            # identische Gruppenplots wie k4a2
+            plotter.plot_reward_groups(window=plotter.smooth_window)
+
             plotter.plot_places_latest()
-            title_multi = f"Lernkurve - {family.upper()} vs feste Heuristiken"
-            plotter.plot_benchmark(filename_prefix="lernkurve", with_macro=True,
-                                   family_title=family.upper(), multi_title=title_multi)
+            title_multi = f"Lernkurve (Benchmark) - {family.upper()} vs. feste Heuristiken"
+            plotter.plot_benchmark(
+                filename_prefix="lernkurve",
+                with_macro=True,
+                family_title=family.upper(),
+                multi_title=title_multi,
+                smooth_window=CONFIG["FEATURES"].get("WR_SMOOTH_WINDOW", plotter.smooth_window),
+                show_ci=CONFIG["FEATURES"].get("WR_SHOW_CI", True),
+                ci_z=CONFIG["FEATURES"].get("WR_CI_Z", 1.96),
+            )
+
+            # OPTIONAL: Wenn du die reinen Reward-Kurven nicht brauchst, kannst du den Aufruf weglassen
+            # plotter.plot_benchmark_rewards()
+
 
             if CONFIG["FEATURES"].get("PLOT_METRICS", False):
                 plotter.plot_train(
