@@ -1,0 +1,5 @@
+name,type,family,version,episode,from_pid
+P0: K1 vs Single Only,dqn,k1a2,39,20000,0
+P1: K1 vs V-Table,dqn,k1a2,37,20000,0
+P2: K1 vs Single Only,dqn,k1a2,39,20000,0
+P3: K1 vs V-Table,dqn,k1a2,37,20000,0

@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+342,P0: K1 vs. Max Combo,ppo v54 ep1.000.000,ppo,k1a1,54,1000000,20.1,1.45,1007,1243
+342,P1: K2 (Independent),ppo v06 ep400.000,ppo,k2a1,06,400000,28.3,1.51,1415,1257
+342,P2: K1 vs. Max Combo,ppo v54 ep1.000.000,ppo,k1a1,54,1000000,21.9,1.48,1094,1283
+342,P3: K2 (Independent),ppo v06 ep400.000,ppo,k2a1,06,400000,29.7,1.56,1484,1217

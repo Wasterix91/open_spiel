@@ -19,8 +19,8 @@ from utils.load_save_common import find_next_version, prepare_run_dirs, save_con
 
 # ============== CONFIG ==============
 CONFIG = {
-    "EPISODES":         1_000_000,
-    "BENCH_INTERVAL":   10_000,
+    "EPISODES":         100_000,
+    "BENCH_INTERVAL":   5000,
     "BENCH_EPISODES":   2_000,
     "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
@@ -59,8 +59,8 @@ CONFIG = {
         "DELTA_WEIGHT": 0.0,
         "HAND_PENALTY_COEFF": 0.0,
 
-        "FINAL_MODE": "env_only",
-        "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
+        "FINAL_MODE": "rank_only",
+        "BONUS_WIN": 5.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
     },
 
     # Feature-Toggles
@@ -71,16 +71,16 @@ CONFIG = {
         "DEBUG_FEATURES": False,
         "PLOT_METRICS": True,     # Trainingsplots erzeugen?
         "SAVE_METRICS_TO_CSV": False,  # Trainingsmetriken persistent speichern?
-        "RET_SMOOTH_WINDOW": 150,
+        "RET_SMOOTH_WINDOW": 500,
 
+        "WR_SMOOTH_WINDOW": 5,      # z.B. 5, 7, 9 ...
+        "WR_SHOW_CI": True,
+        "WR_CI_Z": 1.96,
+        "PLOT_FORMATS": ["png", "svg"],
         # Steuert plot_train(); Sonder-Keys triggern In-Memory-Return-Plots.
         "PLOT_KEYS": [
-            # DQN/Train (Beispiele):
             "epsilon", "ep_length", "train_seconds",
-            # Sonderplots aus Memory (Episoden-Return):
-            "ep_return_raw", "ep_return_components",
-            "ep_return_env", "ep_return_shaping", "ep_return_final",
-            "ep_return_training",
+            # KEINE ep_return_* Trigger hier
         ],
     },
 
@@ -169,14 +169,16 @@ def main():
     paths = prepare_run_dirs(MODELS_ROOT, family, version, prefix="model")
 
     plotter = MetricsPlotter(
-        out_dir=paths["plots_dir"],
-        benchmark_opponents=list(CONFIG["BENCH_OPPONENTS"]),
-        benchmark_csv="benchmark_curves.csv",
-        train_csv="training_metrics.csv",
-        save_csv=CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False),
-        verbosity=1,
-        smooth_window=CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 150),
+    out_dir=paths["plots_dir"],
+    benchmark_opponents=list(CONFIG["BENCH_OPPONENTS"]),
+    benchmark_csv="benchmark_curves.csv",
+    train_csv="training_metrics.csv",
+    save_csv=CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False),
+    verbosity=1,
+    smooth_window=CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 150),
+    out_formats=CONFIG["FEATURES"].get("PLOT_FORMATS", ["png"]),  # <--- NEU
     )
+
     plotter.log("New Training (k4a2): Shared-Policy DQN — In-Proc External Trainer (Bundle-Updates)")
     plotter.log(f"Deck_Size: {CONFIG['DECK_SIZE']}")
     plotter.log(f"Episodes: {CONFIG['EPISODES']}")
@@ -251,7 +253,11 @@ def main():
     for ep in range(1, CONFIG["EPISODES"] + 1):
         ep_start = time.perf_counter()
         ep_len = 0
+
         ep_shaping_returns = [0.0 for _ in range(num_players)]
+        ep_step_delta_returns   = [0.0 for _ in range(num_players)]   # NEU
+        ep_step_penalty_returns = [0.0 for _ in range(num_players)]   # NEU
+
 
         ts = env.reset()
         pending = {p: None for p in range(num_players)}   # {"s":..., "a":..., "r":...}
@@ -280,6 +286,8 @@ def main():
 
             # (C) optionaler Step-Reward
             r_step = 0.0
+            delta_r = 0.0
+            penalty_r = 0.0
             if shaper.step_active():
                 hand_before = shaper.hand_size(ts, p, deck_int)
 
@@ -289,8 +297,13 @@ def main():
 
             if shaper.step_active():
                 hand_after = shaper.hand_size(ts_next, p, deck_int)
-                r_step = float(shaper.step_reward(hand_before=hand_before, hand_after=hand_after))
-                ep_shaping_returns[p] += r_step
+                delta_r, penalty_r, r_step = shaper.step_reward_components(
+                    hand_before=hand_before, hand_after=hand_after
+                )
+                ep_shaping_returns[p]       += r_step
+                ep_step_delta_returns[p]    += delta_r
+                ep_step_penalty_returns[p]  += penalty_r
+
 
             # (E) Pending für p
             pending[p] = {"s": obs, "a": a, "r": r_step}
@@ -324,17 +337,23 @@ def main():
         env_part     = finals[0] if shaper.include_env_reward() else 0.0
         shaping_part = ep_shaping_returns[0] if shaper.step_active() else 0.0
         final_bonus  = float(shaper.final_bonus(finals, 0))
+        step_delta_part   = ep_step_delta_returns[0] if shaper.step_active() else 0.0  # NEU
+        step_penalty_part = ep_step_penalty_returns[0] if shaper.step_active() else 0.0  # NEU
+
         ep_return_training = shaping_part + env_part + final_bonus
 
         plotter.add_ep_returns(
             global_episode=ep,
             ep_returns=[ep_return_training],
             components={
-                "env_score":   [env_part],      # 0.0, wenn inaktiv
-                "shaping":     [shaping_part],  # 0.0, wenn inaktiv
-                "final_bonus": [final_bonus],
+                "env_score":    [env_part],
+                "final_bonus":  [final_bonus],
+                "shaping":      [shaping_part],       
+                "step_delta":   [step_delta_part],    
+                "step_penalty": [step_penalty_part],  
             },
         )
+
 
         # ---- Episoden-Metriken ----
         ep_metrics = {
@@ -408,7 +427,7 @@ def main():
             per_opponent = run_benchmark(
                 game=game,
                 agent=agent,
-                opponents_dict=bench_map,   # <--- WICHTIG: bench_map, nicht STRATS
+                opponents_dict=bench_map,   
                 opponent_names=CONFIG["BENCH_OPPONENTS"],
                 episodes=BEPS,
                 feat_cfg=feat_cfg,
@@ -419,15 +438,22 @@ def main():
 
             plot_start = time.perf_counter()
             plotter.add_benchmark(ep, per_opponent)
-            plotter.plot_benchmark_rewards()
+            #plotter.plot_benchmark_rewards()
+            plotter.plot_reward_groups(window=plotter.smooth_window)
+
             plotter.plot_places_latest()
-            title_multi = f"Lernkurve - {family.upper()} vs feste Heuristiken"
+            title_multi =  f"Lernkurve (Benchmark) - {family.upper()} vs. feste Heuristiken"
             plotter.plot_benchmark(
                 filename_prefix="lernkurve",
                 with_macro=True,
                 family_title=family.upper(),
                 multi_title=title_multi,
+                smooth_window=CONFIG["FEATURES"].get("WR_SMOOTH_WINDOW", plotter.smooth_window),
+                show_ci=CONFIG["FEATURES"].get("WR_SHOW_CI", True),
+                ci_z=CONFIG["FEATURES"].get("WR_CI_Z", 1.96),
             )
+
+
             if CONFIG["FEATURES"].get("PLOT_METRICS", False):
                 plotter.plot_train(
                     include_keys=CONFIG["FEATURES"].get("PLOT_KEYS"),

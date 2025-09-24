@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+326,P0: K1 vs POP 2,ppo v56 ep1.000.000,ppo,k1a1,56,1000000,21.2,1.35,1062,1238
+326,P1: K4 Shared Policy SP,ppo v05 ep500.000,ppo,k4a1,05,500000,28.5,1.65,1427,1203
+326,P2: K1 vs POP 2,ppo v56 ep1.000.000,ppo,k1a1,56,1000000,22.4,1.37,1118,1303
+326,P3: K4 Shared Policy SP,ppo v05 ep500.000,ppo,k4a1,05,500000,27.9,1.63,1393,1256

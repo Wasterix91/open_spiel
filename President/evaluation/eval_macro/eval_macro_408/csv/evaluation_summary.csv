@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+408,P0: K2 (Independent),ppo v04 ep100.000,ppo,k2a1,04,100000,24.1,1.38,1203,1252
+408,P1: K2 (Independent),dqn v05 ep20.000,dqn,k2a2,05,20000,26.1,1.6,1306,1231
+408,P2: K2 (Independent),ppo v04 ep100.000,ppo,k2a1,04,100000,22.2,1.36,1111,1231
+408,P3: K2 (Independent),dqn v05 ep20.000,dqn,k2a2,05,20000,27.6,1.65,1380,1286

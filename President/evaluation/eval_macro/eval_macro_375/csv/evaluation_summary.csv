@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+375,P0: K1 vs V-Table,ppo v05 ep1.000.000,ppo,k1a1,05,1000000,25.9,1.52,1294,1259
+375,P1: K3 (Snapshot SP),ppo v04 ep100.000,ppo,k3a1,04,100000,25.6,1.51,1278,1242
+375,P2: K1 vs V-Table,ppo v05 ep1.000.000,ppo,k1a1,05,1000000,23.9,1.49,1193,1206
+375,P3: K3 (Snapshot SP),ppo v04 ep100.000,ppo,k3a1,04,100000,24.7,1.48,1235,1293

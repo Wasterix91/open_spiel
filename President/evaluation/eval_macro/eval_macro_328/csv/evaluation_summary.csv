@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+328,P0: K4 Shared Policy SP,ppo v05 ep500.000,ppo,k4a1,05,500000,26.3,1.55,1314,1281
+328,P1: K3 Snapshot Policy SP,ppo v32 ep1.000.000,ppo,k3a1,32,1000000,24.0,1.46,1202,1272
+328,P2: K4 Shared Policy SP,ppo v05 ep500.000,ppo,k4a1,05,500000,26.2,1.54,1310,1227
+328,P3: K3 Snapshot Policy SP,ppo v32 ep1.000.000,ppo,k3a1,32,1000000,23.5,1.45,1174,1220

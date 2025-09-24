@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+411,P0: K1 vs V-Table,dqn v37 ep20.000,dqn,k1a2,37,20000,24.6,1.47,1230,1236
+411,P1: K4 (Shared Policy SP),dqn v32 ep100.000,dqn,k4a2,32,100000,24.9,1.51,1246,1277
+411,P2: K1 vs V-Table,dqn v37 ep20.000,dqn,k1a2,37,20000,25.7,1.51,1284,1236
+411,P3: K3 (Shared Policy SP),dqn v32 ep100.000,dqn,k4a2,32,100000,24.8,1.51,1240,1251

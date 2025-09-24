@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+378,P0: K1 vs POP 2,ppo v11 ep20.000,ppo,k1a1,11,20000,24.7,1.44,1236,1294
+378,P1: K3 (Snapshot SP),ppo v04 ep100.000,ppo,k3a1,04,100000,26.7,1.58,1337,1280
+378,P2: K1 vs POP 2,ppo v11 ep20.000,ppo,k1a1,11,20000,23.7,1.44,1185,1197
+378,P3: K3 (Snapshot SP),ppo v04 ep100.000,ppo,k3a1,04,100000,24.8,1.54,1242,1229

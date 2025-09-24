@@ -5,13 +5,22 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.patheffects as pe
+from matplotlib.lines import Line2D
+import matplotlib.colors as mcolors 
+import colorsys
+
+
 # 0% Rand links/rechts auf allen Achsen
 mpl.rcParams["axes.xmargin"] = 0.0
 
 mpl.rcParams.update({
     "font.family": "serif",
-    "font.serif": ["Palatino Linotype", "Book Antiqua", "Palatino", "DejaVu Serif"]
+    "font.serif": ["Palatino Linotype", "Book Antiqua", "Palatino", "DejaVu Serif"],
+    "pdf.fonttype": 42,     # Text in PDFs bleibt editierbarer Text
+    "ps.fonttype": 42,
+    "svg.fonttype": "none", # Text in SVG bleibt Text (nicht in Pfade konvertieren)
 })
+
 
 
 class MetricsPlotter:
@@ -23,11 +32,14 @@ class MetricsPlotter:
         train_csv: str = "train_metrics.csv",
         save_csv: bool = True,
         verbosity: int = 1,
-        smooth_window: int | None = None,   # Fenstergröße für Moving Average der Rewards
+        smooth_window: int | None = None,
+        out_formats: Optional[List[str]] = None,   # <--- NEU
     ):
         self.out_dir = out_dir
         os.makedirs(self.out_dir, exist_ok=True)
 
+
+        self._out_formats = list(out_formats or ["png"])  # <--- NEU
         # Logging
         self.verbosity = verbosity
         self.smooth_window = int(smooth_window) if smooth_window is not None else 150
@@ -38,13 +50,13 @@ class MetricsPlotter:
         self._bench_save_csv = bool(save_csv)
 
         self.bench_episodes: List[int] = []
-        # Historien getrennt nach Kennzahl
         self.bench_hist_wr: Dict[str, List[float]] = {n: [] for n in self.bench_names}
         self.bench_hist_reward: Dict[str, List[float]] = {n: [] for n in self.bench_names}
-        # Platzierungsverteilung je Gegner: Liste von (p0,p1,p2,p3) je Episode
         self.bench_hist_places: Dict[str, List[Tuple[float, float, float, float]]] = {
             n: [] for n in self.bench_names
         }
+        self.bench_hist_n: Dict[str, List[int]] = {n: [] for n in self.bench_names}
+        self.bench_hist_k: Dict[str, List[int]] = {n: [] for n in self.bench_names}
         self.bench_macro_wr: List[float] = []
         self.bench_macro_reward: List[float] = []
 
@@ -54,25 +66,79 @@ class MetricsPlotter:
         self.train_keys: Optional[List[str]] = None
         self.train_rows: List[dict] = []
 
-        # ---- Konsistente Farben für alle Return-Plots ----
+        # ---- Konsistente Farben ----
         self._ret_colors = {
-            "env_score":    "tab:blue",
-            "shaping":      "tab:green",
-            "final_bonus":  "tab:orange",
-            # Total-Return:
+            # Totals / Linienfarben
             "total_scatter": "tab:gray",
             "total_ma":      "tab:red",
+            "total_all":     "#222222",
+
+            # Final-Gruppe (Blautöne)
+            "final_total":   "#1f77b4",
+            "final_env":     "#6baed6",
+            "final_rank":    "#08519c",
+
+            # Step-Gruppe (Grüntöne)
+            "step_total":    "#2ca02c",
+            "step_delta":    "#74c476",
+            "step_penalty":  "#006d2c",
+
+            # Komponenten-Aliasse → gleiche Farben wie Gruppen
+            "env_score":     "#6baed6",  # Final (Env)
+            "final_bonus":   "#08519c",  # Final (Rank)
+            "shaping":       "#2ca02c",  # Step (Total)
+
+            # Scatter-Grundfarbe (falls benötigt)
+            "component_scatter": "#B0B0B0",
         }
-        self._ret_colors["component_scatter"] = "#B0B0B0"  # helles Grau
-        self._ret_scatter_alpha = 0.18
-        self._ret_scatter_size  = 6
-        self._ret_line_width    = 2.2
-        self._ret_use_outline   = True
+
+        # Plot-Styling (zentral)
+        self._ret_line_width   = 3.2      # dicker: MA-Linie
+        self._ret_outline_add  = 1.5      # weißer Rand um Linie (Kontrast)
+        self._sc_total_size    = 14.0     # Punkte im Rohplot
+        self._sc_comp_size     = 8.0      # Punkte in Komponentenplots
+        self._sc_marker        = "o"      # skalierbar
+        self._sc_edge          = "none"
+        self._sc_linewidths    = 0.0
+
+        # Sichtbarkeit/“Kräftigkeit” der Punkte (Alpha wird in _fade_rgba genutzt)
+        self._fade_alpha_total = 0.35     # Rohplot-Punkte
+        self._fade_alpha_comp  = 0.40     # Komponenten-Punkte
+        self._fade_mix_blue    = 0.16     # Blau weniger aufhellen (satter)
+        self._fade_mix_other   = 0.26     # andere Farben
+        self._ret_use_outline  = True
+
+
+
 
         # In-Memory Episode-Returns
         self.ep_ret_eps: List[int] = []     # global_ep
         self.ep_ret_vals: List[float] = []  # Trainings-Reward (Buffersignal)
-        self.ep_ret_components: Dict[str, List[float]] = {}  # z.B. {"env_score": [...], "shaping": [...], "final_bonus": [...]}
+        self.ep_ret_components: Dict[str, List[float]] = {}  # z.B. {"env_score":[...], "shaping":[...], "final_bonus":[...]}
+
+    # ---------- Hilfsfunktionen ----------
+    def _fade_rgba(self, col, alpha=None):
+        a = self._fade_alpha_total if alpha is None else float(alpha)
+        if col is None:
+            return (0.0, 0.0, 0.0, a)
+        rgb = np.array(mcolors.to_rgb(col), dtype=float)
+        h, s, v = colorsys.rgb_to_hsv(*rgb)
+        mix = self._fade_mix_blue if (0.55 <= h <= 0.72) else self._fade_mix_other
+        light = mix * np.ones(3) + (1.0 - mix) * rgb
+        return (float(light[0]), float(light[1]), float(light[2]), a)
+    
+    def _savefig(self, out_path_no_change: str, *, dpi: int = 300):
+        """
+        Nimmt einen Pfad (z. B. .../plot.png) und speichert in allen
+        Formaten aus self._out_formats (png/svg/pdf).
+        """
+        base, _ = os.path.splitext(out_path_no_change)
+        for fmt in self._out_formats:
+            path = f"{base}.{fmt}"
+            plt.savefig(path, bbox_inches="tight", transparent=False, dpi=dpi)
+
+
+
 
     # ---------- Benchmark: add ----------
     def add_benchmark(
@@ -82,27 +148,16 @@ class MetricsPlotter:
         macro_wr: Optional[float] = None,
         macro_reward: Optional[float] = None,
     ):
-        """
-        results-Format (neu):
-        {
-            "<opp>": {
-              "winrate": float,   # in %
-              "reward": float,    # Ø ENV-Reward P0
-              "places": [p0,p1,p2,p3],
-              "episodes": int
-            },
-            ...
-        }
-        Abwärtskompatibel:
-        - float -> Winrate
-        - reward -> mean_reward Fallback
-        - places -> place_dist Fallback
-        """
         if not self.bench_names:
             self.bench_names = list(results.keys())
             self.bench_hist_wr = {n: [] for n in self.bench_names}
             self.bench_hist_reward = {n: [] for n in self.bench_names}
             self.bench_hist_places = {n: [] for n in self.bench_names}
+
+        if not hasattr(self, "bench_hist_n"):
+            self.bench_hist_n = {n: [] for n in self.bench_names}
+        if not hasattr(self, "bench_hist_k"):
+            self.bench_hist_k = {n: [] for n in self.bench_names}
 
         if self._bench_save_csv:
             header_fields = ["episode"]
@@ -144,6 +199,8 @@ class MetricsPlotter:
                 wr = float(val)
                 rw = float("nan")
                 p0 = p1 = p2 = p3 = float("nan")
+                n_i = 0
+                k_i = 0
             else:
                 wr = float(val.get("winrate", float("nan")))
                 rw = float(val.get("reward", val.get("mean_reward", float("nan"))))
@@ -153,9 +210,21 @@ class MetricsPlotter:
                 p2 = float(place[2]) if len(place) > 2 else float("nan")
                 p3 = float(place[3]) if len(place) > 3 else float("nan")
 
+                n_i = int(val.get("episodes", 0) or 0)
+                if "wins" in val and val.get("wins") is not None:
+                    k_i = int(val.get("wins", 0) or 0)
+                else:
+                    if math.isfinite(wr) and n_i > 0:
+                        k_i = int(round(wr / 100.0 * n_i))
+                        k_i = max(0, min(k_i, n_i))
+                    else:
+                        k_i = 0
+
             self.bench_hist_wr[name].append(wr)
             self.bench_hist_reward[name].append(rw)
             self.bench_hist_places[name].append((p0, p1, p2, p3))
+            self.bench_hist_n.setdefault(name, []).append(n_i)
+            self.bench_hist_k.setdefault(name, []).append(k_i)
 
             row += [wr, rw, p0, p1, p2, p3]
             if math.isfinite(wr):
@@ -179,15 +248,18 @@ class MetricsPlotter:
         with_macro: bool = True,
         family_title: str | None = None,
         multi_title: str | None = None,
+        smooth_window: int = 1,
+        show_ci: bool = True,
+        ci_z: float = 1.96,
     ):
-        """Winrate-Kurven mit konsistenten Titeln + spezifizierte Dateinamen."""
+        """Winrate-Kurven (ggf. geglättet) + optionale Konfidenzbänder."""
         if not self.bench_episodes:
             return
 
         def _pretty_opp(name: str) -> str:
             mapping = {
                 "max_combo": "Max Combo",
-                "random2": "Random2",
+                "random2": "Random 2",
                 "single_only": "Single Only",
             }
             return mapping.get(name, name)
@@ -199,36 +271,10 @@ class MetricsPlotter:
             if multi_title:
                 return multi_title
             if family_title:
-                return f"Lernkurve - {family_title} vs feste Heuristiken"
+                return f"Lernkurve (Benchmark) - {family_title} vs. feste Heuristiken"
             return f"{filename_prefix}"
 
-        def _plot_multi(out_path: str, include_macro: bool, add_25: bool = False):
-            plt.figure(figsize=(12, 8))
-            for name in self.bench_names:
-                plt.plot(
-                    self.bench_episodes,
-                    self.bench_hist_wr[name],
-                    marker="o",
-                    markersize=4,
-                    label=_pretty_opp(name),
-                    color=colors[name],
-                )
-            if include_macro:
-                plt.plot(
-                    self.bench_episodes,
-                    self.bench_macro_wr,
-                    marker="o",
-                    markersize=4,
-                    linestyle="--",
-                    label="Avg Macro",
-                    color=macro_color,
-                )
-            _apply_common_axes(_title_multi(), add_25=add_25)
-            plt.legend(loc="upper right")
-            plt.tight_layout()
-            plt.savefig(out_path)
-            plt.close()
-
+        # Farben
         base_colors = plt.rcParams.get("axes.prop_cycle", None)
         if base_colors is not None:
             base_colors = base_colors.by_key().get("color", [])
@@ -237,35 +283,146 @@ class MetricsPlotter:
         colors = {name: base_colors[i % len(base_colors)] for i, name in enumerate(self.bench_names)}
         macro_color = "#444444"
 
+        # Achsen/Styling
         def _apply_common_axes(title: str, add_25: bool = False):
             plt.title(title)
             plt.xlabel("Episode")
             plt.ylabel("Winrate (%)")
             plt.ylim(0, 100)
             plt.grid(True)
-
             ax = plt.gca()
             ax.set_xlim(left=0)
             ticks = ax.get_xticks()
             if 0.0 not in ticks:
                 ax.set_xticks(np.unique(np.concatenate(([0.0], ticks))))
-
             if add_25:
                 plt.axhline(25, color="r", linewidth=1, label="25% Linie")
 
+        # Helfer: Wilson-CI & rollierende Summen (lokal für diesen Plot)
+        def _wilson_interval(k: int, n: int, z: float = 1.96) -> Tuple[float, float]:
+            if n <= 0:
+                return (float("nan"), float("nan"))
+            p = k / n
+            denom = 1.0 + (z * z) / n
+            center = (p + (z * z) / (2 * n)) / denom
+            delta = z * math.sqrt(p * (1 - p) / n + (z * z) / (4 * n * n)) / denom
+            lo = max(0.0, center - delta)
+            hi = min(1.0, center + delta)
+            return lo, hi
+
+        def _roll_sum(xs: List[int], w: int) -> List[int]:
+            if w <= 1 or not xs:
+                return list(xs)
+            out = []
+            from collections import deque
+            q = deque()
+            s = 0
+            for x in xs:
+                q.append(int(x)); s += int(x)
+                if len(q) > w:
+                    s -= int(q.popleft())
+                out.append(int(s))
+            return out
+
+        def _movavg(v: np.ndarray, w: int) -> np.ndarray:
+            if v.size == 0 or w <= 1:
+                return v
+            w = max(1, int(w))
+            c = np.cumsum(np.insert(v, 0, 0.0))
+            tail = (c[w:] - c[:-w]) / float(w)
+            head = np.array([np.mean(v[:i + 1]) for i in range(min(w - 1, v.size))], dtype=float)
+            return np.concatenate([head, tail])
+
+        def _series_pct_and_ci(name: str):
+            wr_raw = self.bench_hist_wr[name]
+            has_counts = hasattr(self, "bench_hist_k") and hasattr(self, "bench_hist_n") \
+                        and (name in self.bench_hist_k) and (name in self.bench_hist_n) \
+                        and (len(self.bench_hist_k[name]) == len(wr_raw)) \
+                        and any(int(n) > 0 for n in self.bench_hist_n[name])
+
+            if has_counts:
+                k = list(self.bench_hist_k[name])
+                n = list(self.bench_hist_n[name])
+                k_use = _roll_sum(k, smooth_window) if smooth_window and smooth_window > 1 else k
+                n_use = _roll_sum(n, smooth_window) if smooth_window and smooth_window > 1 else n
+
+                y, lo, hi = [], [], []
+                T = len(self.bench_episodes)
+                for t in range(T):
+                    nn = n_use[t] if t < len(n_use) else 0
+                    kk = k_use[t] if t < len(k_use) else 0
+                    if nn > 0:
+                        l, h = _wilson_interval(kk, nn, z=ci_z)
+                        p = kk / nn
+                        y.append(100.0 * p)
+                        lo.append(100.0 * l)
+                        hi.append(100.0 * h)
+                    else:
+                        v = wr_raw[t] if t < len(wr_raw) else float("nan")
+                        y.append(v); lo.append(float("nan")); hi.append(float("nan"))
+                return np.array(y), np.array(lo), np.array(hi)
+            else:
+                y = np.array(wr_raw, dtype=float)
+                y = _movavg(y, smooth_window) if smooth_window and smooth_window > 1 else y
+                lo = np.full_like(y, np.nan, dtype=float)
+                hi = np.full_like(y, np.nan, dtype=float)
+                return y, lo, hi
+
+        def _plot_multi(out_path: str, include_macro: bool, add_25: bool = False):
+            plt.figure(figsize=(12, 8))
+            for name in self.bench_names:
+                y, lo, hi = _series_pct_and_ci(name)
+                plt.plot(
+                    self.bench_episodes,
+                    y,
+                    marker="o",
+                    markersize=3,
+                    label=_pretty_opp(name),
+                    color=colors[name],
+                )
+                if show_ci and np.isfinite(lo).any():
+                    plt.fill_between(self.bench_episodes, lo, hi, alpha=0.15, color=colors[name], linewidth=0)
+            if include_macro:
+                ys_macro = []
+                T = len(self.bench_episodes)
+                for t in range(T):
+                    vals_t = []
+                    for nm in self.bench_names:
+                        yy, _, _ = _series_pct_and_ci(nm)
+                        if t < len(yy) and math.isfinite(yy[t]):
+                            vals_t.append(yy[t])
+                    ys_macro.append(float(np.mean(vals_t)) if vals_t else float("nan"))
+                plt.plot(
+                    self.bench_episodes,
+                    ys_macro,
+                    marker="o",
+                    markersize=3,
+                    linestyle="--",
+                    label="Avg Macro",
+                    color=macro_color,
+                )
+            _apply_common_axes(_title_multi(), add_25=add_25)
+            plt.legend(loc="upper right")
+            plt.tight_layout()
+            self._savefig(out_path)
+            plt.close()
+
         def _plot_single(name: str, out_path: str, add_25: bool = False, title_override: str | None = None):
             plt.figure(figsize=(10, 6))
+            y, lo, hi = _series_pct_and_ci(name)
             plt.plot(
                 self.bench_episodes,
-                self.bench_hist_wr[name],
+                y,
                 marker="o",
                 markersize=4,
                 color=colors[name],
             )
+            if show_ci and np.isfinite(lo).any():
+                plt.fill_between(self.bench_episodes, lo, hi, alpha=0.2, color=colors[name], linewidth=0)
             title = title_override or _title_single(_pretty_opp(name))
             _apply_common_axes(title, add_25=add_25)
             plt.tight_layout()
-            plt.savefig(out_path)
+            self._savefig(out_path)
             plt.close()
 
         os.makedirs(self.out_dir, exist_ok=True)
@@ -313,8 +470,9 @@ class MetricsPlotter:
                 first_name,
                 os.path.join(self.out_dir, "07_Lernkurve_single_only.png"),
                 add_25=False,
-                title_override=_title_single(_pretty_opp("single_only")),
+                title_override=_title_single(_pretty_opp(first_name)),
             )
+
 
     def plot_benchmark_rewards(self, filename_prefix: str = "benchmark_rewards", with_macro: bool = True, title_prefix: str | None = None):
         """Ø-Reward-Kurven aus dem Benchmark."""
@@ -331,7 +489,7 @@ class MetricsPlotter:
             plt.grid(True)
             plt.tight_layout()
             out = os.path.join(self.out_dir, f"{filename_prefix}_{name}.png")
-            plt.savefig(out)
+            self._savefig(out)
             plt.close()
 
         plt.figure(figsize=(12, 8))
@@ -346,17 +504,11 @@ class MetricsPlotter:
         plt.legend(loc="upper right")
         plt.tight_layout()
         out_all = os.path.join(self.out_dir, f"{filename_prefix}_alle_strategien.png")
-        plt.savefig(out_all)
+        self._savefig(out_all)
         plt.close()
 
     def plot_places_latest(self, filename_prefix: str = "places"):
-        """
-        Schreibt für jede Gegnerstrategie die Platzierungsverteilung (p0..p3)
-        der letzten Benchmark-Episode ANS ENDE EINER SAMMEL-CSV.
-
-        Datei: <out_dir>/<filename_prefix>_latest.csv
-        Spalten: opponent, episode, p0, p1, p2, p3  (Anteile, Summe ~ 1.0)
-        """
+        """Schreibt Platzierungsverteilung der letzten Benchmark-Episode in CSV (append)."""
         if not self._bench_save_csv:
             return
         if not self.bench_episodes:
@@ -436,18 +588,16 @@ class MetricsPlotter:
         include_keys: Optional[List[str]] = None,
         exclude_keys: Optional[List[str]] = None,
     ):
-        # Sonder-Keys, die nicht aus train_rows kommen, sondern aus Memory:
         special_keys = {
             "ep_return_raw", "ep_return_components",
             "ep_return_env", "ep_return_shaping", "ep_return_final",
-            "ep_return_training",  # Alias für Gesamt-Reward
+            "ep_return_training",
         }
 
         wants_special = False
         if include_keys is not None:
             wants_special = any(k in special_keys for k in include_keys)
 
-        # Nur abbrechen, wenn weder Trainingsmetriken noch Sonderplots gewünscht sind
         if (not self.train_rows or not self.train_keys) and not wants_special:
             return
 
@@ -465,7 +615,6 @@ class MetricsPlotter:
         if include_keys is not None:
             req = set(include_keys)
 
-            # Gesamt + Komponenten-Mehrfachplot (Alias eingeschlossen)
             if ("ep_return_raw" in req) or ("ep_return_components" in req) or ("ep_return_training" in req):
                 self.plot_ep_returns(window=self.smooth_window)
 
@@ -493,7 +642,7 @@ class MetricsPlotter:
                 plt.title(f"Training – {k}")
                 plt.xlabel("Episode"); plt.ylabel(k)
                 plt.grid(True); plt.tight_layout()
-                plt.savefig(os.path.join(self.out_dir, f"{filename_prefix}_{k}.png"))
+                self._savefig(os.path.join(self.out_dir, f"{filename_prefix}_{k}.png"))
                 plt.close()
         else:
             plt.figure(figsize=(12, 8))
@@ -503,7 +652,7 @@ class MetricsPlotter:
             plt.title("Training – Metrics")
             plt.xlabel("Episode"); plt.ylabel("Value")
             plt.grid(True); plt.legend(loc="upper left"); plt.tight_layout()
-            plt.savefig(os.path.join(self.out_dir, f"{filename_prefix}_all.png"))
+            self._savefig(os.path.join(self.out_dir, f"{filename_prefix}_all.png"))
             plt.close()
 
     def add_ep_returns(
@@ -512,11 +661,7 @@ class MetricsPlotter:
         ep_returns: List[float],
         components: Optional[Dict[str, List[float]]] = None
     ):
-        """
-        Nimmt Episode-Return(s) entgegen und speichert sie NUR im Speicher.
-        - Keine CSV.
-        - Üblicher Use-Case: genau 1 Return pro globaler Episode.
-        """
+        """Nimmt Episode-Return(s) entgegen und speichert sie nur im Speicher."""
         if not ep_returns:
             return
 
@@ -535,10 +680,9 @@ class MetricsPlotter:
     def plot_ep_returns(self, window: int | None = None):
         """
         Plottet die Episode-Returns aus dem IN-MEMORY-Puffer.
-        - Erzeugt:
-            - ep_return_raw.png (roh + Moving Avg)
-            - ep_return_components.png (alle Komponenten gemeinsam)
-            - ep_return_<komponente>.png (je Komponente einzeln)
+        Erzeugt:
+          - ep_return_raw.png (Rohpunkte + Moving Average)
+          - ep_return_components.png (Env/Step/Rank gemeinsam)
         """
         if not self.ep_ret_eps or not self.ep_ret_vals:
             return
@@ -560,46 +704,55 @@ class MetricsPlotter:
 
         # --- ep_return_raw.png ---
         plt.figure(figsize=(12, 7))
+        base_col = self._ret_colors.get("total_ma", "tab:red")
+
+        color = self._fade_rgba(base_col, alpha=self._fade_alpha_total)
+
         plt.scatter(
             x, y,
-            s=self._ret_scatter_size,
-            alpha=self._ret_scatter_alpha,
-            label="roh",                         # <-- NEU
-            color=self._ret_colors["total_scatter"],
+            s=self._sc_total_size,
+            marker=self._sc_marker,
+            color=color,
+            edgecolors=self._sc_edge,
+            linewidths=self._sc_linewidths,
             zorder=1,
+            rasterized=True,  # <--- hinzufügen
         )
+
+
+
         line_ma, = plt.plot(
             x, y_ma,
             linewidth=self._ret_line_width,
-            label=f"Rewards gesamt (MA, w={window})",   # <-- NEU
-            color=self._ret_colors["total_ma"],
+            label=f"Rewards gesamt (MA, w={window})",
+            color=base_col,
             zorder=3,
         )
-
         if self._ret_use_outline:
-            line_ma.set_path_effects([pe.Stroke(linewidth=self._ret_line_width+1.4, foreground="white"), pe.Normal()])
+            line_ma.set_path_effects([
+                pe.Stroke(linewidth=self._ret_line_width + self._ret_outline_add, foreground="white"),
+                pe.Normal()
+            ])
+
 
         plt.title("Training – Rewards (roh)")
         plt.xlabel("Trainings-Episode")
         plt.ylabel("Rewards")
         plt.grid(True); plt.legend(); plt.tight_layout()
-        plt.savefig(os.path.join(self.out_dir, "ep_return_raw.png"))
+        self._savefig(os.path.join(self.out_dir, "ep_return_raw.png"))
         plt.close()
 
         # --- ep_return_components.png ---
-        # Immer diese drei Komponenten zeigen; fehlende werden als 0-Liste nachgerüstet
         comp_keys = ["env_score", "shaping", "final_bonus"]
         for k in comp_keys:
             if k not in self.ep_ret_components:
                 self.ep_ret_components[k] = [0.0] * len(self.ep_ret_eps)
-        
-        # Mapping für schönere Legendenamen
+
         legend_names = {
             "env_score":   "Final Reward (Env)",
             "shaping":     "Step Reward",
             "final_bonus": "Final Reward (Rank)",
         }
-
 
         plt.figure(figsize=(12, 7))
         for k in comp_keys:
@@ -607,110 +760,241 @@ class MetricsPlotter:
             col = self._ret_colors.get(k, None)
             plt.plot(x, _movavg(v, window), label=legend_names.get(k, k), color=col)
 
-        plt.title("Reward-Komponenten (Moving Avg)")
+        plt.title("Reward-Komponenten")
         plt.xlabel("Trainings-Episode")
         plt.ylabel("Rewards")
         plt.grid(True); plt.legend(); plt.tight_layout()
-        plt.savefig(os.path.join(self.out_dir, "ep_return_components.png"))
+        self._savefig(os.path.join(self.out_dir, "ep_return_components.png"))
         plt.close()
 
-        # --- Einzelplots pro Komponente ---
-        for k in comp_keys:
-            v  = np.asarray(self.ep_ret_components[k], dtype=float)
-            mv = _movavg(v, window)
-            col_line = self._ret_colors.get(k, None)
-            col_scatter = self._ret_colors["component_scatter"]
-
-            plt.figure(figsize=(10, 6))
-            plt.scatter(x, v, s=self._ret_scatter_size, alpha=self._ret_scatter_alpha,
-                        label="roh", color=col_scatter, zorder=1)
-            nice = legend_names.get(k, k)
-            line_comp, = plt.plot(
-                x, mv,
-                linewidth=self._ret_line_width,
-                label=f"{nice} (MA)",
-                color=col_line,
-                zorder=3,
-)
-
-            if self._ret_use_outline:
-                line_comp.set_path_effects([pe.Stroke(linewidth=self._ret_line_width+1.2, foreground="white"), pe.Normal()])
-
-            plt.title(f"Training – {legend_names.get(k, k)} (Moving Avg)")
-            plt.xlabel("Trainings-Episode")
-            plt.ylabel("Rewards")
-            plt.grid(True); plt.legend(); plt.tight_layout()
-            plt.savefig(os.path.join(self.out_dir, f"ep_return_{k}.png"))
-            plt.close()
-
-
     def plot_ep_return_component(self, component_key: str, window: int | None = None,
-                                 filename: Optional[str] = None, title: Optional[str] = None):
+                                filename: Optional[str] = None, title: Optional[str] = None,
+                                show_legend: bool = True):
         """
-        Einzelplot für eine Return-Komponente aus dem In-Memory-Puffer.
-        component_key: "env_score" | "shaping" | "final_bonus"
-        Erzeugt standardmäßig: ep_return_<component_key>.png
+        Einzelplot für eine Return-Komponente.
+        - Scatter: sehr klein & kräftig (aufgehellte Linienfarbe), ohne Label.
+        - Linie: Moving Average mit optionaler Legende.
+        - Schreibt die Datei immer, auch wenn (noch) keine Daten da sind.
         """
-        if not self.ep_ret_eps:
-            return
-        # Falls die Komponente bisher nie geliefert wurde: flache 0-Linie erzeugen
-        if component_key not in self.ep_ret_components:
-            self.ep_ret_components[component_key] = [0.0] * len(self.ep_ret_eps)
+        os.makedirs(self.out_dir, exist_ok=True)
 
-
-        x = np.asarray(self.ep_ret_eps, dtype=float)
-        v = np.asarray(self.ep_ret_components[component_key], dtype=float)
-        # Mapping für schönere Legendenamen
         legend_names = {
-            "env_score":   "Final Reward (Env)",
-            "shaping":     "Step Reward",
-            "final_bonus": "Final Reward (Rank)",
+            "env_score":    "Final Reward (Env)",
+            "final_bonus":  "Final Reward (Rank)",
+            "shaping":      "Step Reward (Total)",
+            "step_delta":   "Step Reward (Combo)",
+            "step_penalty": "Step Reward (Hand-Penalty)",
         }
         nice_name = legend_names.get(component_key, component_key)
 
+        window   = self.smooth_window if (window is None) else int(window)
+        out_name = filename or f"ep_return_{component_key}.png"
+        ttl      = title or f"Training – {nice_name}"
+        base_col = self._ret_colors.get(component_key, None)
+
+        x = np.asarray(self.ep_ret_eps, dtype=float)
+        v = np.asarray(self.ep_ret_components.get(component_key, []), dtype=float)
 
         def _movavg(arr: np.ndarray, w: int) -> np.ndarray:
-            if arr.size == 0:
+            if arr.size == 0 or w <= 1:
                 return arr
-            w = max(1, int(w))
-            w = min(w, arr.size)
+            w = max(1, int(w)); w = min(w, arr.size)
             c = np.cumsum(np.insert(arr, 0, 0.0))
             tail = (c[w:] - c[:-w]) / float(w)
             head = np.array([np.mean(arr[:i+1]) for i in range(w-1)], dtype=float)
             return np.concatenate([head, tail])
 
-        window = self.smooth_window if (window is None) else int(window)
-        mv = _movavg(v, window)
-        out_name = filename or f"ep_return_{component_key}.png"
-        ttl = title or f"Training – {nice_name} (Moving Avg)"
-        col = self._ret_colors.get(component_key, None)
-
         plt.figure(figsize=(12, 7))
-        plt.scatter(
-            x, v,
-            s=self._ret_scatter_size,
-            alpha=self._ret_scatter_alpha,
-            label="roh",
-            color=self._ret_colors["component_scatter"],
-            zorder=1,
-        )
-        line_comp, = plt.plot(
-            x, mv,
-            linewidth=self._ret_line_width,
-            label=f"{nice_name} (MA)",
-            color=col,
-            zorder=3,
-        )
 
-        if self._ret_use_outline:
-            line_comp.set_path_effects([pe.Stroke(linewidth=self._ret_line_width+1.2, foreground="white"), pe.Normal()])
+        if v.size > 0 and x.size > 0:
+            L = min(x.size, v.size)
+
+            # >>> NEU: Final-Scatter kräftiger und größer
+            is_final = component_key in ("env_score", "final_bonus")
+
+            alpha = (0.22 if is_final else self._fade_alpha_comp)         # Transparenz
+            size  = (self._sc_comp_size * 1.35 if is_final else self._sc_comp_size)  # Größe
+
+            # Final: kein Aufhellen → sattes Original mit Alpha
+            # Sonst: aufgehellte Variante wie bisher
+            color = (mcolors.to_rgba(base_col, alpha=alpha)
+                    if is_final else self._fade_rgba(base_col, alpha=alpha))
+
+            plt.scatter(
+                x[:L], v[:L],
+                s=size,
+                marker=self._sc_marker,
+                color=color,
+                edgecolors=self._sc_edge,
+                linewidths=self._sc_linewidths,
+                zorder=1,
+                rasterized=True,  # <--- hinzufügen
+            )
+
+
+
+            mv = _movavg(v[:L], window)
+            line_comp, = plt.plot(
+                x[:L], mv,
+                linewidth=self._ret_line_width,
+                label=(f"{nice_name} (MA)" if show_legend else None),
+                color=base_col,
+                zorder=3,
+            )
+            if self._ret_use_outline:
+                line_comp.set_path_effects([
+                    pe.Stroke(linewidth=self._ret_line_width + self._ret_outline_add, foreground="white"),
+                    pe.Normal()
+                ])
+
+            if show_legend:
+                plt.legend()
 
         plt.title(ttl)
         plt.xlabel("Trainings-Episode")
         plt.ylabel("Rewards")
-        plt.grid(True); plt.legend(); plt.tight_layout()
-        plt.savefig(os.path.join(self.out_dir, out_name))
+        plt.grid(True); plt.tight_layout()
+        self._savefig(os.path.join(self.out_dir, out_name))
         plt.close()
+
+    def plot_reward_groups(
+        self,
+        window: int | None = None,
+        out_all: str   = "08_rewards_all_components.png",
+        out_final: str = "09_rewards_final_components.png",
+        out_step: str  = "12_rewards_step_components.png",
+        also_individual: bool = True,
+    ):
+        """
+        Erzeugt:
+          - rewards_all.png   (Total, Final-Total, Env, Rank, Step-Total, Combo, Hand-Penalty)
+          - rewards_final.png (Final-Total, Env, Rank)
+          - rewards_step.png  (Step-Total, Combo, Hand-Penalty)
+          Optional zusätzlich die 4 Einzelplots (s. Dateinamen unten).
+        """
+        os.makedirs(self.out_dir, exist_ok=True)
+        window = self.smooth_window if (window is None) else int(window)
+
+        # --- Daten ---
+        x = np.asarray(self.ep_ret_eps, dtype=float)
+        total_all   = np.asarray(self.ep_ret_vals, dtype=float)
+
+        def comp(k): return np.asarray(self.ep_ret_components.get(k, []), dtype=float)
+        env        = comp("env_score")
+        rank       = comp("final_bonus")
+        step_total = comp("shaping")
+        step_delta = comp("step_delta")
+        step_pen   = comp("step_penalty")
+
+        L_final = min(len(env), len(rank))
+        final_total = env[:L_final] + rank[:L_final] if L_final > 0 else np.array([], dtype=float)
+
+        # Farben absichern
+        self._ret_colors.setdefault("total_all",   "#222222")
+        self._ret_colors.setdefault("final_total", "#1f77b4")
+        self._ret_colors.setdefault("final_env",   "#6baed6")
+        self._ret_colors.setdefault("final_rank",  "#08519c")
+        self._ret_colors.setdefault("step_total",  "#2ca02c")
+        self._ret_colors.setdefault("step_delta",  "#74c476")
+        self._ret_colors.setdefault("step_penalty","#006d2c")
+
+        styles = {
+            "Total Rewards":                 dict(color=self._ret_colors["total_all"],   lw=2.6, ls="-"),
+            "Final Reward (Total)":          dict(color=self._ret_colors["final_total"], lw=2.2, ls="-"),
+            "Final Reward (Env)":            dict(color=self._ret_colors["final_env"],   lw=1.8, ls="--"),
+            "Final Reward (Rank)":           dict(color=self._ret_colors["final_rank"],  lw=1.8, ls=":"),
+            "Step Reward (Total)":           dict(color=self._ret_colors["step_total"],  lw=2.2, ls="-"),
+            "Step Reward (Combo)":           dict(color=self._ret_colors["step_delta"],  lw=1.8, ls="--"),
+            "Step Reward (Hand-Penalty)":    dict(color=self._ret_colors["step_penalty"],lw=1.8, ls=":"),
+        }
+
+        series = [
+            ("Total Rewards",              total_all),
+            ("Final Reward (Total)",       final_total),
+            ("Final Reward (Env)",         env),
+            ("Final Reward (Rank)",        rank),
+            ("Step Reward (Total)",        step_total),
+            ("Step Reward (Combo)",        step_delta),
+            ("Step Reward (Hand-Penalty)", step_pen),
+        ]
+
+        def _movavg(arr: np.ndarray, w: int) -> np.ndarray:
+            if arr.size == 0 or w <= 1: return arr
+            w = max(1, int(w))
+            c = np.cumsum(np.insert(arr, 0, 0.0))
+            tail = (c[w:] - c[:-w]) / float(w)
+            head = np.array([np.mean(arr[:i+1]) for i in range(min(w-1, arr.size))], dtype=float)
+            return np.concatenate([head, tail])
+
+        def _plot_one(x, y, style):
+            if x.size == 0 or y.size == 0: return None
+            L = min(x.size, y.size)
+            (h,) = plt.plot(x[:L], _movavg(y[:L], window), **style)
+            return h
+
+        def _legend_all(labels, handles_map):
+            hs = []
+            for name in labels:
+                if name in handles_map:
+                    hs.append(handles_map[name])
+                else:
+                    st = styles[name]
+                    hs.append(Line2D([0], [0], color=st["color"], lw=st["lw"], ls=st["ls"]))
+            plt.legend(hs, labels)
+
+        # --- (A) Alle ---
+        plt.figure(figsize=(12, 7))
+        handles = {}
+        for name, y in series:
+            h = _plot_one(x, y, styles[name])
+            if h is not None: handles[name] = h
+        plt.title("Rewards (Training) – Alle Komponenten")
+        plt.xlabel("Trainings-Episode"); plt.ylabel("Rewards"); plt.grid(True)
+        _legend_all([n for n,_ in series], handles)
+        plt.tight_layout(); self._savefig(os.path.join(self.out_dir, out_all)); plt.close()
+
+        # --- (B) Final ---
+        plt.figure(figsize=(12, 7))
+        handles = {}
+        for name in ["Final Reward (Total)", "Final Reward (Env)", "Final Reward (Rank)"]:
+            y = dict(series)[name]
+            h = _plot_one(x, y, styles[name])
+            if h is not None: handles[name] = h
+        plt.title("Rewards (Training) – Final Komponenten")
+        plt.xlabel("Trainings-Episode"); plt.ylabel("Rewards"); plt.grid(True)
+        _legend_all(["Final Reward (Total)", "Final Reward (Env)", "Final Reward (Rank)"], handles)
+        plt.tight_layout(); self._savefig(os.path.join(self.out_dir, out_final)); plt.close()
+
+        # --- (C) Step ---
+        plt.figure(figsize=(12, 7))
+        handles = {}
+        for name in ["Step Reward (Total)", "Step Reward (Combo)", "Step Reward (Hand-Penalty)"]:
+            y = dict(series)[name]
+            h = _plot_one(x, y, styles[name])
+            if h is not None: handles[name] = h
+        plt.title("Rewards (Training) – Step Komponenten")
+        plt.xlabel("Trainings-Episode"); plt.ylabel("Rewards"); plt.grid(True)
+        _legend_all(["Step Reward (Total)", "Step Reward (Combo)", "Step Reward (Hand-Penalty)"], handles)
+        plt.tight_layout(); self._savefig(os.path.join(self.out_dir, out_step)); plt.close()
+
+        # --- (D) Einzelplots (ohne Legende) ---
+        if also_individual:
+            self.plot_ep_return_component("env_score",   window=window,
+                                          filename="10_final_reward_env.png",
+                                          title="Rewards (Training) – Final Reward (Env)",
+                                          show_legend=False)
+            self.plot_ep_return_component("final_bonus", window=window,
+                                          filename="11_final_reward_rank.png",
+                                          title="Rewards (Training) – Final Reward (Rank-Bonus)",
+                                          show_legend=False)
+            self.plot_ep_return_component("step_delta",  window=window,
+                                          filename="13_step_reward_combo.png",
+                                          title="Rewards (Training) – Step Reward (Combo-Bonus)",
+                                          show_legend=False)
+            self.plot_ep_return_component("step_penalty",window=window,
+                                          filename="14_step_reward_hand_penalty.png",
+                                          title="Rewards (Training) – Step Reward (Hand-Penalty)",
+                                          show_legend=False)
 
     # ---------- Logging ----------
     def log(self, msg: str, level: int = 1):

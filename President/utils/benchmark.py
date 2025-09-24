@@ -189,6 +189,9 @@ def run_benchmark(game, agent, opponents_dict, opponent_names, episodes, feat_cf
             "reward": float(np.mean(rewards)),
             "places": [c / episodes for c in place_counts],
             "episodes": int(episodes),
+            "wins": int(wins),
+            "reward_std": float(np.std(rewards, ddof=1)) if episodes > 1 else 0.0,
+            "place_counts": [int(c) for c in place_counts],
         }
 
     return results

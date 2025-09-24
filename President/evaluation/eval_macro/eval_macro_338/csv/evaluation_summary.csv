@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+338,P0: K3 Snapshot Selfplay,ppo v32 ep1.000.000,ppo,k3a1,32,1000000,22.3,1.4,1116,1209
+338,P1: K3 Snapshot Selfplay,dqn v32 ep210.000,dqn,k3a2,32,210000,27.4,1.57,1369,1236
+338,P2: K3 Snapshot Selfplay,ppo v32 ep1.000.000,ppo,k3a1,32,1000000,23.2,1.46,1159,1274
+338,P3: K3 Snapshot Selfplay,dqn v32 ep210.000,dqn,k3a2,32,210000,27.1,1.57,1356,1281

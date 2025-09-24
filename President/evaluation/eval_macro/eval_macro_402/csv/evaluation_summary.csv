@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+402,P0: K1 vs POP 2,dqn v38 ep20.000,dqn,k1a2,38,20000,24.6,1.46,1229,1278
+402,P1: K3 (Snapshot SP),dqn v31 ep20.000,dqn,k3a2,31,20000,25.4,1.53,1270,1272
+402,P2: K1 vs POP 2,dqn v38 ep20.000,dqn,k1a2,38,20000,25.0,1.49,1248,1285
+402,P1: K3 (Snapshot SP),dqn v31 ep20.000,dqn,k3a2,31,20000,25.1,1.51,1253,1165

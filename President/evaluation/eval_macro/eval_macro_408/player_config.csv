@@ -1,0 +1,5 @@
+name,type,family,version,episode,from_pid
+P0: K2 (Independent),ppo,k2a1,04,100000,0
+P1: K2 (Independent),dqn,k2a2,05,20000,0
+P2: K2 (Independent),ppo,k2a1,04,100000,0
+P3: K2 (Independent),dqn,k2a2,05,20000,0

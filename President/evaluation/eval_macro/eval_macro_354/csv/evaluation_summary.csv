@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+354,P0: K1 vs. Max Combo,dqn v40 ep400.000,dqn,k1a2,40,400000,8.5,0.97,424,1242
+354,P1: K4 (Shared Policy SP),dqn v34 ep1.000.000,dqn,k4a2,34,1000000,40.8,2.01,2042,1277
+354,P2: K1 vs. Max Combo,dqn v40 ep400.000,dqn,k1a2,40,400000,9.5,1.02,476,1256
+354,P3: K4 (Shared Policy SP),dqn v34 ep1.000.000,dqn,k4a2,34,1000000,41.2,2.0,2058,1225

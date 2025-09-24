@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+343,P0: K1 vs. Max Combo,ppo v54 ep1.000.000,ppo,k1a1,54,1000000,18.7,1.37,936,1203
+343,P1: K2 (Snapshot SP),ppo v32 ep1.000.000,ppo,k3a1,32,1000000,31.6,1.64,1582,1248
+343,P2: K1 vs. Max Combo,ppo v54 ep1.000.000,ppo,k1a1,54,1000000,19.1,1.37,954,1257
+343,P3: K2 (Snapshot SP),ppo v32 ep1.000.000,ppo,k3a1,32,1000000,30.6,1.62,1528,1292

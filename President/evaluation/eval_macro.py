@@ -35,24 +35,23 @@ if not logging.getLogger().handlers:
     logging.getLogger().setLevel(logging.INFO)
 
 # ===================== Konfiguration ===================== #
-NUM_EPISODES = 30_000
-EVAL_EPISODE = 5000
-DECK = "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+NUM_EPISODES = 5_000
+EVAL_EPISODE = 1_000
+DECK = "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
 
 # Beispiel-Setup (anpassen):
 
 # 1v3 Gegen Max Combo
-""" PLAYER_CONFIG = [
-    {"name": "P0", "type": "random2"},
-    {"name": "P1", "type": "max_combo"},
-    {"name": "P2", "type": "max_combo"},
-    {"name": "P3", "type": "max_combo"},
-]  """
-
+PLAYER_CONFIG = [
+    {"name": "P0: K1 vs V-Table", "type": "dqn", "family": "k1a2", "version": "37", "episode": 20_000, "from_pid": 0},
+    {"name": "P1: K4 (Shared Policy SP)", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
+    {"name": "P2: K1 vs V-Table", "type": "dqn", "family": "k1a2", "version": "37", "episode": 20_000, "from_pid": 0},
+    {"name": "P3: K3 (Shared Policy SP)", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
+]
 # 1v3 Gegen Single Only
 
 """ PLAYER_CONFIG = [
-    {"name": "P0", "type": "random2"},
+    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "43", "episode": 1_000_000, "from_pid": 0},
     {"name": "P1", "type": "single_only"},
     {"name": "P2", "type": "single_only"},
     {"name": "P3", "type": "single_only"},
@@ -60,38 +59,36 @@ DECK = "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
 
 # 1v3 Gegen Random2
 """ PLAYER_CONFIG = [
-    {"name": "P0", "type": "random2"},
+    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "43", "episode": 1_000_000, "from_pid": 0},
     {"name": "P1", "type": "random2"},
     {"name": "P2", "type": "random2"},
     {"name": "P3", "type": "random2"},
 ]   """
 
-
-
 # 2v2 über Kreuz vs Max Combo
 """ PLAYER_CONFIG = [ 
-    {"name": "P0", "type": "random2"},
+    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "43", "episode": 1_000_000, "from_pid": 0},
     {"name": "P1", "type": "max_combo"},
-    {"name": "P2", "type": "random2"},
+    {"name": "P2", "type": "dqn", "family": "k1a2", "version": "43", "episode": 1_000_000, "from_pid": 0},
     {"name": "P3", "type": "max_combo"}
 ]    """
 
 # 2v2 über Kreuz vs Single Only
 """ PLAYER_CONFIG = [ 
-    {"name": "P0", "type": "random2"},
+    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "43", "episode": 1_000_000, "from_pid": 0},
     {"name": "P1", "type": "single_only"},
-    {"name": "P2", "type": "random2"},
+    {"name": "P2", "type": "dqn", "family": "k1a2", "version": "43", "episode": 1_000_000, "from_pid": 0},
     {"name": "P3", "type": "single_only"}
 ]    """
 
 # 2v2 über Kreuz vs Random2
 
-PLAYER_CONFIG = [ 
-    {"name": "P0", "type": "random2"},
+""" PLAYER_CONFIG = [ 
+    {"name": "P0", "type": "dqn", "family": "k1a2", "version": "43", "episode": 1_000_000, "from_pid": 0},
     {"name": "P1", "type": "random2"},
-    {"name": "P2", "type": "random2"},
+    {"name": "P2", "type": "dqn", "family": "k1a2", "version": "43", "episode": 1_000_000, "from_pid": 0},
     {"name": "P3", "type": "random2"}
-]  
+]   """
 
 #########################
 ###############
@@ -130,7 +127,14 @@ PLAYER_CONFIG = [
 
 # Vier verschiedene Spieler (Agents)
 """ PLAYER_CONFIG = [ 
-    {"name": "P0: K1 (vs Max Combo)", "type": "dqn", "family": "k1a2", "version": "36", "episode": 20_000, "from_pid": 0},
+    {"name": "P0: K1 (Single Only)", "type": "dqn", "family": "k1a2", "version": "43", "episode": 250_000, "from_pid": 0},
+    {"name": "P1", "type": "max_combo"},
+    {"name": "P2", "type": "max_combo"},
+    {"name": "P3", "type": "max_combo"},
+] """
+
+""" PLAYER_CONFIG = [ 
+    {"name": "P0: K1 (vs Max Combo)", "type": "dqn", "family": "k1a2", "version": "43", "episode": 20_000, "from_pid": 0},
     {"name": "P1: K1 (vs Single Only)", "type": "dqn", "family": "k1a2", "version": "39", "episode": 20_000, "from_pid": 0},
     {"name": "P2: K3 (vs Tabelle)", "type": "dqn", "family": "k1a2", "version": "37", "episode": 20_000, "from_pid": 0},
     {"name": "P3: K4 (vs POP2)", "type": "dqn", "family": "k1a2", "version": "38", "episode": 20_000, "from_pid": 0}

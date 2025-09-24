@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+351,P0: K1 vs. Max Combo,dqn v40 ep400.000,dqn,k1a2,40,400000,23.7,1.58,1185,1253
+351,P1: K1 vs. POP,dqn v42 ep1.000.000,dqn,k1a2,42,1000000,26.4,1.41,1322,1264
+351,P2: K1 vs. Max Combo,dqn v40 ep400.000,dqn,k1a2,40,400000,23.5,1.59,1174,1215
+351,P3: K1 vs. POP,dqn v42 ep1.000.000,dqn,k1a2,42,1000000,26.4,1.42,1319,1268

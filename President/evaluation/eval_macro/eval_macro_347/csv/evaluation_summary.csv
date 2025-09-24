@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+347,P0: K1 vs. Single Only,ppo v55 ep500.000,ppo,k1a1,55,500000,13.9,1.07,693,1180
+347,P1: K2 (Independent),ppo v06 ep400.000,ppo,k2a1,06,400000,35.9,1.94,1795,1282
+347,P2: K1 vs. Single Only,ppo v55 ep500.000,ppo,k1a1,55,500000,13.7,1.06,686,1301
+347,P3: K2 (Independent),ppo v06 ep400.000,ppo,k2a1,06,400000,36.5,1.92,1826,1237

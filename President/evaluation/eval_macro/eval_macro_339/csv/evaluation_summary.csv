@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+339,P0: K4 Shared Policy Selfplay,ppo v05 ep500.000,ppo,k4a1,05,500000,22.0,1.42,1101,1279
+339,P1: K4 Shared Policy Selfplay,dqn v34 ep1.000.000,dqn,k4a2,34,1000000,28.2,1.58,1410,1231
+339,P2: K4 Shared Policy Selfplay,ppo v05 ep500.000,ppo,k4a1,05,500000,21.6,1.4,1080,1246
+339,P3: K4 Shared Policy Selfplay,dqn v34 ep1.000.000,dqn,k4a2,34,1000000,28.2,1.6,1409,1244

@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+327,P0: K2 Independent,ppo v06 ep400.000,ppo,k2a1,06,400000,24.2,1.45,1208,1230
+327,P1: K3 Snapshot Policy SP,ppo v32 ep1.000.000,ppo,k3a1,32,1000000,26.8,1.57,1338,1260
+327,P2: K2 Independent,ppo v06 ep400.000,ppo,k2a1,06,400000,23.4,1.43,1172,1251
+327,P3: K3 Snapshot Policy SP,ppo v32 ep1.000.000,ppo,k3a1,32,1000000,25.6,1.55,1282,1259

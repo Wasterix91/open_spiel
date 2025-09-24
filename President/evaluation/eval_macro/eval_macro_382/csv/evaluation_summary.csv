@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+382,P0: K2 (Independent),ppo v04 ep100.000,ppo,k2a1,04,100000,25.1,1.42,1255,1229
+382,P1: K3 (Snapshot SP),ppo v04 ep100.000,ppo,k3a1,04,100000,24.6,1.56,1229,1303
+382,P2: K2 (Independent),ppo v04 ep100.000,ppo,k2a1,04,100000,25.8,1.44,1291,1199
+382,P3: K3 (Snapshot SP),ppo v04 ep100.000,ppo,k3a1,04,100000,24.5,1.58,1225,1269

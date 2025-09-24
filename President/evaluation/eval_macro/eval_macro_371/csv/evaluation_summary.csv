@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+371,P0: K1 vs Single Only,ppo v07 ep20.000,ppo,k1a1,07,20000,24.7,1.43,1235,1207
+371,P1: K3 (Snapshot SP),ppo v04 ep100.000,ppo,k3a1,04,100000,26.2,1.58,1311,1216
+371,P2: K1 vs Single Only,ppo v07 ep20.000,ppo,k1a1,07,20000,24.0,1.43,1201,1328
+371,P3: K3 (Snapshot SP),ppo v04 ep100.000,ppo,k3a1,04,100000,25.1,1.56,1253,1249

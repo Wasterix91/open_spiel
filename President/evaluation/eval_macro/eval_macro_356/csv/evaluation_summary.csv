@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+356,P0: K1 vs. Singly Only,dqn v41 ep250.000,dqn,k1a2,41,250000,5.2,0.77,258,1204
+356,P1: K3 (Snapshot SP),dqn v32 ep210.000,dqn,k3a2,32,210000,45.1,2.23,2256,1315
+356,P2: K1 vs. Singly Only,dqn v41 ep250.000,dqn,k1a2,41,250000,5.5,0.78,273,1205
+356,P3: K3 (Snapshot SP),dqn v32 ep210.000,dqn,k3a2,32,210000,44.3,2.22,2213,1276

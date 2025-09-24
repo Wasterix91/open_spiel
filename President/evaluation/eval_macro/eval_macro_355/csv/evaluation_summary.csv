@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+355,P0: K1 vs. Singly Only,dqn v41 ep250.000,dqn,k1a2,41,250000,4.8,0.71,241,1270
+355,P1: K4 (Shared Policy SP),dqn v34 ep1.000.000,dqn,k4a2,34,1000000,44.3,2.27,2215,1215
+355,P2: K1 vs. Singly Only,dqn v41 ep250.000,dqn,k1a2,41,250000,4.9,0.74,243,1231
+355,P3: K4 (Shared Policy SP),dqn v34 ep1.000.000,dqn,k4a2,34,1000000,46.0,2.29,2301,1284

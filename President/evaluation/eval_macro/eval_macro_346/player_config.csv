@@ -1,0 +1,5 @@
+name,type,family,version,episode,from_pid
+P0: K1 vs. Single Only,ppo,k1a1,55,500000,0
+P1: K1 vs. POP,ppo,k1a1,56,1000000,0
+P2: K1 vs. Single Only,ppo,k1a1,55,500000,0
+P3: K1 vs. POP,ppo,k1a1,56,1000000,0

@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+410,P0: K4 (Shared Policy SP),ppo v04 ep100.000,ppo,k4a1,04,100000,25.1,1.51,1255,1268
+410,P1: K4 (Shared Policy SP),dqn v32 ep100.000,dqn,k4a2,32,100000,25.9,1.51,1294,1261
+410,P2: K4 (Shared Policy SP),ppo v04 ep100.000,ppo,k4a1,04,100000,23.7,1.47,1183,1273
+410,P3: K3 (Shared Policy SP),dqn v32 ep100.000,dqn,k4a2,32,100000,25.4,1.51,1268,1198

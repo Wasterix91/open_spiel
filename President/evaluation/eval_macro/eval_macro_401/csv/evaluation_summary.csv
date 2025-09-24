@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+401,P0: K1 vs POP 2,dqn v38 ep20.000,dqn,k1a2,38,20000,26.2,1.5,1309,1275
+401,P1: K2 (Independent),dqn v05 ep20.000,dqn,k2a2,05,20000,24.3,1.5,1213,1208
+401,P2: K1 vs POP 2,dqn v38 ep20.000,dqn,k1a2,38,20000,24.2,1.46,1209,1229
+401,P1: K2 (Independent),dqn v05 ep20.000,dqn,k2a2,05,20000,25.4,1.54,1269,1288

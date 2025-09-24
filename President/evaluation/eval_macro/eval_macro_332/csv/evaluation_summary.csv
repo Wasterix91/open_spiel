@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+332,P0: K1 vs POP2,dqn v42 ep1.000.000,dqn,k1a2,42,1000000,14.8,1.11,738,1225
+332,P1: K4 Shared Policy SP,dqn v34 ep1.000.000,dqn,k4a2,34,1000000,35.0,1.89,1751,1307
+332,P2: K1 vs POP2,dqn v42 ep1.000.000,dqn,k1a2,42,1000000,16.0,1.12,800,1196
+332,P4: K4 Shared Policy SP,dqn v34 ep1.000.000,dqn,k4a2,34,1000000,34.2,1.89,1711,1272

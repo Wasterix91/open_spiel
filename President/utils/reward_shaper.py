@@ -15,7 +15,11 @@ class RewardShaper:
             hb = shaper.hand_size(ts_before, p, deck_int)
             ts_after = env.step([a])
             ha = shaper.hand_size(ts_after, p, deck_int)
-            r_step = shaper.step_reward(hand_before=hb, hand_after=ha)
+
+            delta_r, penalty_r, r_step = shaper.step_reward_components(
+                hand_before=hb, hand_after=ha
+            )
+            # für Replay-Buffer:
             agent.post_step(r_step, done=ts_after.last())
 
       - Am Episodenende:
@@ -67,28 +71,40 @@ class RewardShaper:
     def step_active(self) -> bool:
         return self.step_mode != "none"
 
-    def step_reward(self, *, hand_before: int, hand_after: int) -> float:
+    def step_reward_components(self, *, hand_before: int, hand_after: int):
+        """
+        Liefert eine Zerlegung der Step-Rewards:
+          (delta_component, penalty_component, total)
+
+        - delta_component  = dw * (ΔKarten)^2   (bei "delta_weight_only"/"combined")
+        - penalty_component = -hp * hand_after  (bei "hand_penalty_coeff_only"/"combined")
+        - total = Summe der aktiven Komponenten
+        """
         mode = self.step_mode
         if mode == "none":
-            return 0.0
+            return 0.0, 0.0, 0.0
 
-        r = 0.0
+        delta_component = 0.0
+        penalty_component = 0.0
+
         if mode in ("delta_weight_only", "combined"):
             delta_cards = max(0.0, float(hand_before - hand_after))  # 0 bei Pass
-            # >>> Quadratische Belohnung für Kombos
-            r += self.dw * (delta_cards ** 2)
-
-            # >>> Alternative (optional): Dreiecksbelohnung für Kombos
+            # Quadratische Belohnung für Kombos:
+            delta_component = self.dw * (delta_cards ** 2)
+            # Alternative (Dreiecksbelohnung):
             # tri = delta_cards * (delta_cards + 1.0) / 2.0
-            # r += self.dw * tri
-            # Hinweis: Falls du die Dreiecksformel nutzt, kommentiere die
-            # quadratische Zeile oben aus, damit nicht doppelt addiert wird.
+            # delta_component = self.dw * tri
 
         if mode in ("hand_penalty_coeff_only", "combined"):
-            r += -self.hp * float(hand_after)
+            penalty_component = -self.hp * float(hand_after)
 
-        return r
+        total = float(delta_component + penalty_component)
+        return float(delta_component), float(penalty_component), total
 
+    def step_reward(self, *, hand_before: int, hand_after: int) -> float:
+        """Beibehaltener Convenience-Wrapper (Summe)."""
+        _, _, total = self.step_reward_components(hand_before=hand_before, hand_after=hand_after)
+        return total
 
     # ---------- FINAL ----------
     def include_env_reward(self) -> bool:

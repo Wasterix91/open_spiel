@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+392,P0: K1 vs Single Only,dqn v39 ep20.000,dqn,k1a2,39,20000,21.5,1.38,1077,1268
+392,P1: K1 vs V-Table,dqn v37 ep20.000,dqn,k1a2,37,20000,27.8,1.63,1389,1223
+392,P2: K1 vs Single Only,dqn v39 ep20.000,dqn,k1a2,39,20000,21.9,1.36,1094,1260
+392,P3: K1 vs V-Table,dqn v37 ep20.000,dqn,k1a2,37,20000,28.8,1.64,1440,1249

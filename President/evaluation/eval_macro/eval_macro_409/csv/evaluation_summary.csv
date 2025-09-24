@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+409,P0: K3 (Snapshot SP),ppo v04 ep100.000,ppo,k3a1,04,100000,21.1,1.39,1054,1294
+409,P1: K3 (Snapshot SP),dqn v31 ep20.000,dqn,k3a2,31,20000,29.4,1.63,1469,1244
+409,P2: K3 (Snapshot SP),ppo v04 ep100.000,ppo,k3a1,04,100000,21.2,1.37,1061,1257
+409,P3: K3 (Snapshot SP),dqn v31 ep20.000,dqn,k3a2,31,20000,28.3,1.61,1416,1205

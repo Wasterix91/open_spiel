@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+398,P0: K2 (Independent),dqn v05 ep20.000,dqn,k2a2,05,20000,25.3,1.5,1264,1242
+398,P1: K4 (Shared Policy SP),dqn v32 ep100.000,dqn,k4a2,32,100000,24.7,1.5,1233,1183
+398,P2: K2 (Independent),dqn v05 ep20.000,dqn,k2a2,05,20000,25.4,1.52,1268,1247
+398,P1: K4 (Shared Policy SP),dqn v32 ep100.000,dqn,k4a2,32,100000,24.7,1.49,1235,1328

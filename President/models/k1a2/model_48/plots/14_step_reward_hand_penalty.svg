@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="856.748437pt" height="495.896562pt" viewBox="0 0 856.748437 495.896562" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2025-09-24T20:16:03.902226</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.10.3, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 495.896562 
+L 856.748437 495.896562 
+L 856.748437 0 
+L 0 0 
+L 0 495.896562 
+z
+" style="fill: none"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 58.523438 458.198125 
+L 836.823438 458.198125 
+L 836.823438 22.318125 
+L 58.523438 22.318125 
+L 58.523438 458.198125 
+z
+" style="fill: none"/>
+   </g>
+   <image xlink:href="data:image/png;base64,
+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" id="image710116917d" transform="scale(1 -1) translate(0 -3.12)" x="58.56" y="-238.56" width="778.32" height="3.12"/>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <path d="M 169.518493 458.198125 
+L 169.518493 22.318125 
+" clip-path="url(#p7509d7053d)" style="fill: none; stroke: #b0b0b0; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_2">
+      <defs>
+       <path id="m27c8cf741e" d="M 0 0 
+L 0 3.5 
+" style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m27c8cf741e" x="169.518493" y="458.198125" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 10px; font-family: 'Palatino Linotype', 'Book Antiqua', 'Palatino', 'DejaVu Serif', serif; text-anchor: middle" x="169.518493" y="472.796562" transform="rotate(-0 169.518493 472.796562)">500</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_3">
+      <path d="M 280.735984 458.198125 
+L 280.735984 22.318125 
+" clip-path="url(#p7509d7053d)" style="fill: none; stroke: #b0b0b0; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#m27c8cf741e" x="280.735984" y="458.198125" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 10px; font-family: 'Palatino Linotype', 'Book Antiqua', 'Palatino', 'DejaVu Serif', serif; text-anchor: middle" x="280.735984" y="472.796562" transform="rotate(-0 280.735984 472.796562)">1000</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_5">
+      <path d="M 391.953475 458.198125 
+L 391.953475 22.318125 
+" clip-path="url(#p7509d7053d)" style="fill: none; stroke: #b0b0b0; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_6">
+      <g>
+       <use xlink:href="#m27c8cf741e" x="391.953475" y="458.198125" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 10px; font-family: 'Palatino Linotype', 'Book Antiqua', 'Palatino', 'DejaVu Serif', serif; text-anchor: middle" x="391.953475" y="472.796562" transform="rotate(-0 391.953475 472.796562)">1500</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_7">
+      <path d="M 503.170965 458.198125 
+L 503.170965 22.318125 
+" clip-path="url(#p7509d7053d)" style="fill: none; stroke: #b0b0b0; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_8">
+      <g>
+       <use xlink:href="#m27c8cf741e" x="503.170965" y="458.198125" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 10px; font-family: 'Palatino Linotype', 'Book Antiqua', 'Palatino', 'DejaVu Serif', serif; text-anchor: middle" x="503.170965" y="472.796562" transform="rotate(-0 503.170965 472.796562)">2000</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_9">
+      <path d="M 614.388456 458.198125 
+L 614.388456 22.318125 
+" clip-path="url(#p7509d7053d)" style="fill: none; stroke: #b0b0b0; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_10">
+      <g>
+       <use xlink:href="#m27c8cf741e" x="614.388456" y="458.198125" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 10px; font-family: 'Palatino Linotype', 'Book Antiqua', 'Palatino', 'DejaVu Serif', serif; text-anchor: middle" x="614.388456" y="472.796562" transform="rotate(-0 614.388456 472.796562)">2500</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_11">
+      <path d="M 725.605947 458.198125 
+L 725.605947 22.318125 
+" clip-path="url(#p7509d7053d)" style="fill: none; stroke: #b0b0b0; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#m27c8cf741e" x="725.605947" y="458.198125" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 10px; font-family: 'Palatino Linotype', 'Book Antiqua', 'Palatino', 'DejaVu Serif', serif; text-anchor: middle" x="725.605947" y="472.796562" transform="rotate(-0 725.605947 472.796562)">3000</text>
+     </g>
+    </g>
+    <g id="xtick_7">
+     <g id="line2d_13">
+      <path d="M 836.823438 458.198125 
+L 836.823438 22.318125 
+" clip-path="url(#p7509d7053d)" style="fill: none; stroke: #b0b0b0; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_14">
+      <g>
+       <use xlink:href="#m27c8cf741e" x="836.823438" y="458.198125" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 10px; font-family: 'Palatino Linotype', 'Book Antiqua', 'Palatino', 'DejaVu Serif', serif; text-anchor: middle" x="836.823438" y="472.796562" transform="rotate(-0 836.823438 472.796562)">3500</text>
+     </g>
+    </g>
+    <g id="text_8">
+     <text style="font-size: 10px; font-family: 'Palatino Linotype', 'Book Antiqua', 'Palatino', 'DejaVu Serif', serif; text-anchor: middle" x="447.673438" y="486.474687" transform="rotate(-0 447.673438 486.474687)">Trainings-Episode</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_15">
+      <path d="M 58.523438 398.759943 
+L 836.823438 398.759943 
+" clip-path="url(#p7509d7053d)" style="fill: none; stroke: #b0b0b0; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_16">
+      <defs>
+       <path id="m8913e83c74" d="M 0 0 
+L -3.5 0 
+" style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m8913e83c74" x="58.523438" y="398.759943" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 10px; font-family: 'Palatino Linotype', 'Book Antiqua', 'Palatino', 'DejaVu Serif', serif; text-anchor: end" x="51.523438" y="402.559162" transform="rotate(-0 51.523438 402.559162)">−0.04</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_17">
+      <path d="M 58.523438 319.509034 
+L 836.823438 319.509034 
+" clip-path="url(#p7509d7053d)" style="fill: none; stroke: #b0b0b0; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_18">
+      <g>
+       <use xlink:href="#m8913e83c74" x="58.523438" y="319.509034" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_10">
+      <text style="font-size: 10px; font-family: 'Palatino Linotype', 'Book Antiqua', 'Palatino', 'DejaVu Serif', serif; text-anchor: end" x="51.523438" y="323.308253" transform="rotate(-0 51.523438 323.308253)">−0.02</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_19">
+      <path d="M 58.523438 240.258125 
+L 836.823438 240.258125 
+" clip-path="url(#p7509d7053d)" style="fill: none; stroke: #b0b0b0; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_20">
+      <g>
+       <use xlink:href="#m8913e83c74" x="58.523438" y="240.258125" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_11">
+      <text style="font-size: 10px; font-family: 'Palatino Linotype', 'Book Antiqua', 'Palatino', 'DejaVu Serif', serif; text-anchor: end" x="51.523438" y="244.057344" transform="rotate(-0 51.523438 244.057344)">0.00</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_21">
+      <path d="M 58.523438 161.007216 
+L 836.823438 161.007216 
+" clip-path="url(#p7509d7053d)" style="fill: none; stroke: #b0b0b0; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_22">
+      <g>
+       <use xlink:href="#m8913e83c74" x="58.523438" y="161.007216" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_12">
+      <text style="font-size: 10px; font-family: 'Palatino Linotype', 'Book Antiqua', 'Palatino', 'DejaVu Serif', serif; text-anchor: end" x="51.523438" y="164.806435" transform="rotate(-0 51.523438 164.806435)">0.02</text>
+     </g>
+    </g>
+    <g id="ytick_5">
+     <g id="line2d_23">
+      <path d="M 58.523438 81.756307 
+L 836.823438 81.756307 
+" clip-path="url(#p7509d7053d)" style="fill: none; stroke: #b0b0b0; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_24">
+      <g>
+       <use xlink:href="#m8913e83c74" x="58.523438" y="81.756307" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_13">
+      <text style="font-size: 10px; font-family: 'Palatino Linotype', 'Book Antiqua', 'Palatino', 'DejaVu Serif', serif; text-anchor: end" x="51.523438" y="85.555526" transform="rotate(-0 51.523438 85.555526)">0.04</text>
+     </g>
+    </g>
+    <g id="text_14">
+     <text style="font-size: 10px; font-family: 'Palatino Linotype', 'Book Antiqua', 'Palatino', 'DejaVu Serif', serif; text-anchor: middle" x="14.798438" y="240.258125" transform="rotate(-90 14.798438 240.258125)">Rewards</text>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 58.523438 458.198125 
+L 58.523438 22.318125 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 836.823438 458.198125 
+L 836.823438 22.318125 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 58.523438 458.198125 
+L 836.823438 458.198125 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 58.523438 22.318125 
+L 836.823438 22.318125 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_25">
+    <path d="M 58.523438 240.258125 
+L 836.823438 240.258125 
+L 836.823438 240.258125 
+" clip-path="url(#p7509d7053d)" style="fill: none; stroke: #ffffff; stroke-width: 4.7; stroke-linecap: square"/>
+    <path d="M 58.523438 240.258125 
+L 836.823438 240.258125 
+L 836.823438 240.258125 
+" clip-path="url(#p7509d7053d)" style="fill: none; stroke: #006d2c; stroke-width: 3.2; stroke-linecap: square"/>
+   </g>
+   <g id="text_15">
+    <text style="font-size: 12px; font-family: 'Palatino Linotype', 'Book Antiqua', 'Palatino', 'DejaVu Serif', serif; text-anchor: middle" x="447.673438" y="16.318125" transform="rotate(-0 447.673438 16.318125)">Rewards (Training) – Step Reward (Hand-Penalty)</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p7509d7053d">
+   <rect x="58.523438" y="22.318125" width="778.3" height="435.88"/>
+  </clipPath>
+ </defs>
+</svg>

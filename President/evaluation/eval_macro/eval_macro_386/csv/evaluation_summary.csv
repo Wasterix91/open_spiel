@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+386,P0: K1 vs Max Combo,dqn v36 ep20.000,dqn,k1a2,36,20000,22.3,1.42,1115,1235
+386,P1: K2 (Independent),dqn v05 ep20.000,dqn,k2a2,05,20000,27.0,1.56,1349,1271
+386,P2: K1 vs Max Only,dqn v36 ep20.000,dqn,k1a2,36,20000,24.8,1.48,1238,1284
+386,P3: K2 (Independent),dqn v05 ep20.000,dqn,k2a2,05,20000,26.0,1.55,1298,1210

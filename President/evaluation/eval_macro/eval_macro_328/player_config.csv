@@ -1,0 +1,5 @@
+name,type,family,version,episode,from_pid
+P0: K4 Shared Policy SP,ppo,k4a1,05,500000,0
+P1: K3 Snapshot Policy SP,ppo,k3a1,32,1000000,0
+P2: K4 Shared Policy SP,ppo,k4a1,05,500000,0
+P3: K3 Snapshot Policy SP,ppo,k3a1,32,1000000,0

@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+390,P0: K1 vs Single Only,dqn v39 ep20.000,dqn,k1a2,39,20000,22.3,1.37,1114,1231
+390,P1: K3 (Snapshot SP),dqn v31 ep20.000,dqn,k3a2,31,20000,26.9,1.61,1345,1261
+390,P2: K1 vs Single Only,dqn v39 ep20.000,dqn,k1a2,39,20000,23.0,1.37,1149,1214
+390,P3: K3 (Snapshot SP),dqn v31 ep20.000,dqn,k3a2,31,20000,27.8,1.65,1392,1294

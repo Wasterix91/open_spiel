@@ -1,0 +1,53 @@
+[2025-09-23 16:55:36] New Evaluation (macro_409)
+[2025-09-23 16:55:36] Deck_Size: 16
+[2025-09-23 16:55:36] Episodes: 5.000
+[2025-09-23 16:55:36] Path: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_409
+[2025-09-23 16:55:36] 
+[2025-09-23 16:55:36] Player Configuration:
+[2025-09-23 16:55:36] Idx | Name                 | Type | Family | Version | Episode | from_pid
+[2025-09-23 16:55:36] -------------------------------------------------------------------------
+[2025-09-23 16:55:36] 0   | P0: K3 (Snapshot SP) | ppo  | k3a1   | 04      | 100000  | 0       
+[2025-09-23 16:55:36] 1   | P1: K3 (Snapshot SP) | dqn  | k3a2   | 31      | 20000   | 0       
+[2025-09-23 16:55:36] 2   | P2: K3 (Snapshot SP) | ppo  | k3a1   | 04      | 100000  | 0       
+[2025-09-23 16:55:36] 3   | P3: K3 (Snapshot SP) | dqn  | k3a2   | 31      | 20000   | 0       
+[2025-09-23 16:55:40] 
+[2025-09-23 16:55:40] Benchmark @eval_ep    1000
+[2025-09-23 16:55:40] Winrates: P0 (ppo v04. ep100.000): 22.1% | P1 (dqn v31. ep20.000): 30.2% | P2 (ppo v04. ep100.000): 19.9% | P3 (dqn v31. ep20.000): 27.8%
+[2025-09-23 16:55:40] P0 (ppo v04 ep100.000) | winrate:  22.1% | avg_return:    1.39 | wins:    221 | starts:    257
+[2025-09-23 16:55:40] P1 (dqn v31 ep20.000) | winrate:  30.2% | avg_return:    1.64 | wins:    302 | starts:    251
+[2025-09-23 16:55:40] P2 (ppo v04 ep100.000) | winrate:  19.9% | avg_return:    1.36 | wins:    199 | starts:    263
+[2025-09-23 16:55:40] P3 (dqn v31 ep20.000) | winrate:  27.8% | avg_return:    1.62 | wins:    278 | starts:    229
+[2025-09-23 16:55:45] 
+[2025-09-23 16:55:45] Benchmark @eval_ep    2000
+[2025-09-23 16:55:45] Winrates: P0 (ppo v04. ep100.000): 20.9% | P1 (dqn v31. ep20.000): 28.9% | P2 (ppo v04. ep100.000): 22.1% | P3 (dqn v31. ep20.000): 28.1%
+[2025-09-23 16:55:45] P0 (ppo v04 ep100.000) | winrate:  20.9% | avg_return:    1.37 | wins:    418 | starts:    515
+[2025-09-23 16:55:45] P1 (dqn v31 ep20.000) | winrate:  28.9% | avg_return:    1.61 | wins:    578 | starts:    494
+[2025-09-23 16:55:45] P2 (ppo v04 ep100.000) | winrate:  22.1% | avg_return:    1.39 | wins:    443 | starts:    514
+[2025-09-23 16:55:45] P3 (dqn v31 ep20.000) | winrate:  28.1% | avg_return:    1.62 | wins:    561 | starts:    477
+[2025-09-23 16:55:50] 
+[2025-09-23 16:55:50] Benchmark @eval_ep    3000
+[2025-09-23 16:55:50] Winrates: P0 (ppo v04. ep100.000): 20.2% | P1 (dqn v31. ep20.000): 29.4% | P2 (ppo v04. ep100.000): 22.1% | P3 (dqn v31. ep20.000): 28.3%
+[2025-09-23 16:55:50] P0 (ppo v04 ep100.000) | winrate:  20.2% | avg_return:    1.37 | wins:    607 | starts:    770
+[2025-09-23 16:55:50] P1 (dqn v31 ep20.000) | winrate:  29.4% | avg_return:    1.62 | wins:    881 | starts:    740
+[2025-09-23 16:55:50] P2 (ppo v04 ep100.000) | winrate:  22.1% | avg_return:    1.39 | wins:    663 | starts:    756
+[2025-09-23 16:55:50] P3 (dqn v31 ep20.000) | winrate:  28.3% | avg_return:    1.62 | wins:    849 | starts:    734
+[2025-09-23 16:55:55] 
+[2025-09-23 16:55:55] Benchmark @eval_ep    4000
+[2025-09-23 16:55:55] Winrates: P0 (ppo v04. ep100.000): 20.7% | P1 (dqn v31. ep20.000): 29.3% | P2 (ppo v04. ep100.000): 21.9% | P3 (dqn v31. ep20.000): 28.2%
+[2025-09-23 16:55:55] P0 (ppo v04 ep100.000) | winrate:  20.7% | avg_return:    1.38 | wins:    827 | starts:   1039
+[2025-09-23 16:55:55] P1 (dqn v31 ep20.000) | winrate:  29.3% | avg_return:    1.62 | wins:   1171 | starts:    987
+[2025-09-23 16:55:55] P2 (ppo v04 ep100.000) | winrate:  21.9% | avg_return:    1.38 | wins:    874 | starts:   1008
+[2025-09-23 16:55:55] P3 (dqn v31 ep20.000) | winrate:  28.2% | avg_return:    1.62 | wins:   1128 | starts:    966
+[2025-09-23 16:56:00] 
+[2025-09-23 16:56:00] Benchmark @eval_ep    5000
+[2025-09-23 16:56:00] Winrates: P0 (ppo v04. ep100.000): 21.1% | P1 (dqn v31. ep20.000): 29.4% | P2 (ppo v04. ep100.000): 21.2% | P3 (dqn v31. ep20.000): 28.3%
+[2025-09-23 16:56:00] P0 (ppo v04 ep100.000) | winrate:  21.1% | avg_return:    1.39 | wins:   1054 | starts:   1294
+[2025-09-23 16:56:00] P1 (dqn v31 ep20.000) | winrate:  29.4% | avg_return:    1.63 | wins:   1469 | starts:   1244
+[2025-09-23 16:56:00] P2 (ppo v04 ep100.000) | winrate:  21.2% | avg_return:    1.37 | wins:   1061 | starts:   1257
+[2025-09-23 16:56:00] P3 (dqn v31 ep20.000) | winrate:  28.3% | avg_return:    1.61 | wins:   1416 | starts:   1205
+[2025-09-23 16:56:00] Evaluation summary saved: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_409/csv/evaluation_summary.csv
+[2025-09-23 16:56:00] CSV_DIR: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_409/csv
+[2025-09-23 16:56:00] Plots directory: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_409/plots
+[2025-09-23 16:56:00] 01-tables saved (with/without pass, recomputed no-pass percentages).
+[2025-09-23 16:56:01] All plots & CSVs saved.
+[2025-09-23 16:56:01] run.log: /home/wasterix/OpenSpiel/open_spiel/President/evaluation/eval_macro/eval_macro_409/run.log

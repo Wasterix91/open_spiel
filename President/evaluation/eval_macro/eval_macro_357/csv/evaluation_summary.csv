@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+357,P0: K1 vs. Singly Only,dqn v41 ep250.000,dqn,k1a2,41,250000,5.2,0.74,260,1257
+357,P1: K2 (Independent),dqn v08 ep220.000,dqn,k2a2,08,220000,44.4,2.24,2221,1236
+357,P2: K1 vs. Singly Only,dqn v41 ep250.000,dqn,k1a2,41,250000,5.5,0.78,273,1262
+357,P3: K2 (Independent),dqn v08 ep220.000,dqn,k2a2,08,220000,44.9,2.24,2246,1245

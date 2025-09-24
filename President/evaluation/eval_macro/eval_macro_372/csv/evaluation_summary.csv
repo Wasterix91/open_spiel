@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+372,P0: K1 vs Single Only,ppo v07 ep20.000,ppo,k1a1,07,20000,23.1,1.37,1155,1250
+372,P1: K4 (Shared Policy SP),ppo v04 ep100.000,ppo,k4a1,04,100000,27.1,1.63,1355,1319
+372,P2: K1 vs Single Only,ppo v07 ep20.000,ppo,k1a1,07,20000,22.7,1.37,1136,1217
+372,P3: K4 (Shared Policy SP),ppo v04 ep100.000,ppo,k4a1,04,100000,27.1,1.63,1354,1214
