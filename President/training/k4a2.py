@@ -56,10 +56,10 @@ CONFIG = {
     # FINAL_MODE: "none" | "env_only" | "rank_only" | "both"
     "REWARD": {
         "STEP_MODE": "combined",
-        "DELTA_WEIGHT": 0.0,
-        "HAND_PENALTY_COEFF": 1.0,
+        "DELTA_WEIGHT": 0.1,
+        "HAND_PENALTY_COEFF": 0.0,
 
-        "FINAL_MODE": "none",
+        "FINAL_MODE": "env_only",
         "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
     },
 
