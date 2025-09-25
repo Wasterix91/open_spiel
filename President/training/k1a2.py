@@ -19,8 +19,8 @@ from collections import defaultdict
 
 CONFIG = {
     "EPISODES":         100_000,
-    "BENCH_INTERVAL":   500,
-    "BENCH_EPISODES":   200,
+    "BENCH_INTERVAL":   5000,
+    "BENCH_EPISODES":   2000,
     "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
@@ -68,11 +68,11 @@ CONFIG = {
     # FINAL_MODE: "none" | "env_only" | "rank_only" | "both"
     "REWARD": {
         "STEP_MODE": "combined",
-        "DELTA_WEIGHT": 1.0,
-        "HAND_PENALTY_COEFF": 0.05,
+        "DELTA_WEIGHT": 0.0,
+        "HAND_PENALTY_COEFF": 1.0,
 
-        "FINAL_MODE": "both",
-        "BONUS_WIN": 20.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
+        "FINAL_MODE": "none",
+        "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
     },
 
     # Feature-Toggles
@@ -88,7 +88,7 @@ CONFIG = {
         "RET_SMOOTH_WINDOW": 150,
 
         # Winrate-Plot (wie k4a2): Rolling-Window & Konfidenzintervall
-        "WR_SMOOTH_WINDOW": 5,
+        "WR_SMOOTH_WINDOW": 3,
         "WR_SHOW_CI": True,
         "WR_CI_Z": 1.96,
 

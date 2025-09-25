@@ -19,8 +19,8 @@ from utils.load_save_a1_ppo import save_checkpoint_ppo
 
 # ============== CONFIG ==============
 CONFIG = {
-    "EPISODES":         1_000_000,
-    "BENCH_INTERVAL":   10_000,
+    "EPISODES":         100_000,
+    "BENCH_INTERVAL":   5_000,
     "BENCH_EPISODES":   2_000,
     "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
@@ -67,6 +67,11 @@ CONFIG = {
         "PLOT_METRICS": True,
         "SAVE_METRICS_TO_CSV": False,
         "RET_SMOOTH_WINDOW": 500,   # Fenstergröße für Moving Average der Rewards
+
+        "WR_SMOOTH_WINDOW": 3,
+        "WR_SHOW_CI": True,
+        "WR_CI_Z": 1.96,
+        "PLOT_FORMATS": ["png", "svg"],
         "PLOT_KEYS": [              # steuert plot_train(); mögliche Keys:
             # PPO-Metriken:
             #   reward_mean, reward_std, return_mean,
@@ -79,19 +84,19 @@ CONFIG = {
             # Sonderplots (aus Memory, nicht aus metrics):
             #   ep_return_raw, ep_return_components,
             #   ep_return_env, ep_return_shaping, ep_return_final
-            "return_mean",
-            "reward_mean",
-            "entropy",
-            "approx_kl",
-            "clip_frac",
-            "policy_loss",
-            "value_loss",
-            "ep_return_raw",
-            "ep_return_components",
-            "ep_return_env",         # Einzelplot env_score
-            "ep_return_shaping",     # Einzelplot shaping
-            "ep_return_final",       # Einzelplot final_bonus
-            "ep_return_training",
+            #"return_mean",
+            #"reward_mean",
+            #"entropy",
+            #"approx_kl",
+            #"clip_frac",
+            #"policy_loss",
+            #"value_loss",
+            #"ep_return_raw",
+            #"ep_return_components",
+            #"ep_return_env",         # Einzelplot env_score
+            #"ep_return_shaping",     # Einzelplot shaping
+            #"ep_return_final",       # Einzelplot final_bonus
+            #"ep_return_training",
         ],
     },
 
@@ -168,7 +173,12 @@ def main():
         save_csv=CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False),
         verbosity=1,
         smooth_window=CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 150),
+        out_formats=CONFIG["FEATURES"].get("PLOT_FORMATS", ["png"]),  # <--- NEU
     )
+    # Rewards-Linien dünner (wirken sonst „fett“):
+    plotter._ret_line_width = 1.4
+    plotter._ret_use_outline = False
+
     plotter.log("New Training (k4a1): Shared-Policy PPO — In-Proc External Trainer (Bundle-Updates)")
     plotter.log(f"Deck_Size: {CONFIG['DECK_SIZE']}")
     plotter.log(f"Episodes: {CONFIG['EPISODES']}")
@@ -263,6 +273,9 @@ def main():
         ts = env.reset()
         last_idx = {p: None for p in range(num_players)}  # letzte Transition je Sitz
         ep_shaping_return_p0 = 0.0                        # nur P0 für Plot-Parität
+        ep_step_delta_return_p0 = 0.0     # <--- NEU
+        ep_step_penalty_return_p0 = 0.0   # <--- NEU
+
 
         while not ts.last():
             p = ts.observations["current_player"]
@@ -288,10 +301,15 @@ def main():
 
             if shaper.step_active():
                 hand_after = shaper.hand_size(ts_next, p, deck_int)
-                step_r = float(shaper.step_reward(hand_before=hand_before, hand_after=hand_after))
-                if p == 0:  # nur P0 aufsummieren für konsistente Plots
-                    ep_shaping_return_p0 += step_r
-                agent.post_step(step_r, done=ts_next.last())
+                delta_r, penalty_r, step_r = shaper.step_reward_components(
+                    hand_before=hand_before, hand_after=hand_after
+                )
+                if p == 0:
+                    ep_shaping_return_p0      += float(step_r)
+                    ep_step_delta_return_p0   += float(delta_r)     # <--- NEU
+                    ep_step_penalty_return_p0 += float(penalty_r)   # <--- NEU
+                agent.post_step(float(step_r), done=ts_next.last())
+
 
             ts = ts_next
 
@@ -327,11 +345,14 @@ def main():
             global_episode=ep,
             ep_returns=[ep_return_training],
             components={
-                "env_score":   [env_part],      # 0.0, wenn nicht aktiv
-                "shaping":     [shaping_part],  # 0.0, wenn nicht aktiv
+                "env_score":   [env_part],
+                "shaping":     [shaping_part],
                 "final_bonus": [ep_bonus_p0],
+                "step_delta":  [ep_step_delta_return_p0],    # <--- NEU
+                "step_penalty":[ep_step_penalty_return_p0],  # <--- NEU
             },
         )
+
 
         if collect_metrics:
             if CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False):
@@ -396,14 +417,20 @@ def main():
             plotter.add_benchmark(ep, per_opponent)
             plotter.plot_benchmark_rewards()
             plotter.plot_places_latest()
+            plotter.plot_reward_groups(window=plotter.smooth_window)  # <--- NEU
 
-            title_multi = f"Lernkurve - {family.upper()} vs feste Heuristiken"
+            title_multi = f"Lernkurve (Benchmark) - {family.upper()} vs. feste Heuristiken"
             plotter.plot_benchmark(
                 filename_prefix="lernkurve",
                 with_macro=True,
                 family_title=family.upper(),
                 multi_title=title_multi,
+                smooth_window=CONFIG["FEATURES"].get("WR_SMOOTH_WINDOW", plotter.smooth_window),
+                show_ci=CONFIG["FEATURES"].get("WR_SHOW_CI", True),
+                ci_z=CONFIG["FEATURES"].get("WR_CI_Z", 1.96),
+                variants=["02"],  # <--- NUR 02 rendern (und dank PLOT_FORMATS als png+svg speichern)
             )
+
             if CONFIG["FEATURES"].get("PLOT_METRICS", False):
                 plotter.plot_train(
                     include_keys=CONFIG["FEATURES"].get("PLOT_KEYS"),

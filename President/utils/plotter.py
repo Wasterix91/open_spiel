@@ -427,7 +427,7 @@ class MetricsPlotter:
             plt.close()
 
         os.makedirs(self.out_dir, exist_ok=True)
-        variants = set(variants or ("03",))  # Default: nur 02 rendern
+        variants = set(variants or ("03",))  # Default: nur 03 rendern
 
         # --- Multi-Plots nach Variante ---
         if "01" in variants:
