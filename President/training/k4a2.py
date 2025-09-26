@@ -19,8 +19,8 @@ from utils.load_save_common import find_next_version, prepare_run_dirs, save_con
 
 # ============== CONFIG ==============
 CONFIG = {
-    "EPISODES":         100_000,
-    "BENCH_INTERVAL":   5000,
+    "EPISODES":         500_000,
+    "BENCH_INTERVAL":   10_000,
     "BENCH_EPISODES":   2000,
     "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
