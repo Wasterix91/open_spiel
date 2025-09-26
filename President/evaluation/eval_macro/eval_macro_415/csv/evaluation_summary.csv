@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+415,P0: K4A2 60,dqn v60 ep100.000,dqn,k4a2,60,100000,38.7,2.06,193314,124793
+415,P1: K4A2 61,dqn v61 ep100.000,dqn,k4a2,61,100000,21.3,1.73,106746,124787
+415,P2: K4A2 62,dqn v62 ep100.000,dqn,k4a2,62,100000,20.4,0.7,102164,125058
+415,P3: K4A2 55,dqn v55 ep100.000,dqn,k4a2,55,100000,19.6,1.51,97776,125362

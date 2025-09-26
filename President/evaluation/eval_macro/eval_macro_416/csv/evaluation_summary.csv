@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+416,P0: K4A2 66,dqn v66 ep100.000,dqn,k4a2,66,100000,9.6,0.79,47769,124702
+416,P1: K4A2 67,dqn v67 ep100.000,dqn,k4a2,67,100000,21.6,1.43,107831,125020
+416,P2: K4A2 65,dqn v65 ep100.000,dqn,k4a2,65,100000,51.5,2.25,257360,125563
+416,P3,max_combo v,max_combo,,,,17.4,1.53,87040,124715

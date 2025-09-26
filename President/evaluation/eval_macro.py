@@ -43,10 +43,10 @@ DECK = "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
 
 # 1v3 Gegen Max Combo
 PLAYER_CONFIG = [
-    {"name": "P0: K4A2 46", "type": "dqn", "family": "k4a2", "version": "50", "episode": 100_000, "from_pid": 0},
-    {"name": "P1: K4A2 47", "type": "dqn", "family": "k4a2", "version": "51", "episode": 100_000, "from_pid": 0},
-    {"name": "P2: K4A2 48", "type": "dqn", "family": "k4a2", "version": "52", "episode": 100_000, "from_pid": 0},
-    {"name": "P3: K4A2 49", "type": "dqn", "family": "k4a2", "version": "53", "episode": 100_000, "from_pid": 0},
+    {"name": "P0: K4A2 66", "type": "dqn", "family": "k4a2", "version": "66", "episode": 100_000, "from_pid": 0},
+    {"name": "P1: K4A2 67", "type": "dqn", "family": "k4a2", "version": "67", "episode": 100_000, "from_pid": 0},
+    {"name": "P2: K4A2 65", "type": "dqn", "family": "k4a2", "version": "65", "episode": 100_000, "from_pid": 0},
+    {"name": "P3", "type": "max_combo"}
 ]
 # 1v3 Gegen Single Only
 
