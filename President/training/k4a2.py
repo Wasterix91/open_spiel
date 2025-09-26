@@ -20,8 +20,8 @@ from utils.load_save_common import find_next_version, prepare_run_dirs, save_con
 # ============== CONFIG ==============
 CONFIG = {
     "EPISODES":         100_000,
-    "BENCH_INTERVAL":   500,
-    "BENCH_EPISODES":   200,
+    "BENCH_INTERVAL":   5000,
+    "BENCH_EPISODES":   2000,
     "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
@@ -55,11 +55,11 @@ CONFIG = {
     # STEP_MODE : "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
     # FINAL_MODE: "none" | "env_only" | "rank_only" | "both"
     "REWARD": {
-        "STEP_MODE": "combined",
-        "DELTA_WEIGHT": 1.0,
+        "STEP_MODE": "none",
+        "DELTA_WEIGHT": 0.0,
         "HAND_PENALTY_COEFF": 0.0,
 
-        "FINAL_MODE": "none",
+        "FINAL_MODE": "env_only",
         "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
     },
 
