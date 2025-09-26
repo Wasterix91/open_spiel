@@ -35,18 +35,18 @@ if not logging.getLogger().handlers:
     logging.getLogger().setLevel(logging.INFO)
 
 # ===================== Konfiguration ===================== #
-NUM_EPISODES = 5_000
-EVAL_EPISODE = 1_000
-DECK = "16",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
+NUM_EPISODES = 500_000
+EVAL_EPISODE = 100_000
+DECK = "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
 
 # Beispiel-Setup (anpassen):
 
 # 1v3 Gegen Max Combo
 PLAYER_CONFIG = [
-    {"name": "P0: K1 vs V-Table", "type": "dqn", "family": "k1a2", "version": "37", "episode": 20_000, "from_pid": 0},
-    {"name": "P1: K4 (Shared Policy SP)", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
-    {"name": "P2: K1 vs V-Table", "type": "dqn", "family": "k1a2", "version": "37", "episode": 20_000, "from_pid": 0},
-    {"name": "P3: K3 (Shared Policy SP)", "type": "dqn", "family": "k4a2", "version": "32", "episode": 100_000, "from_pid": 0},
+    {"name": "P0: K4A2 46", "type": "dqn", "family": "k4a2", "version": "46", "episode": 100_000, "from_pid": 0},
+    {"name": "P1: K4A2 47", "type": "dqn", "family": "k4a2", "version": "47", "episode": 100_000, "from_pid": 0},
+    {"name": "P2: K4A2 48", "type": "dqn", "family": "k4a2", "version": "48", "episode": 100_000, "from_pid": 0},
+    {"name": "P3: K4A2 49", "type": "dqn", "family": "k4a2", "version": "49", "episode": 100_000, "from_pid": 0},
 ]
 # 1v3 Gegen Single Only
 

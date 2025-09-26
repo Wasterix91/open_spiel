@@ -20,8 +20,8 @@ from utils.load_save_common import find_next_version, prepare_run_dirs, save_con
 # ============== CONFIG ==============
 CONFIG = {
     "EPISODES":         100_000,
-    "BENCH_INTERVAL":   5000,
-    "BENCH_EPISODES":   2_000,
+    "BENCH_INTERVAL":   500,
+    "BENCH_EPISODES":   200,
     "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
@@ -56,10 +56,10 @@ CONFIG = {
     # FINAL_MODE: "none" | "env_only" | "rank_only" | "both"
     "REWARD": {
         "STEP_MODE": "combined",
-        "DELTA_WEIGHT": 0.1,
+        "DELTA_WEIGHT": 1.0,
         "HAND_PENALTY_COEFF": 0.0,
 
-        "FINAL_MODE": "env_only",
+        "FINAL_MODE": "none",
         "BONUS_WIN": 0.0, "BONUS_2ND": 0.0, "BONUS_3RD": 0.0, "BONUS_LAST": 0.0,
     },
 
@@ -76,10 +76,10 @@ CONFIG = {
         "WR_SMOOTH_WINDOW": 3,      # z.B. 5, 7, 9 ...
         "WR_SHOW_CI": True,
         "WR_CI_Z": 1.96,
-        "PLOT_FORMATS": ["png", "svg"],
+        "PLOT_FORMATS": ["pdf"],
         # Steuert plot_train(); Sonder-Keys triggern In-Memory-Return-Plots.
         "PLOT_KEYS": [
-            "epsilon", "ep_length", "train_seconds",
+            #"epsilon", "ep_length", "train_seconds",
             # KEINE ep_return_* Trigger hier
         ],
     },
@@ -169,15 +169,17 @@ def main():
     paths = prepare_run_dirs(MODELS_ROOT, family, version, prefix="model")
 
     plotter = MetricsPlotter(
-    out_dir=paths["plots_dir"],
-    benchmark_opponents=list(CONFIG["BENCH_OPPONENTS"]),
-    benchmark_csv="benchmark_curves.csv",
-    train_csv="training_metrics.csv",
-    save_csv=CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False),
-    verbosity=1,
-    smooth_window=CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 150),
-    out_formats=CONFIG["FEATURES"].get("PLOT_FORMATS", ["png"]),  # <--- NEU
+        out_dir=paths["plots_dir"],
+        benchmark_opponents=list(CONFIG["BENCH_OPPONENTS"]),
+        benchmark_csv="benchmark_curves.csv",
+        train_csv="training_metrics.csv",
+        save_csv=CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False),
+        verbosity=1,
+        smooth_window=CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 150),
+        out_formats=CONFIG["FEATURES"].get("PLOT_FORMATS", ["png"]),
+        name_prefix=f"{family}_{version}",   # <-- NEU: k4a2_52_...
     )
+
 
     plotter.log("New Training (k4a2): Shared-Policy DQN — In-Proc External Trainer (Bundle-Updates)")
     plotter.log(f"Deck_Size: {CONFIG['DECK_SIZE']}")
@@ -442,16 +444,15 @@ def main():
             plotter.plot_reward_groups(window=plotter.smooth_window)
 
             plotter.plot_places_latest()
-            title_multi =  f"Lernkurve (Benchmark) - {family.upper()} vs. feste Heuristiken"
             plotter.plot_benchmark(
                 filename_prefix="lernkurve",
                 with_macro=True,
                 family_title=family.upper(),
-                multi_title=title_multi,
-                smooth_window=CONFIG["FEATURES"].get("WR_SMOOTH_WINDOW", plotter.smooth_window),
-                show_ci=CONFIG["FEATURES"].get("WR_SHOW_CI", True),
-                ci_z=CONFIG["FEATURES"].get("WR_CI_Z", 1.96),
+                multi_title=f"Lernkurve - {family.upper()} vs feste Heuristiken",
+                variants=["03"],   
             )
+
+
 
 
             if CONFIG["FEATURES"].get("PLOT_METRICS", False):

@@ -79,7 +79,7 @@ CONFIG = {
         "WR_SMOOTH_WINDOW": 3,
         "WR_SHOW_CI": True,
         "WR_CI_Z": 1.96,
-        "PLOT_FORMATS": ["png", "svg"],
+        "PLOT_FORMATS": ["pdf"],
         "PLOT_KEYS": [              # steuert plot_train(); mögliche Keys:
             # PPO-Metriken:
             #   reward_mean, reward_std, return_mean,
@@ -226,8 +226,10 @@ def main():
         save_csv=CONFIG["FEATURES"]["SAVE_METRICS_TO_CSV"],
         verbosity=1,
         smooth_window=CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 150),
-        out_formats=CONFIG["FEATURES"].get("PLOT_FORMATS", ["png"]),  # <--- NEU
+        out_formats=CONFIG["FEATURES"].get("PLOT_FORMATS", ["png", "svg", "pdf"]),
+        name_prefix=f"{family}_{version}",   # <--- NEU
     )
+
 
     # Rewards-Linien schlanker & ohne weißen Outline
     plotter._ret_line_width = 1.4
@@ -471,7 +473,7 @@ def main():
                 smooth_window=CONFIG["FEATURES"].get("WR_SMOOTH_WINDOW", plotter.smooth_window),
                 show_ci=CONFIG["FEATURES"].get("WR_SHOW_CI", True),
                 ci_z=CONFIG["FEATURES"].get("WR_CI_Z", 1.96),
-                variants=["02"],  # <--- NUR 02 rendern (und dank PLOT_FORMATS in png & svg)
+                variants=["03"],  # <--- NUR 02 rendern (und dank PLOT_FORMATS in png & svg)
             )
 
             plot_seconds = time.perf_counter() - plot_start

@@ -93,7 +93,7 @@ CONFIG = {
         "WR_CI_Z": 1.96,
 
         # Ausgabeformate für alle Plots
-        "PLOT_FORMATS": ["png", "svg"],
+        "PLOT_FORMATS": ["pdf"],
 
         # Steuert plot_train(); ep_return_* triggert die In-Memory-Return-Plots
         "PLOT_KEYS": [
@@ -225,8 +225,10 @@ def main():
         save_csv=CONFIG["FEATURES"]["SAVE_METRICS_TO_CSV"],
         verbosity=1,
         smooth_window=CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 150),
-        out_formats=CONFIG["FEATURES"].get("PLOT_FORMATS", ["png"]),  # <— NEU
+        out_formats=CONFIG["FEATURES"].get("PLOT_FORMATS", ["png", "svg", "pdf"]),
+        name_prefix=f"{family}_{version}",   # <--- NEU: z.B. "k1a2_51"
     )
+
 
     plotter.log("New Training (k1a2): DQN Single-Agent vs Heuristiken/Population (P0→P0)")
     plotter.log(f"Deck_Size: {CONFIG['DECK_SIZE']}")
@@ -496,11 +498,10 @@ def main():
                 filename_prefix="lernkurve",
                 with_macro=True,
                 family_title=family.upper(),
-                multi_title=title_multi,
-                smooth_window=CONFIG["FEATURES"].get("WR_SMOOTH_WINDOW", plotter.smooth_window),
-                show_ci=CONFIG["FEATURES"].get("WR_SHOW_CI", True),
-                ci_z=CONFIG["FEATURES"].get("WR_CI_Z", 1.96),
+                multi_title=f"Lernkurve - {family.upper()} vs feste Heuristiken",
+                variants=["03"], 
             )
+
 
             # OPTIONAL: Wenn du die reinen Reward-Kurven nicht brauchst, kannst du den Aufruf weglassen
             # plotter.plot_benchmark_rewards()

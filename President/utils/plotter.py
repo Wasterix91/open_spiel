@@ -6,22 +6,36 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.patheffects as pe
 from matplotlib.lines import Line2D
-import matplotlib.colors as mcolors 
+import matplotlib.colors as mcolors
 import colorsys
 
+# ============================================================
+# 🔧 EIN ORT FÜR ALLE SCHRIFTGRÖSSEN (Labels/Ticks/Legenden)
+#    Passe hier an – wirkt auf alle Plots zentral.
+#    Du kannst pro Gruppe (benchmark / rewards / train) abweichen.
+# ============================================================
+PLOT_FONT_PRESETS = {
+    # Basiswerte (werden von allen Gruppen geerbt)
+    "default": dict(TITLE=34, LABEL=28, TICK=24, LEGEND=14),
+
+    # Optional gruppenspezifische Abweichungen
+    "benchmark": {},  # z.B.: dict(TITLE=42)
+    "rewards":   {},  # z.B.: dict(LABEL=36, TICK=32)
+    "train":     {},  # z.B.: dict(LEGEND=24)
+}
 
 # 0% Rand links/rechts auf allen Achsen
 mpl.rcParams["axes.xmargin"] = 0.0
-
+# Basis-Schriftarten & Export
 mpl.rcParams.update({
     "font.family": "serif",
     "font.serif": ["Palatino Linotype", "Book Antiqua", "Palatino", "DejaVu Serif"],
     "pdf.fonttype": 42,     # Text in PDFs bleibt editierbarer Text
     "ps.fonttype": 42,
     "svg.fonttype": "none", # Text in SVG bleibt Text (nicht in Pfade konvertieren)
+    # Legendengröße default – wird von unseren Helpern meist überschrieben
+    "legend.fontsize": PLOT_FONT_PRESETS["default"].get("LEGEND", 12),
 })
-
-
 
 class MetricsPlotter:
     def __init__(
@@ -32,14 +46,16 @@ class MetricsPlotter:
         train_csv: str = "train_metrics.csv",
         save_csv: bool = True,
         verbosity: int = 1,
-        smooth_window: int | None = None,
-        out_formats: Optional[List[str]] = None,   # <--- NEU
+        smooth_window: Optional[int] = None,
+        out_formats: Optional[List[str]] = None,
+        name_prefix: Optional[str] = None,
     ):
         self.out_dir = out_dir
         os.makedirs(self.out_dir, exist_ok=True)
 
+        self._out_formats = list(out_formats or ["png"])
+        self._name_prefix = name_prefix or ""
 
-        self._out_formats = list(out_formats or ["png"])  # <--- NEU
         # Logging
         self.verbosity = verbosity
         self.smooth_window = int(smooth_window) if smooth_window is not None else 150
@@ -93,28 +109,73 @@ class MetricsPlotter:
         }
 
         # Plot-Styling (zentral)
-        self._ret_line_width   = 1.4      # dicker: MA-Linie
-        self._ret_outline_add  = 0.5      # weißer Rand um Linie (Kontrast)
-        self._sc_total_size    = 14.0     # Punkte im Rohplot
-        self._sc_comp_size     = 8.0      # Punkte in Komponentenplots
-        self._sc_marker        = "o"      # skalierbar
+        self._ret_line_width   = 1.4
+        self._ret_outline_add  = 0.5
+        self._sc_total_size    = 14.0
+        self._sc_comp_size     = 8.0
+        self._sc_marker        = "o"
         self._sc_edge          = "none"
         self._sc_linewidths    = 0.0
 
-        # Sichtbarkeit/“Kräftigkeit” der Punkte (Alpha wird in _fade_rgba genutzt)
-        self._fade_alpha_total = 0.35     # Rohplot-Punkte
-        self._fade_alpha_comp  = 0.40     # Komponenten-Punkte
-        self._fade_mix_blue    = 0.16     # Blau weniger aufhellen (satter)
-        self._fade_mix_other   = 0.26     # andere Farben
+        # Sichtbarkeit
+        self._fade_alpha_total = 0.35
+        self._fade_alpha_comp  = 0.40
+        self._fade_mix_blue    = 0.16
+        self._fade_mix_other   = 0.26
         self._ret_use_outline  = True
 
-
-
-
         # In-Memory Episode-Returns
-        self.ep_ret_eps: List[int] = []     # global_ep
-        self.ep_ret_vals: List[float] = []  # Trainings-Reward (Buffersignal)
-        self.ep_ret_components: Dict[str, List[float]] = {}  # z.B. {"env_score":[...], "shaping":[...], "final_bonus":[...]}
+        self.ep_ret_eps: List[int] = []
+        self.ep_ret_vals: List[float] = []
+        self.ep_ret_components: Dict[str, List[float]] = {}
+
+    # ---------- Zentrale Font-Helper ----------
+    def _fonts(self, group: str = "default") -> Dict[str, int]:
+        base = dict(PLOT_FONT_PRESETS.get("default", {}))
+        base.update(PLOT_FONT_PRESETS.get(group, {}) or {})
+        # Normalisiere Keys (Groß/Klein egal)
+        return {
+            "TITLE": int(base.get("TITLE", 40)),
+            "LABEL": int(base.get("LABEL", 32)),
+            "TICK":  int(base.get("TICK", 28)),
+            "LEGEND": int(base.get("LEGEND", 28)),
+        }
+
+    def _apply_axes(self,
+                    title: Optional[str],
+                    xlabel: Optional[str],
+                    ylabel: Optional[str],
+                    *,
+                    group: str = "default"):
+        f = self._fonts(group)
+        if title:
+            plt.title(title, fontsize=f["TITLE"])
+        if xlabel:
+            plt.xlabel(xlabel, fontsize=f["LABEL"])
+        if ylabel:
+            plt.ylabel(ylabel, fontsize=f["LABEL"])
+        ax = plt.gca()
+        ax.tick_params(axis="both", which="major", labelsize=f["TICK"])
+
+    def _legend(self, *, loc: str = "best", group: str = "default",
+                handles=None, labels=None, **extra):
+        f = self._fonts(group)
+        defaults = {"fontsize": f["LEGEND"], "markerscale": 1.6, "handlelength": 3.0}
+        defaults.update(extra or {})
+        ax = plt.gca()
+
+        # Falls nichts übergeben wurde: aus der Achse holen
+        if handles is None or labels is None:
+            handles, labels = ax.get_legend_handles_labels()
+
+        # Nur sinnvolle Einträge behalten
+        pairs = [(h, l) for h, l in zip(handles, labels) if l and not str(l).startswith("_")]
+        if not pairs:
+            return  # nichts zu zeigen → keine (leere) Legende zeichnen
+
+        h, l = zip(*pairs)
+        plt.legend(h, l, loc=loc, **defaults)
+
 
     # ---------- Hilfsfunktionen ----------
     def _fade_rgba(self, col, alpha=None):
@@ -126,19 +187,20 @@ class MetricsPlotter:
         mix = self._fade_mix_blue if (0.55 <= h <= 0.72) else self._fade_mix_other
         light = mix * np.ones(3) + (1.0 - mix) * rgb
         return (float(light[0]), float(light[1]), float(light[2]), a)
-    
+
     def _savefig(self, out_path_no_change: str, *, dpi: int = 300):
-        """
-        Nimmt einen Pfad (z. B. .../plot.png) und speichert in allen
-        Formaten aus self._out_formats (png/svg/pdf).
-        """
-        base, _ = os.path.splitext(out_path_no_change)
+        # out_path_no_change z.B. ".../09_rewards_final_components.png"
+        d = os.path.dirname(out_path_no_change)
+        base_name = os.path.splitext(os.path.basename(out_path_no_change))[0]
+
+        # k4a2_51_09_rewards_final_components
+        if self._name_prefix:
+            base_name = f"{self._name_prefix}_{base_name}"
+
         for fmt in self._out_formats:
-            path = f"{base}.{fmt}"
-            plt.savefig(path, bbox_inches="tight", transparent=False, dpi=dpi)
-
-
-
+            out_path = os.path.join(d, f"{base_name}.{fmt}")
+            plt.savefig(out_path, bbox_inches="tight", transparent=False,
+                        dpi=(dpi if fmt != "svg" else None))
 
     # ---------- Benchmark: add ----------
     def add_benchmark(
@@ -251,7 +313,7 @@ class MetricsPlotter:
         smooth_window: int = 1,
         show_ci: bool = True,
         ci_z: float = 1.96,
-        variants: Optional[List[str]] = None,   # <--- NEU
+        variants: Optional[List[str]] = None,
     ):
         """Winrate-Kurven (ggf. geglättet) + optionale Konfidenzbänder."""
         if not self.bench_episodes:
@@ -285,10 +347,8 @@ class MetricsPlotter:
         macro_color = "#444444"
 
         # Achsen/Styling
-        def _apply_common_axes(title: str, add_25: bool = False):
-            plt.title(title)
-            plt.xlabel("Episode")
-            plt.ylabel("Winrate (%)")
+        def _apply_common_axes(title: Optional[str] = None, add_25: bool = False):
+            self._apply_axes(title, "Episode", "Winrate (%)", group="benchmark")
             plt.ylim(0, 100)
             plt.grid(True)
             ax = plt.gca()
@@ -299,7 +359,7 @@ class MetricsPlotter:
             if add_25:
                 plt.axhline(25, color="r", linewidth=1, label="25% Linie")
 
-        # Helfer: Wilson-CI & rollierende Summen (lokal für diesen Plot)
+        # Helfer: Wilson-CI & rollierende Summen
         def _wilson_interval(k: int, n: int, z: float = 1.96) -> Tuple[float, float]:
             if n <= 0:
                 return (float("nan"), float("nan"))
@@ -369,7 +429,7 @@ class MetricsPlotter:
                 hi = np.full_like(y, np.nan, dtype=float)
                 return y, lo, hi
 
-        def _plot_multi(out_path: str, include_macro: bool, add_25: bool = False):
+        def _plot_multi(out_path: str, include_macro: bool, add_25: bool = False, suppress_title: bool = False):
             plt.figure(figsize=(12, 8))
             for name in self.bench_names:
                 y, lo, hi = _series_pct_and_ci(name)
@@ -402,8 +462,8 @@ class MetricsPlotter:
                     label="Avg Macro",
                     color=macro_color,
                 )
-            _apply_common_axes(_title_multi(), add_25=add_25)
-            plt.legend(loc="upper right")
+            _apply_common_axes(None if suppress_title else _title_multi(), add_25=add_25)
+            self._legend(loc="upper right", group="benchmark")
             plt.tight_layout()
             self._savefig(out_path)
             plt.close()
@@ -443,7 +503,9 @@ class MetricsPlotter:
         if "03" in variants:
             _plot_multi(
                 out_path=os.path.join(self.out_dir, "03_Lernkurve_Heuristiken_incl_avg_25.png"),
-                include_macro=True, add_25=True,
+                include_macro=True,
+                add_25=True,
+                suppress_title=True,   # <<< Titel aus!
             )
         if "04" in variants:
             _plot_multi(
@@ -477,7 +539,6 @@ class MetricsPlotter:
                 title_override=_title_single(_pretty_opp(first_name)),
             )
 
-
     def plot_benchmark_rewards(self, filename_prefix: str = "benchmark_rewards", with_macro: bool = True, title_prefix: str | None = None):
         """Ø-Reward-Kurven aus dem Benchmark."""
         if not self.bench_episodes:
@@ -487,9 +548,7 @@ class MetricsPlotter:
         for name in self.bench_names:
             plt.figure(figsize=(10, 6))
             plt.plot(self.bench_episodes, self.bench_hist_reward[name], marker="o")
-            plt.title(f"{title} – Ø-Reward vs {name}")
-            plt.xlabel("Episode")
-            plt.ylabel("Ø-Reward (P0)")
+            self._apply_axes(f"{title} – Ø-Reward vs {name}", "Episode", "Ø-Reward (P0)", group="benchmark")
             plt.grid(True)
             plt.tight_layout()
             out = os.path.join(self.out_dir, f"{filename_prefix}_{name}.png")
@@ -501,11 +560,9 @@ class MetricsPlotter:
             plt.plot(self.bench_episodes, self.bench_hist_reward[name], marker="o", label=name)
         if with_macro:
             plt.plot(self.bench_episodes, self.bench_macro_reward, marker="o", linestyle="--", label="macro_reward")
-        plt.title(f"{title} – Ø-Reward vs Gegner")
-        plt.xlabel("Episode")
-        plt.ylabel("Ø-Reward (P0)")
+        self._apply_axes(f"{title} – Ø-Reward vs Gegner", "Episode", "Ø-Reward (P0)", group="benchmark")
         plt.grid(True)
-        plt.legend(loc="upper right")
+        self._legend(loc="upper right", group="benchmark")
         plt.tight_layout()
         out_all = os.path.join(self.out_dir, f"{filename_prefix}_alle_strategien.png")
         self._savefig(out_all)
@@ -643,8 +700,7 @@ class MetricsPlotter:
                 vals = [r.get(k, float("nan")) for r in self.train_rows]
                 plt.figure(figsize=(10, 6))
                 plt.plot(episodes, vals, marker="o", markersize=3, linestyle="None")
-                plt.title(f"Training – {k}")
-                plt.xlabel("Episode"); plt.ylabel(k)
+                self._apply_axes(f"Training – {k}", "Episode", k, group="train")
                 plt.grid(True); plt.tight_layout()
                 self._savefig(os.path.join(self.out_dir, f"{filename_prefix}_{k}.png"))
                 plt.close()
@@ -653,9 +709,8 @@ class MetricsPlotter:
             for k in keys:
                 vals = [r.get(k, float("nan")) for r in self.train_rows]
                 plt.plot(episodes, vals, marker="o", markersize=3, linestyle="None", label=k)
-            plt.title("Training – Metrics")
-            plt.xlabel("Episode"); plt.ylabel("Value")
-            plt.grid(True); plt.legend(loc="upper left"); plt.tight_layout()
+            self._apply_axes("Training – Metrics", "Episode", "Value", group="train")
+            plt.grid(True); self._legend(loc="upper left", group="train"); plt.tight_layout()
             self._savefig(os.path.join(self.out_dir, f"{filename_prefix}_all.png"))
             plt.close()
 
@@ -709,7 +764,6 @@ class MetricsPlotter:
         # --- ep_return_raw.png ---
         plt.figure(figsize=(12, 7))
         base_col = self._ret_colors.get("total_ma", "tab:red")
-
         color = self._fade_rgba(base_col, alpha=self._fade_alpha_total)
 
         plt.scatter(
@@ -720,10 +774,8 @@ class MetricsPlotter:
             edgecolors=self._sc_edge,
             linewidths=self._sc_linewidths,
             zorder=1,
-            rasterized=True,  # <--- hinzufügen
+            rasterized=True,
         )
-
-
 
         line_ma, = plt.plot(
             x, y_ma,
@@ -738,11 +790,8 @@ class MetricsPlotter:
                 pe.Normal()
             ])
 
-
-        plt.title("Training – Rewards (roh)")
-        plt.xlabel("Trainings-Episode")
-        plt.ylabel("Rewards")
-        plt.grid(True); plt.legend(); plt.tight_layout()
+        self._apply_axes("Training – Rewards (roh)", "Trainings-Episode", "Rewards", group="rewards")
+        plt.grid(True); self._legend(group="rewards"); plt.tight_layout()
         self._savefig(os.path.join(self.out_dir, "ep_return_raw.png"))
         plt.close()
 
@@ -764,10 +813,8 @@ class MetricsPlotter:
             col = self._ret_colors.get(k, None)
             plt.plot(x, _movavg(v, window), label=legend_names.get(k, k), color=col)
 
-        plt.title("Reward-Komponenten")
-        plt.xlabel("Trainings-Episode")
-        plt.ylabel("Rewards")
-        plt.grid(True); plt.legend(); plt.tight_layout()
+        self._apply_axes("Reward-Komponenten", "Trainings-Episode", "Rewards", group="rewards")
+        plt.grid(True); self._legend(group="rewards"); plt.tight_layout()
         self._savefig(os.path.join(self.out_dir, "ep_return_components.png"))
         plt.close()
 
@@ -813,16 +860,12 @@ class MetricsPlotter:
         if v.size > 0 and x.size > 0:
             L = min(x.size, v.size)
 
-            # >>> NEU: Final-Scatter kräftiger und größer
             is_final = component_key in ("env_score", "final_bonus")
+            alpha = (0.22 if is_final else self._fade_alpha_comp)
+            size  = (self._sc_comp_size * 1.35 if is_final else self._sc_comp_size)
 
-            alpha = (0.22 if is_final else self._fade_alpha_comp)         # Transparenz
-            size  = (self._sc_comp_size * 1.35 if is_final else self._sc_comp_size)  # Größe
-
-            # Final: kein Aufhellen → sattes Original mit Alpha
-            # Sonst: aufgehellte Variante wie bisher
             color = (mcolors.to_rgba(base_col, alpha=alpha)
-                    if is_final else self._fade_rgba(base_col, alpha=alpha))
+                     if is_final else self._fade_rgba(base_col, alpha=alpha))
 
             plt.scatter(
                 x[:L], v[:L],
@@ -832,10 +875,8 @@ class MetricsPlotter:
                 edgecolors=self._sc_edge,
                 linewidths=self._sc_linewidths,
                 zorder=1,
-                rasterized=True,  # <--- hinzufügen
+                rasterized=True,
             )
-
-
 
             mv = _movavg(v[:L], window)
             line_comp, = plt.plot(
@@ -852,11 +893,9 @@ class MetricsPlotter:
                 ])
 
             if show_legend:
-                plt.legend()
+                self._legend(group="rewards")
 
-        plt.title(ttl)
-        plt.xlabel("Trainings-Episode")
-        plt.ylabel("Rewards")
+        self._apply_axes(ttl, "Trainings-Episode", "Rewards", group="rewards")
         plt.grid(True); plt.tight_layout()
         self._savefig(os.path.join(self.out_dir, out_name))
         plt.close()
@@ -944,7 +983,11 @@ class MetricsPlotter:
                 else:
                     st = styles[name]
                     hs.append(Line2D([0], [0], color=st["color"], lw=st["lw"], ls=st["ls"]))
-            plt.legend(hs, labels)
+            # statt direkt plt.legend(...):
+            self._legend(loc="best", group="rewards", handles=hs, labels=labels)
+
+
+
 
         # --- (A) Alle ---
         plt.figure(figsize=(12, 7))
@@ -952,8 +995,8 @@ class MetricsPlotter:
         for name, y in series:
             h = _plot_one(x, y, styles[name])
             if h is not None: handles[name] = h
-        plt.title("Rewards (Training) – Alle Komponenten")
-        plt.xlabel("Trainings-Episode"); plt.ylabel("Rewards"); plt.grid(True)
+        self._apply_axes("Alle Komponenten", "Trainings-Episode", "Rewards", group="rewards")
+        plt.grid(True)
         _legend_all([n for n,_ in series], handles)
         plt.tight_layout(); self._savefig(os.path.join(self.out_dir, out_all)); plt.close()
 
@@ -964,8 +1007,8 @@ class MetricsPlotter:
             y = dict(series)[name]
             h = _plot_one(x, y, styles[name])
             if h is not None: handles[name] = h
-        plt.title("Rewards (Training) – Final Komponenten")
-        plt.xlabel("Trainings-Episode"); plt.ylabel("Rewards"); plt.grid(True)
+        self._apply_axes("Final Komponenten", "Trainings-Episode", "Rewards", group="rewards")
+        plt.grid(True)
         _legend_all(["Final Reward (Total)", "Final Reward (Env)", "Final Reward (Rank)"], handles)
         plt.tight_layout(); self._savefig(os.path.join(self.out_dir, out_final)); plt.close()
 
@@ -976,8 +1019,8 @@ class MetricsPlotter:
             y = dict(series)[name]
             h = _plot_one(x, y, styles[name])
             if h is not None: handles[name] = h
-        plt.title("Rewards (Training) – Step Komponenten")
-        plt.xlabel("Trainings-Episode"); plt.ylabel("Rewards"); plt.grid(True)
+        self._apply_axes("Step Komponenten", "Trainings-Episode", "Rewards", group="rewards")
+        plt.grid(True)
         _legend_all(["Step Reward (Total)", "Step Reward (Combo)", "Step Reward (Hand-Penalty)"], handles)
         plt.tight_layout(); self._savefig(os.path.join(self.out_dir, out_step)); plt.close()
 
@@ -985,19 +1028,19 @@ class MetricsPlotter:
         if also_individual:
             self.plot_ep_return_component("env_score",   window=window,
                                           filename="10_final_reward_env.png",
-                                          title="Rewards (Training) – Final Reward (Env)",
+                                          title="Final Reward (Env)",
                                           show_legend=False)
             self.plot_ep_return_component("final_bonus", window=window,
                                           filename="11_final_reward_rank.png",
-                                          title="Rewards (Training) – Final Reward (Rank-Bonus)",
+                                          title="Final Reward (Rank-Bonus)",
                                           show_legend=False)
             self.plot_ep_return_component("step_delta",  window=window,
                                           filename="13_step_reward_combo.png",
-                                          title="Rewards (Training) – Step Reward (Combo-Bonus)",
+                                          title="Step Reward (Combo-Bonus)",
                                           show_legend=False)
             self.plot_ep_return_component("step_penalty",window=window,
                                           filename="14_step_reward_hand_penalty.png",
-                                          title="Rewards (Training) – Step Reward (Hand-Penalty)",
+                                          title="Step Reward (Hand-Penalty)",
                                           show_legend=False)
 
     # ---------- Logging ----------
@@ -1115,7 +1158,7 @@ class EvalPlotter:
             self.hist[name].append(val)
             row.append(val)
         if self.save_csv:
-            with open(self.csv_path, "a", newline="") as f:
+            with open(self.csv_path, "a", newline="", encoding="utf-8") as f:
                 csv.writer(f).writerow(row)
 
     def plot_all(self):
@@ -1127,9 +1170,12 @@ class EvalPlotter:
             ys = self.hist[name]
             plt.figure(figsize=(10,6))
             plt.plot(self.episodes, ys, marker="o")
-            plt.title(f"{self.prefix} – Winrate vs {name}")
-            plt.xlabel("Episode"); plt.ylabel("Winrate (%)"); plt.grid(True)
-            plt.ylim(0, 100)
+            # Nutzt die Benchmark-Schriftgrößen
+            plt.ylim(0, 100); plt.grid(True)
+            MetricsPlotter._apply_axes(self=MetricsPlotter(out_dir="."),  # Dummy self, nur um Helper zu nutzen
+                                       title=f"{self.prefix} – Winrate vs {name}",
+                                       xlabel="Episode", ylabel="Winrate (%)",
+                                       group="benchmark")
             plt.tight_layout()
             plt.savefig(os.path.join(self.out_dir, f"{self.prefix}_{name}.png"))
             plt.close()
@@ -1138,8 +1184,12 @@ class EvalPlotter:
         plt.figure(figsize=(12,8))
         for name in self.opps:
             plt.plot(self.episodes, self.hist[name], marker="o", label=name)
-        plt.title(f"{self.prefix} – Winrate vs Gegner")
-        plt.xlabel("Episode"); plt.ylabel("Winrate (%)"); plt.grid(True); plt.legend(loc="upper right")
+        MetricsPlotter._apply_axes(self=MetricsPlotter(out_dir="."),  # Dummy
+                                   title=f"{self.prefix} – Winrate vs Gegner",
+                                   xlabel="Episode", ylabel="Winrate (%)",
+                                   group="benchmark")
+        plt.grid(True)
+        MetricsPlotter._legend(self=MetricsPlotter(out_dir="."), loc="upper right", group="benchmark")
         plt.ylim(0, 100)
         plt.tight_layout()
         plt.savefig(os.path.join(self.out_dir, f"{self.prefix}_alle_strategien.png"))
@@ -1154,8 +1204,12 @@ class EvalPlotter:
         for name in self.opps:
             plt.plot(self.episodes, self.hist[name], marker="o", label=name)
         plt.plot(self.episodes, macro, marker="o", linestyle="--", label="macro_wr")
-        plt.title(f"{self.prefix} – Winrate (mit Macro Average)")
-        plt.xlabel("Episode"); plt.ylabel("Winrate (%)"); plt.grid(True); plt.legend(loc="upper right")
+        MetricsPlotter._apply_axes(self=MetricsPlotter(out_dir="."),  # Dummy
+                                   title=f"{self.prefix} – Winrate (mit Macro Average)",
+                                   xlabel="Episode", ylabel="Winrate (%)",
+                                   group="benchmark")
+        plt.grid(True)
+        MetricsPlotter._legend(self=MetricsPlotter(out_dir="."), loc="upper right", group="benchmark")
         plt.ylim(0, 100)
         plt.tight_layout()
         plt.savefig(os.path.join(self.out_dir, f"{self.prefix}_alle_strategien_avg.png"))
