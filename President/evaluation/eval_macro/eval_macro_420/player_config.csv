@@ -1,0 +1,5 @@
+name,type,family,version,episode,from_pid
+P0: K4A1 07,ppo,k4a1,07,100000.0,0.0
+P1: Max Combo,max_combo,,,,
+P2: Single Only,single_only,,,,
+P3: Random 2,random2,,,,

@@ -35,18 +35,18 @@ if not logging.getLogger().handlers:
     logging.getLogger().setLevel(logging.INFO)
 
 # ===================== Konfiguration ===================== #
-NUM_EPISODES = 500_000
-EVAL_EPISODE = 100_000
+NUM_EPISODES = 50_000
+EVAL_EPISODE = 10_000
 DECK = "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
 
 # Beispiel-Setup (anpassen):
 
 # 1v3 Gegen Max Combo
 PLAYER_CONFIG = [
-    {"name": "P0: K4A2 81", "type": "dqn", "family": "k4a2", "version": "81", "episode": 500_000, "from_pid": 0},
-    {"name": "P1: K4A2 82", "type": "dqn", "family": "k4a2", "version": "82", "episode": 500_000, "from_pid": 0},
-    {"name": "P2: K4A2 83", "type": "dqn", "family": "k4a2", "version": "83", "episode": 500_000, "from_pid": 0},
-    {"name": "P3: K4A2 84", "type": "dqn", "family": "k4a2", "version": "84", "episode": 500_000, "from_pid": 0},
+    {"name": "P0: K4A1 07", "type": "ppo", "family": "k4a1", "version": "07", "episode": 100_000, "from_pid": 0},
+    {"name": "P1: Max Combo", "type": "max_combo"},
+    {"name": "P2: Single Only", "type": "single_only"},
+    {"name": "P3: Random 2", "type": "random2"},
 ]
 # 1v3 Gegen Single Only
 

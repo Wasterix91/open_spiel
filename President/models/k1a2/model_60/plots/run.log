@@ -1,0 +1,27 @@
+[2025-09-30 11:41:14] New Training (k1a2): DQN Single-Agent vs Heuristiken/Population (P0→P0)
+[2025-09-30 11:41:14] Deck_Size: 64
+[2025-09-30 11:41:14] Episodes: 30000
+[2025-09-30 11:41:14] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k1a2/model_60
+[2025-09-30 11:41:37] 
+[2025-09-30 11:41:37] Benchmark @train_ep     500 (bench_eps: 200)
+[2025-09-30 11:41:37] Macro Winrate          :  36.5%
+[2025-09-30 11:41:37] Macro Ø-Reward         :  1.713
+[2025-09-30 11:41:37] Winrate vs max_combo   :  11.5% | Σ-Reward:  201.0 | Ø-Reward:  1.005 | Places: [23 (0.12), 38 (0.19), 56 (0.28), 83 (0.41)]
+[2025-09-30 11:41:37] Winrate vs random2     :  29.5% | Σ-Reward:  349.0 | Ø-Reward:  1.745 | Places: [59 (0.29), 60 (0.30), 52 (0.26), 29 (0.14)]
+[2025-09-30 11:41:37] Winrate vs single_only :  68.5% | Σ-Reward:  478.0 | Ø-Reward:  2.390 | Places: [137 (0.69), 25 (0.12), 17 (0.09), 21 (0.10)]
+[2025-09-30 11:41:39] Timing @ep 500: episode 4.4s | train 0.032s | eval 2.3s | plot 2.0s | save 0.004s | cum 0.01h
+[2025-09-30 11:42:01] 
+[2025-09-30 11:42:01] Benchmark @train_ep    1000 (bench_eps: 200)
+[2025-09-30 11:42:01] Macro Winrate          :  41.3%
+[2025-09-30 11:42:01] Macro Ø-Reward         :  1.788
+[2025-09-30 11:42:01] Winrate vs max_combo   :  16.0% | Σ-Reward:  213.0 | Ø-Reward:  1.065 | Places: [32 (0.16), 31 (0.15), 55 (0.28), 82 (0.41)]
+[2025-09-30 11:42:01] Winrate vs random2     :  25.5% | Σ-Reward:  316.0 | Ø-Reward:  1.580 | Places: [51 (0.26), 62 (0.31), 39 (0.20), 48 (0.24)]
+[2025-09-30 11:42:01] Winrate vs single_only :  82.5% | Σ-Reward:  544.0 | Ø-Reward:  2.720 | Places: [165 (0.82), 17 (0.09), 15 (0.07), 3 (0.01)]
+[2025-09-30 11:42:03] Timing @ep 1000: episode 4.6s | train 0.046s | eval 2.5s | plot 2.1s | save 0.002s | cum 0.01h
+[2025-09-30 11:42:26] 
+[2025-09-30 11:42:26] Benchmark @train_ep    1500 (bench_eps: 200)
+[2025-09-30 11:42:26] Macro Winrate          :  49.2%
+[2025-09-30 11:42:26] Macro Ø-Reward         :  2.055
+[2025-09-30 11:42:26] Winrate vs max_combo   :  16.5% | Σ-Reward:  262.0 | Ø-Reward:  1.310 | Places: [33 (0.17), 52 (0.26), 59 (0.29), 56 (0.28)]
+[2025-09-30 11:42:26] Winrate vs random2     :  48.5% | Σ-Reward:  425.0 | Ø-Reward:  2.125 | Places: [97 (0.48), 55 (0.28), 24 (0.12), 24 (0.12)]
+[2025-09-30 11:42:26] Winrate vs single_only :  82.5% | Σ-Reward:  546.0 | Ø-Reward:  2.730 | Places: [165 (0.82), 21 (0.10), 9 (0.04), 5 (0.03)]

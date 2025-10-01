@@ -87,7 +87,7 @@ class MetricsPlotter:
             # Totals / Linienfarben
             "total_scatter": "tab:gray",
             "total_ma":      "tab:red",
-            "total_all":     "#222222",
+            "total_all":     "#db2911f6",
 
             # Final-Gruppe (Blautöne)
             "final_total":   "#1f77b4",
@@ -109,8 +109,8 @@ class MetricsPlotter:
         }
 
         # Plot-Styling (zentral)
-        self._ret_line_width   = 1.4
-        self._ret_outline_add  = 0.5
+        self._ret_line_width   = 1.0
+        self._ret_outline_add  = 0.3
         self._sc_total_size    = 14.0
         self._sc_comp_size     = 8.0
         self._sc_marker        = "o"
@@ -942,14 +942,24 @@ class MetricsPlotter:
         self._ret_colors.setdefault("step_penalty","#006d2c")
 
         styles = {
-            "Total Rewards":                 dict(color=self._ret_colors["total_all"],   lw=2.6, ls="-"),
-            "Final Reward (Total)":          dict(color=self._ret_colors["final_total"], lw=2.2, ls="-"),
-            "Final Reward (Env)":            dict(color=self._ret_colors["final_env"],   lw=1.8, ls="--"),
-            "Final Reward (Rank)":           dict(color=self._ret_colors["final_rank"],  lw=1.8, ls=":"),
-            "Step Reward (Total)":           dict(color=self._ret_colors["step_total"],  lw=2.2, ls="-"),
-            "Step Reward (Combo)":           dict(color=self._ret_colors["step_delta"],  lw=1.8, ls="--"),
-            "Step Reward (Hand-Penalty)":    dict(color=self._ret_colors["step_penalty"],lw=1.8, ls=":"),
+                "Total Rewards": dict(
+                        color="tab:red",      # rot
+                        lw=1.2,               # dünne Linie
+                        ls="--",               # Punktlinie (dotted)
+                        marker="o",           # Punkte
+                        markersize=2,         # dicke Punkte
+                        markerfacecolor="tab:red",
+                        markeredgecolor="tab:red",
+                    ),
+            #"Total Rewards":                 dict(color=self._ret_colors["total_all"],   lw=1.4, ls="-"),
+            "Final Reward (Total)":          dict(color=self._ret_colors["final_total"], lw=1.2, ls="-"),
+            "Final Reward (Env)":            dict(color=self._ret_colors["final_env"],   lw=1.0, ls="--"),
+            "Final Reward (Rank)":           dict(color=self._ret_colors["final_rank"],  lw=1.0, ls=":"),
+            "Step Reward (Total)":           dict(color=self._ret_colors["step_total"],  lw=1.2, ls="-"),
+            "Step Reward (Combo)":           dict(color=self._ret_colors["step_delta"],  lw=1.0, ls="--"),
+            "Step Reward (Hand-Penalty)":    dict(color=self._ret_colors["step_penalty"],lw=1.0, ls=":"),
         }
+
 
         series = [
             ("Total Rewards",              total_all),

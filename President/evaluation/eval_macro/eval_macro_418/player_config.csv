@@ -1,0 +1,5 @@
+name,type,family,version,episode,from_pid
+P0: K4A1 07,ppo,k4a1,07,100000,0
+P1: K1A2 57,dqn,k1a2,57,100000,0
+P2: K1A1 58,ppo,k1a1,58,100000,0
+P3: K4A2 84,dqn,k4a2,84,100000,0

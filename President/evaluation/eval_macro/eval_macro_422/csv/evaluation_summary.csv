@@ -1,0 +1,5 @@
+macro_id,player,strategy,type,family,version,episode,win_rate_percent,avg_return,num_wins,num_starts
+422,P0: K4A1 07,ppo v07 ep100.000,ppo,k4a1,07,100000,56.3,2.35,28138,12615
+422,P1: Max Combo,max_combo v,max_combo,,,,30.5,1.86,15259,12445
+422,P2: Single Only,single_only v,single_only,,,,4.3,1.07,2136,12425
+422,P3: Random 2,random2 v,random2,,,,8.9,0.72,4467,12515

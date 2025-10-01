@@ -19,8 +19,8 @@ from utils.load_save_common import find_next_version, prepare_run_dirs, save_con
 
 # ============== CONFIG ==============
 CONFIG = {
-    "EPISODES":         500_000,
-    "BENCH_INTERVAL":   10_000,
+    "EPISODES":         100_000,
+    "BENCH_INTERVAL":   5000,
     "BENCH_EPISODES":   2000,
     "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
@@ -55,11 +55,11 @@ CONFIG = {
     # STEP_MODE : "none" | "delta_weight_only" | "hand_penalty_coeff_only" | "combined"
     # FINAL_MODE: "none" | "env_only" | "rank_only" | "both"
     "REWARD": {
-        "STEP_MODE": "combined",
-        "DELTA_WEIGHT": 0.0,
-        "HAND_PENALTY_COEFF": 1.0,
+        "STEP_MODE": "none",
+        "DELTA_WEIGHT": 0.25,
+        "HAND_PENALTY_COEFF": 0.1,
 
-        "FINAL_MODE": "none",
+        "FINAL_MODE": "env_only",
         "BONUS_WIN": 30.0, "BONUS_2ND": 20.0, "BONUS_3RD": 10.0, "BONUS_LAST": 0.0,
     },
 
@@ -71,10 +71,10 @@ CONFIG = {
         "DEBUG_FEATURES": False,
         "PLOT_METRICS": True,     # Trainingsplots erzeugen?
         "SAVE_METRICS_TO_CSV": False,  # Trainingsmetriken persistent speichern?
-        "RET_SMOOTH_WINDOW": 500,
+        "RET_SMOOTH_WINDOW": 1,
 
-        "WR_SMOOTH_WINDOW": 3,      # z.B. 5, 7, 9 ...
-        "WR_SHOW_CI": True,
+        "WR_SMOOTH_WINDOW": 0,      # z.B. 5, 7, 9 ...
+        "WR_SHOW_CI": False,
         "WR_CI_Z": 1.96,
         "PLOT_FORMATS": ["pdf"],
         # Steuert plot_train(); Sonder-Keys triggern In-Memory-Return-Plots.
@@ -175,10 +175,16 @@ def main():
         train_csv="training_metrics.csv",
         save_csv=CONFIG["FEATURES"].get("SAVE_METRICS_TO_CSV", False),
         verbosity=1,
-        smooth_window=CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 150),
+        smooth_window=CONFIG["FEATURES"].get("RET_SMOOTH_WINDOW", 1),
         out_formats=CONFIG["FEATURES"].get("PLOT_FORMATS", ["png"]),
         name_prefix=f"{family}_{version}",   # <-- NEU: k4a2_52_...
     )
+    plotter.smooth_window = 1              # Returns
+    if hasattr(plotter, "wr_smooth_window"):
+        plotter.wr_smooth_window = 1       # Winrates
+    if hasattr(plotter, "wr_show_ci"):
+        plotter.wr_show_ci = False
+
 
 
     plotter.log("New Training (k4a2): Shared-Policy DQN — In-Proc External Trainer (Bundle-Updates)")
@@ -442,15 +448,19 @@ def main():
             plotter.add_benchmark(ep, per_opponent)
             #plotter.plot_benchmark_rewards()
             plotter.plot_reward_groups(window=plotter.smooth_window)
+            # plotter.plot_reward_groups(window=plotter.smooth_window)
+            plotter.plot_reward_groups(window=1)   # identisch, aber explizit
 
-            plotter.plot_places_latest()
-            plotter.plot_benchmark(
+            plotter.plot_places_latest()           # OK
+            plotter.plot_benchmark(                # falls unterstützt: wr_window=1 mitgeben
                 filename_prefix="lernkurve",
                 with_macro=True,
                 family_title=family.upper(),
                 multi_title=f"Lernkurve - {family.upper()} vs feste Heuristiken",
-                variants=["03"],   
+                variants=["03"],
+                # wr_window=1,   # <— falls die Funktion diesen Parameter hat
             )
+
 
 
 

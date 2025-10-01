@@ -1,0 +1,25 @@
+[2025-09-30 11:45:02] New Training (k1a2): DQN Single-Agent vs Heuristiken/Population (P0→P0)
+[2025-09-30 11:45:02] Deck_Size: 64
+[2025-09-30 11:45:02] Episodes: 30000
+[2025-09-30 11:45:02] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k1a2/model_63
+[2025-09-30 11:57:02] 
+[2025-09-30 11:57:02] Benchmark @train_ep   15000 (bench_eps: 200)
+[2025-09-30 11:57:02] Macro Winrate          :  76.5%
+[2025-09-30 11:57:02] Macro Ø-Reward         :  2.690
+[2025-09-30 11:57:02] Winrate vs max_combo   :  57.0% | Σ-Reward:  480.0 | Ø-Reward:  2.400 | Places: [114 (0.57), 62 (0.31), 14 (0.07), 10 (0.05)]
+[2025-09-30 11:57:02] Winrate vs random2     :  89.5% | Σ-Reward:  577.0 | Ø-Reward:  2.885 | Places: [179 (0.90), 20 (0.10), 0 (0.00), 1 (0.01)]
+[2025-09-30 11:57:02] Winrate vs single_only :  83.0% | Σ-Reward:  557.0 | Ø-Reward:  2.785 | Places: [166 (0.83), 27 (0.14), 5 (0.03), 2 (0.01)]
+[2025-09-30 11:57:07] Timing @ep 15000: episode 7.0s | train 0.099s | eval 2.6s | plot 4.3s | save 0.003s | cum 0.20h
+[2025-09-30 12:10:19] 
+[2025-09-30 12:10:19] Benchmark @train_ep   30000 (bench_eps: 200)
+[2025-09-30 12:10:19] Macro Winrate          :  75.8%
+[2025-09-30 12:10:19] Macro Ø-Reward         :  2.673
+[2025-09-30 12:10:19] Winrate vs max_combo   :  62.5% | Σ-Reward:  491.0 | Ø-Reward:  2.455 | Places: [125 (0.62), 50 (0.25), 16 (0.08), 9 (0.04)]
+[2025-09-30 12:10:19] Winrate vs random2     :  86.0% | Σ-Reward:  567.0 | Ø-Reward:  2.835 | Places: [172 (0.86), 25 (0.12), 1 (0.01), 2 (0.01)]
+[2025-09-30 12:10:19] Winrate vs single_only :  79.0% | Σ-Reward:  546.0 | Ø-Reward:  2.730 | Places: [158 (0.79), 32 (0.16), 8 (0.04), 2 (0.01)]
+[2025-09-30 12:10:26] Timing @ep 30000: episode 8.4s | train 0.037s | eval 2.0s | plot 6.4s | save 0.003s | cum 0.42h
+[2025-09-30 12:10:26] Opponent-Usage gespeichert: /home/wasterix/OpenSpiel/open_spiel/President/models/k1a2/model_63/plots/opponent_usage.csv
+[2025-09-30 12:10:26] 
+[2025-09-30 12:10:26] Gesamtzeit: 0.42h (~ 19.70 eps/s)
+[2025-09-30 12:10:26] k1a2, Single Agent vs Population. Training abgeschlossen.
+[2025-09-30 12:10:26] Path: /home/wasterix/OpenSpiel/open_spiel/President/models/k1a2/model_63

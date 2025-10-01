@@ -18,9 +18,9 @@ from utils.reward_shaper import RewardShaper
 from collections import defaultdict
 
 CONFIG = {
-    "EPISODES":         100_000,
-    "BENCH_INTERVAL":   5000,
-    "BENCH_EPISODES":   2000,
+    "EPISODES":         30_000,
+    "BENCH_INTERVAL":   15_000,
+    "BENCH_EPISODES":   200,
     "DECK_SIZE":        "64",  # "12" | "16" | "20" | "24" | "32" | "52" | "64"
     "SEED":             42,
 
