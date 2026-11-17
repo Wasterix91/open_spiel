@@ -1,8 +1,11 @@
-import numpy as np
 import json
+
+import numpy as np
 
 
 class ValueTableAgent:
+    """Liest eine vorberechnete Wertetabelle und wählt deren beste Legal Action."""
+
     index_dt = np.dtype(np.uint64)
     data_dt = np.dtype([('next', index_dt), ('v', np.float32),
         ('v_count', np.uint16), ('action', np.uint8), ('_dummy', np.uint8)])
@@ -32,7 +35,6 @@ class ValueTableAgent:
         return shifted, last_played_out
 
     def get_action_values(self, state_observation):
-        #print(state_observation)
         state_observation = [int(x) for x in state_observation]
         own_hand = state_observation[:self.n_ranks]
         other_hand_sums = list(reversed(state_observation[self.n_ranks:
@@ -47,7 +49,6 @@ class ValueTableAgent:
         other_hand_sums_shifted, last_played_shifted = self.remove_empty_players(other_hand_sums, last_played)
         state = [last_played_shifted, trick_rank, trick_count_minus_one] + list(own_hand) + \
             other_hand_sums_shifted + list(cards_gone)
-        #print(state)
 
         address = 0
         for x in state:
@@ -59,7 +60,6 @@ class ValueTableAgent:
             elem = self.data[address]
             action_dict[int(elem['action'])] = float(elem['v'])
             address = elem['next']
-        #print(action_dict)
         return action_dict
 
     def table_code_to_openspiel_code(self, code):
@@ -77,8 +77,5 @@ class ValueTableAgent:
 
     def __call__(self, info_state):
         action_dict = self.get_action_values(info_state.observation_tensor())
-        #transcoded_actions = set(self.table_code_to_openspiel_code(c) for c in action_dict.keys())
-        #assert set(legal_actions) == transcoded_actions, \
-        #    f"legal_actions don't match (supplied argument: {set(legal_actions)}, in table: {transcoded_actions})"
         best_action = min(action_dict.items(), key=lambda x: x[1])[0]
         return self.table_code_to_openspiel_code(best_action)

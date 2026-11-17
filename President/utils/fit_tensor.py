@@ -6,6 +6,8 @@ import numpy as np
 
 @dataclass
 class FeatureConfig:
+    """Beschreibt Layout und optionale Erweiterungen des Agent-Inputs."""
+
     num_players: int
     num_ranks: int                      # kNumRanks aus dem Spiel
     add_seat_onehot: bool = False       # optional: Sitz-One-Hot anhängen
@@ -50,6 +52,7 @@ class FeatureConfig:
 
 
 def seat_one_hot(player_id: int, num_players: int) -> np.ndarray:
+    """Erzeugt das Seat Encoding für einen Spieler."""
     v = np.zeros((num_players,), dtype=np.float32)
     if not (0 <= player_id < num_players):
         raise ValueError(f"player_id {player_id} out of range [0,{num_players-1}]")

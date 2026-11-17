@@ -12,7 +12,6 @@
 │   │   ├── v_table_4_4_4_index.bin
 │   │   └── v_table_4_4_4_params.json
 │   ├── v_table_agent.py
-│   └── v_table_agent.py:Zone.Identifier
 ├── cfg
 │   └── reqirements.txt
 ├── evaluation

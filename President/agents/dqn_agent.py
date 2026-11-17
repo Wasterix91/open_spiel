@@ -1,9 +1,11 @@
 # agents/dqn_agent.py
 # -*- coding: utf-8 -*-
 from __future__ import annotations
-import os, random
+
+import os
+import random
 from dataclasses import dataclass
-from typing import Optional, Sequence, Iterable, List, Tuple
+from typing import Iterable, List, Optional, Sequence, Tuple
 
 import numpy as np
 import torch
@@ -14,6 +16,8 @@ import torch.optim as optim
 # ===================== DQN Config ===================== #
 @dataclass
 class DQNConfig:
+    """Konfiguration für Netzwerk, Exploration und Target Updates."""
+
     # Optimizer
     learning_rate: float = 1e-3
     optimizer: str = "adam"           # "adam" | "rmsprop"
@@ -57,7 +61,14 @@ DEFAULT_CONFIG = DQNConfig()
 
 # ===================== Netzarchitektur ===================== #
 class QNetwork(nn.Module):
-    def __init__(self, input_size: int, output_size: int, hidden: Sequence[int] = (128, 128)):
+    """Mehrschichtiges Q-Netzwerk mit konfigurierbaren Hidden Layers."""
+
+    def __init__(
+        self,
+        input_size: int,
+        output_size: int,
+        hidden: Sequence[int] = (128, 128),
+    ):
         super().__init__()
         layers: List[nn.Module] = []
         last = input_size
@@ -97,7 +108,15 @@ class ReplayBuffer:
             mask[idxs] = 1.0
         return mask
 
-    def add(self, state, action, reward, next_state, done, next_legal_actions: Optional[Iterable[int]] = None):
+    def add(
+        self,
+        state,
+        action,
+        reward,
+        next_state,
+        done,
+        next_legal_actions: Optional[Iterable[int]] = None,
+    ):
         mask = self._to_mask(next_legal_actions)
         self.buffer.append(self.Experience(state, action, reward, next_state, done, mask))
 
@@ -130,13 +149,15 @@ class ReplayBuffer:
 
 # ===================== DQN Agent ===================== #
 class DQNAgent:
-    """
-    - ε-greedy über LEGAL actions (illegale werden maskiert)
-    - Replay speichert next_legal_mask; Targets werden entsprechend maskiert
-    - Hard- oder Polyak-Update des Target-Netzes
-    - save/restore kompatibel zu *_qnet.pt / *_tgt.pt
-    """
-    def __init__(self, state_size: int, num_actions: int, config: Optional[DQNConfig] = None, device: Optional[str] = None):
+    """DQN-Agent mit Legal-Action-Masking und konfigurierbarem Target Update."""
+
+    def __init__(
+        self,
+        state_size: int,
+        num_actions: int,
+        config: Optional[DQNConfig] = None,
+        device: Optional[str] = None,
+    ):
         self.config = config or DEFAULT_CONFIG
         self.device = torch.device(device or self.config.device)
         self.state_size = int(state_size)

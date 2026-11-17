@@ -2,9 +2,9 @@
 #define OPEN_SPIEL_GAMES_PRESIDENT_H_
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
-#include <optional>
 
 #include "open_spiel/spiel.h"
 
@@ -21,7 +21,7 @@ struct PresidentAction {
   int rank;
 };
 
-// Encoding / Decoding
+// Action 0 ist Pass; alle übrigen Actions kodieren Kombination und Rang.
 inline int EncodeAction(const PresidentAction& action, int num_ranks) {
   if (action.type == ComboType::Pass) return 0;
   return 1 + (action.combo_size - 1) * num_ranks + action.rank;
@@ -40,7 +40,7 @@ class PresidentGame : public Game {
  public:
   explicit PresidentGame(const GameParameters& params);
 
-  // === Required overrides ===
+  // Erforderliche OpenSpiel-Schnittstellen.
   int NumPlayers() const override;
   int NumDistinctActions() const override;
   double MinUtility() const override;
@@ -48,11 +48,11 @@ class PresidentGame : public Game {
   int MaxGameLength() const override;
   std::unique_ptr<State> NewInitialState() const override;
 
-  // === Tensor shapes ===
+  // Tensor-Shapes für Training und Evaluation.
   std::vector<int> ObservationTensorShape() const override;
   std::vector<int> InformationStateTensorShape() const override;
 
-  // === Game Parameters ===
+  // Konfigurierbare Spielparameter.
   int num_players_;
   bool shuffle_cards_;
   bool single_card_mode_;
@@ -81,7 +81,7 @@ class PresidentGameState : public State {
   void ApplyAction(Action action_id) override;
   std::vector<int> GetFinishOrder();
 
-  // === Observation und InformationState ===
+  // Observation und Information State aus Sicht eines Spielers.
   void ObservationTensor(Player player, absl::Span<float> values) const override;
   std::string ObservationString(Player player) const override;
 

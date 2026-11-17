@@ -32,7 +32,7 @@ const GameType kGameType{
     /*provides_observation_tensor=*/true,
     /*parameter_specification=*/
     {
-        {"num_players", GameParameter(4)},  // ✅ Dynamisch
+        {"num_players", GameParameter(4)},
         {"shuffle_cards", GameParameter(true)},
         {"single_card_mode", GameParameter(false)},
         {"deck_size", GameParameter(std::string("32"))},
@@ -217,12 +217,12 @@ void PresidentGameState::ApplyAction(Action action_id) {
   }
 
   if (!IsTerminal()) {
-    // advance player
+    // Zum nächsten aktiven Spieler wechseln.
     while(true) {
       current_player_ = (current_player_ + 1) % num_players_;
       if (!IsOut(current_player_)) break;
       if (last_player_to_play_ == current_player_) {
-        // Player finished with a trick that nobody can play on, next player can start new trick
+        // Hat der letzte Spieler den Stich beendet, eröffnet der nächste aktive Spieler.
         last_player_to_play_ = (last_player_to_play_ + 1) % num_players_;
       }
     }
@@ -302,12 +302,14 @@ bool PresidentGameState::IsOut(int player) const {
 }
 
 
-// === Für Reinforcement Learning ===
+// === Repräsentation für Reinforcement Learning ===
 std::vector<int> PresidentGame::ObservationTensorShape() const {
   return {kNumRanks + num_players_ - 1 + 3 + kNumRanks};
 }
 
 void PresidentGameState::ObservationTensor(Player player, absl::Span<float> values) const {
+  // Layout: eigene Ranganzahlen, gegnerische Handgrößen, Stichzustand,
+  // anschließend die Ranganzahlen aus abgeschlossenen Stichen.
   auto game = static_pointer_cast<const PresidentGame>(game_);
   int last_index = 0;
   for (int i = 0; i < game->kNumRanks; i++) {
@@ -322,7 +324,7 @@ void PresidentGameState::ObservationTensor(Player player, absl::Span<float> valu
   }
   last_index += num_players_ - 1;
 
-  // Siehe ObservationString
+  // Relative Distanz zum letzten Spieler; 0 markiert einen neuen Stich.
   int last_played_relative = ((current_player_ - last_player_to_play_) + num_players_) % num_players_;
   values[last_index] = last_played_relative;
   last_index += 1;
@@ -330,7 +332,7 @@ void PresidentGameState::ObservationTensor(Player player, absl::Span<float> valu
   last_index += 1;
   values[last_index] = last_played_relative == 0 ? -1 : top_rank_;
 
-  // Karten aus alten Stichen
+  // Der aktuelle Stich wird abgezogen, damit nur abgeschlossene Stiche zählen.
   for (int r = 0; r < game->kNumRanks; r++) {
     int count = game->num_suits_;
     for (int p = 0; p < game->num_players_; p++) {
@@ -361,15 +363,7 @@ std::string PresidentGameState::ObservationString(Player player) const {
     obs += std::to_string(sum) + ",";
   }
 
-  // 3. last_played_relative (Vorwärtszählen im Uhrzeigersinn bis zum letzten Ausspieler) <-- Originale Logik
-  //int last_played_relative = (last_player_to_play_ - current_player_) % num_players_;
-  //obs += std::to_string(last_played_relative) + ",";
-
-  // 3. last_played_relative (Vorwärtszählen im Uhrzeigersinn bis zum letzten Ausspieler, normalisiert)
-  //int last_played_relative = ((last_player_to_play_ - current_player_) + num_players_) % num_players_;
-  //obs += std::to_string(last_played_relative) + ",";
-
-  // 3. last_played_relative (Rückwärtszählen im Uhrzeigersinn bis zum letzten Ausspieler, normalisiert)
+  // 3. Relative Distanz zum letzten Spieler im Uhrzeigersinn
   int last_played_relative = ((current_player_ - last_player_to_play_) + num_players_) % num_players_;
   obs += std::to_string(last_played_relative) + ",";
 
@@ -411,11 +405,7 @@ std::string PresidentGameState::InformationStateString(Player player) const {
     info += std::to_string(sum) + ",";
   }
 
-  // 3. last_played_relative (Index last_index)
-  //int last_played_relative = (last_player_to_play_ - current_player_) % num_players_;
-  //info += std::to_string(last_played_relative) + ",";
-
-  // 3. Neue Berechnung, siehe InformationStateTensor
+  // 3. Relative Distanz zum letzten Spieler
   int last_played_relative = ((current_player_ - last_player_to_play_) + num_players_) % num_players_;
   info += std::to_string(last_played_relative) + ",";
 

@@ -35,6 +35,8 @@ DEFAULT_CONFIG = PPOConfig(
 
 # ================= Networks ================= #
 class PolicyNetwork(nn.Module):
+    """Policy-Netzwerk zur Berechnung der Action Logits."""
+
     def __init__(self, input_size, num_actions):
         super().__init__()
         self.net = nn.Sequential(
@@ -48,7 +50,10 @@ class PolicyNetwork(nn.Module):
     def forward(self, x):
         return self.net(x)
 
+
 class ValueNetwork(nn.Module):
+    """Value-Netzwerk zur Schätzung des Zustandswerts."""
+
     def __init__(self, input_size):
         super().__init__()
         self.net = nn.Sequential(
@@ -64,8 +69,7 @@ class ValueNetwork(nn.Module):
 
 # =============== Utils =============== #
 def masked_softmax(logits, mask):
-    # mask: 1.0 für legal, 0.0 für illegal
-    # Stelle sicher, dass logits und mask auf demselben Device liegen
+    """Berechnet Wahrscheinlichkeiten ausschließlich über Legal Actions."""
     mask = mask.to(logits.device)
     masked_logits = logits.clone()
     masked_logits = torch.where(
@@ -77,6 +81,8 @@ def masked_softmax(logits, mask):
 
 # =============== Replay Buffer =============== #
 class ReplayBuffer:
+    """Speichert PPO-Rollouts einschließlich Legal Masks und Player IDs."""
+
     def __init__(self):
         self.states = []
         self.actions = []
@@ -104,9 +110,20 @@ class ReplayBuffer:
     def clear(self):
         self.__init__()
 
+
 # =============== PPO Agent =============== #
 class PPOAgent:
-    def __init__(self, info_state_size, num_actions, seat_id_dim=0, config=None, device="cpu", segmented_gae_mode="adjacent"):
+    """PPO-Agent mit optionalem Seat Encoding und segmentierter GAE."""
+
+    def __init__(
+        self,
+        info_state_size,
+        num_actions,
+        seat_id_dim=0,
+        config=None,
+        device="cpu",
+        segmented_gae_mode="adjacent",
+    ):
         self.device = torch.device(device)
         self._base_state_dim = info_state_size
         self._seat_id_dim = int(seat_id_dim)
@@ -143,12 +160,12 @@ class PPOAgent:
         with torch.no_grad():
             logits = self._policy(x)
             probs = masked_softmax(logits, legal_mask_t)
-            dist = torch.distributions.Categorical(probs=probs)  # Fix: richtiger Konstruktor
+            dist = torch.distributions.Categorical(probs=probs)
             action = dist.sample()
             log_prob = dist.log_prob(action)
             value = self._value(x)
 
-        # Store transition with placeholder reward (0); will be updated via post_step
+        # Der Reward wird nach dem Environment-Schritt über post_step ergänzt.
         self._buffer.add(
             state=x.detach().cpu().numpy(),
             action=int(action.item()),
@@ -163,7 +180,7 @@ class PPOAgent:
         return int(action.item())
 
     def post_step(self, reward, done=False):
-        # Update last transition's reward (+ possibly done)
+        # Reward und Terminal-Flag der letzten Transition aktualisieren.
         self._buffer.rewards[-1] = float(reward)
         self._buffer.dones[-1] = bool(done)
 
@@ -171,7 +188,7 @@ class PPOAgent:
         T = len(rewards)
         advantages = np.zeros(T, dtype=np.float32)
         lastgaelam = 0.0
-        # Terminal bootstrapping: value_{T} = 0
+        # Am Episodenende gilt für das Bootstrapping value_{T} = 0.
         for t in reversed(range(T)):
             next_nonterminal = 0.0 if (t == T - 1 or dones[t]) else 1.0
             next_value = 0.0 if (t == T - 1 or dones[t]) else values[t + 1]
