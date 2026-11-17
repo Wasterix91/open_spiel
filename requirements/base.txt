@@ -1,0 +1,15 @@
+# Direct dependencies for President training.
+-c constraints.txt
+
+absl-py
+numpy
+torch
+
+# OpenSpiel is intentionally not installed from PyPI. Build the local fork in
+# this repository so that the custom President C++ game is included in pyspiel.
+#
+# On Linux, install torch from the official CPU wheel index before installing
+# this file. Do not use the default CUDA-enabled wheel and its nvidia-* deps:
+#   python -m pip install --index-url https://download.pytorch.org/whl/cpu \
+#     -c requirements/constraints.txt torch
+#   python -m pip install -r requirements/base.txt

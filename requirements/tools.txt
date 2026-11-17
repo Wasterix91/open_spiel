@@ -1,0 +1,6 @@
+# Optional model-inspection and visualization tools used by agent_info.py.
+-r evaluation.txt
+
+graphviz
+torchinfo
+torchview
